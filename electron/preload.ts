@@ -2,7 +2,7 @@ import { electronAPI } from "@electron-toolkit/preload";
 import { contextBridge, ipcRenderer } from "electron";
 import { TokenData } from "../src/types/types";
 const api = {
-  llm: {
+  ai: {
     sendGeminiRequest: (prompt: string): Promise<TokenData[]> =>
       ipcRenderer.invoke("gemini-tokens-request", { prompt }),
   },
@@ -39,24 +39,26 @@ const api = {
     },
   },
 
-  subtitles: {
-    addSubtitlesByVideoId: (videoId: any, subtitles: any) =>
-      ipcRenderer.invoke(
-        "db:subtitles:addSubtitlesByVideoId",
-        videoId,
-        subtitles
-      ),
-    getSubtitlesByVideoId: (videoId: any) =>
-      ipcRenderer.invoke("db:subtitles:getSubtitlesByVideoId", videoId),
-    updateToken: (lineId: any, tokenIndex: any, tokenData: any) =>
-      ipcRenderer.invoke(
-        "db:subtitles:updateToken",
-        lineId,
-        tokenIndex,
-        tokenData
-      ),
-    deleteSubtitlesByVideoId: (videoId: any) =>
-      ipcRenderer.invoke("db:subtitles:deleteSubtitlesByVideoId", videoId),
+  db: {
+    subtitles: {
+      addSubtitlesByVideoId: (videoId: any, subtitles: any) =>
+        ipcRenderer.invoke(
+          "db:subtitles:addSubtitlesByVideoId",
+          videoId,
+          subtitles
+        ),
+      getSubtitlesByVideoId: (videoId: any) =>
+        ipcRenderer.invoke("db:subtitles:getSubtitlesByVideoId", videoId),
+      updateToken: (lineId: any, tokenIndex: any, tokenData: any) =>
+        ipcRenderer.invoke(
+          "db:subtitles:updateToken",
+          lineId,
+          tokenIndex,
+          tokenData
+        ),
+      deleteSubtitlesByVideoId: (videoId: any) =>
+        ipcRenderer.invoke("db:subtitles:deleteSubtitlesByVideoId", videoId),
+    },
   },
 };
 

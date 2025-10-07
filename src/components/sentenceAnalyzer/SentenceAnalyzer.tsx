@@ -57,6 +57,8 @@ export default function AnalysisSentence({
       setIsLoading(true);
       try {
         const prompt = getPrompt(originalSentence);
+        console.log(originalSentence);
+        console.log(prompt);
         // 使用新的、经过队列处理的请求函数，并等待其结果
         const receivedTokens = await queuedSendGeminiRequest(prompt); // 确保 useStream 不是 undefined
         // 更新组件状态

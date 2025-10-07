@@ -20,6 +20,8 @@ export function setupGeminiApiHandler(): void {
         throw new Error("API_KEY is not defined in environment variables.");
       }
 
+      console.log("The prompt is ", prompt);
+
       try {
         const payload = {
           model: MODEL_NAME,
