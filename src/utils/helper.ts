@@ -69,47 +69,6 @@ export function speakJapanese(text: string): void {
   }
 }
 
-// 默认API URL
-const DEFAULT_API_URL =
-  process.env.API_URL ||
-  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-
-// 保存API设置到localStorage
-export function saveApiSettings(apiKey: string, apiUrl: string): void {
-  if (typeof window !== "undefined") {
-    if (apiKey) {
-      localStorage.setItem("userApiKey", apiKey);
-    } else {
-      localStorage.removeItem("userApiKey");
-    }
-
-    if (apiUrl && apiUrl !== DEFAULT_API_URL) {
-      localStorage.setItem("userApiUrl", apiUrl);
-    } else {
-      localStorage.removeItem("userApiUrl");
-    }
-  }
-}
-
-// 从localStorage获取API设置
-export function getApiSettings(): { apiKey: string; apiUrl: string } {
-  if (typeof window !== "undefined") {
-    // 尝试从localStorage读取
-    const savedApiKey = localStorage.getItem("userApiKey") || "";
-    const savedApiUrl = localStorage.getItem("userApiUrl") || DEFAULT_API_URL;
-
-    // 尝试从环境变量读取默认值（如果本地没有值）
-    const apiKey = savedApiKey || process.env.API_KEY || "";
-    const apiUrl = savedApiUrl;
-
-    return { apiKey, apiUrl };
-  }
-  return {
-    apiKey: process.env.API_KEY || "",
-    apiUrl: DEFAULT_API_URL,
-  };
-}
-
 export function randomInt(min: number, max: number): number {
   min = Math.ceil(min);
   max = Math.floor(max);

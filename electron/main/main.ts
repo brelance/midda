@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { registerDbHandlers } from "./api/db/db.api/db.api";
@@ -8,7 +7,8 @@ import { setupGeminiApiHandler } from "./api/llm/gemini.api";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import { app, BrowserWindow } from "electron";
 
-// const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 process.env.APP_ROOT = path.join(__dirname, "..");
 
@@ -99,6 +99,8 @@ app.whenReady().then(() => {
   setupGeminiApiHandler();
   setupWordDetailApiHandler();
   setupWordDictApiHandler();
+
+  createWindow();
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the

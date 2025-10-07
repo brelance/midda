@@ -17,7 +17,7 @@ try {
   // 在生产环境中，你可能希望更优雅地处理这个错误
   // 例如，显示一个错误消息给用户，或者退出应用
   app.quit();
-  // throw error; // 或者直接抛出异常
+  throw error instanceof Error ? error : new Error(String(error));
 }
 
 // 在 Node.js 进程退出时，优雅地关闭数据库连接
