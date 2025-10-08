@@ -42,17 +42,22 @@ const Layout: React.FC<LayoutProps> = ({
   closeDetailsPane,
 }) => {
   return (
-    <div className="flex h-screen bg-[#f5f5dc]">
+    <div className="h-screen bg-[#f5f5dc]">
       {/* 桌面端：三栏布局 */}
-      <div className="hidden lg:flex lg:flex-1">
-        <Sidebar
-          activeNav={activeNav}
-          onNavChange={onNavChange}
-          user={user}
-          isMobile={false}
-          isOpen={true}
-          onClose={() => {}}
-        />
+      <div className="hidden lg:flex h-full w-full">
+        <div className="w-64 bg-blue-200 border-r-4 border-black flex-shrink-0">
+          <div className="p-4">
+            <h2 className="text-xl font-black">桌面端Sidebar测试</h2>
+          </div>
+          <Sidebar
+            activeNav={activeNav}
+            onNavChange={onNavChange}
+            user={user}
+            isMobile={false}
+            isOpen={true}
+            onClose={() => {}}
+          />
+        </div>
         <MainContent
           books={books}
           selectedBook={selectedBook}
@@ -64,39 +69,54 @@ const Layout: React.FC<LayoutProps> = ({
           toggleSidebar={toggleSidebar}
           toggleDetailsPane={toggleDetailsPane}
         />
-        <DetailsPane
-          selectedBook={selectedBook}
-          isMobile={false}
-          isOpen={true}
-          onClose={() => {}}
-        />
+        <div className="w-80 bg-yellow-200 border-l-4 border-black flex-shrink-0">
+          <div className="p-4">
+            <h2 className="text-xl font-black">桌面端DetailsPane测试</h2>
+          </div>
+          <DetailsPane
+            selectedBook={selectedBook}
+            isMobile={false}
+            isOpen={true}
+            onClose={() => {}}
+          />
+        </div>
       </div>
 
       {/* 平板端：两栏布局 */}
-      <div className="hidden md:flex lg:hidden w-full">
-        <Sidebar
-          activeNav={activeNav}
-          onNavChange={onNavChange}
-          user={user}
-          isMobile={false}
-          isOpen={true}
-          onClose={() => {}}
-        />
-        <MainContent
-          books={books}
-          selectedBook={selectedBook}
-          searchQuery={searchQuery}
-          sortBy={sortBy}
-          onSelectBook={onSelectBook}
-          onSearch={onSearch}
-          onSort={onSort}
-          toggleSidebar={toggleSidebar}
-          toggleDetailsPane={toggleDetailsPane}
-        />
+      <div className="hidden md:flex lg:hidden h-full w-full">
+        <div className="w-64 bg-blue-300 border-r-4 border-black flex-shrink-0">
+          <div className="p-4">
+            <h2 className="text-xl font-black">平板端Sidebar测试</h2>
+          </div>
+          <Sidebar
+            activeNav={activeNav}
+            onNavChange={onNavChange}
+            user={user}
+            isMobile={false}
+            isOpen={true}
+            onClose={() => {}}
+          />
+        </div>
+        <div className="flex-1 bg-green-300">
+          <div className="p-4">
+            <h2 className="text-xl font-black">平板端MainContent测试</h2>
+          </div>
+          <MainContent
+            books={books}
+            selectedBook={selectedBook}
+            searchQuery={searchQuery}
+            sortBy={sortBy}
+            onSelectBook={onSelectBook}
+            onSearch={onSearch}
+            onSort={onSort}
+            toggleSidebar={toggleSidebar}
+            toggleDetailsPane={toggleDetailsPane}
+          />
+        </div>
       </div>
 
-      {/* 移动端：单栏布局 + 移动面板 */}
-      <div className="md:hidden w-full">
+      {/* 移动端：单栏布局 */}
+      <div className="flex md:hidden h-full w-full">
         <MainContent
           books={books}
           selectedBook={selectedBook}
@@ -154,7 +174,7 @@ const Layout: React.FC<LayoutProps> = ({
       )}
 
       {/* 平板端详情面板覆盖层 */}
-      {isDetailsPaneOpen && window.innerWidth >= 768 && window.innerWidth < 1024 && (
+      {isDetailsPaneOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:flex lg:hidden items-center justify-center"
           onClick={closeDetailsPane}
