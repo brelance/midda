@@ -399,3 +399,30 @@ body {
   background-color: #b3d4fc; /* 一个柔和的蓝色 */
   color: #000; /* 确保文本颜色在背景上清晰可见 */
 }
+
+/* 阅读器应用样式 */
+body {
+  font-family: "Public Sans", sans-serif;
+  font-weight: 700; /* 默认粗体 */
+  background-color: #f5f5dc;
+  color: #3d2b1f;
+  line-height: 1.2; /* 紧凑行距 */
+}
+
+/* 隐藏滚动条 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* 书籍选中高亮 */
+.book-item-active .border-dashed {
+  outline: 5px solid #a0c4e8;
+  outline-offset: 4px;
+}
+
+/* 导航选中状态 */
+.nav-item-active {
+  background-color: #b3312c !important;
+  color: #ffffff !important;
+  border-radius: 16px;
+}

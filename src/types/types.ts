@@ -55,3 +55,42 @@ export interface GeminiMessage {
   content: string;
   role: string;
 }
+
+// 阅读器应用接口定义
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  cover?: string;
+  progress: number; // 阅读进度百分比 (0-100)
+  status: 'not-started' | 'reading' | 'completed';
+  description?: string;
+  chapters?: Chapter[];
+  addedDate: Date;
+  lastReadDate?: Date;
+}
+
+export interface Chapter {
+  id: string;
+  title: string;
+  pageNumber: number;
+  isRead: boolean;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email?: string;
+  avatar?: string;
+}
+
+export type NavigationItem = 'bookshelf' | 'discover' | 'store' | 'profile';
+
+export interface AppState {
+  books: Book[];
+  user: User;
+  selectedBook: Book | null;
+  activeNav: NavigationItem;
+  searchQuery: string;
+  sortBy: 'title' | 'author' | 'progress' | 'addedDate';
+}
