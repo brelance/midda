@@ -1,8 +1,7 @@
-const plugin = require("tailwindcss/plugin");
-
 module.exports = {
   content: [
-    "./*.{html,js}", // 扫描项目中的HTML和JS文件以移除未使用的样式
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -30,59 +29,5 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    // 5. CSS组件方案插件
-    plugin(function ({ addComponents, theme }) {
-      addComponents({
-        // 核心粗野主义元素
-        ".brutalist-element": {
-          borderWidth: "4px",
-          borderColor: theme("colors.retro-black"),
-          borderRadius: theme("borderRadius.brutalist"),
-          boxShadow: theme("boxShadow.brutalist"),
-          transition: "all 0.1s ease-in-out",
-        },
-        // 卡片
-        ".brutalist-card": {
-          backgroundColor: theme("colors.white"),
-          "@apply brutalist-element": {},
-        },
-        // 按钮
-        ".brutalist-button": {
-          backgroundColor: theme("colors.retro-yellow"),
-          color: theme("colors.white"),
-          fontWeight: "900",
-          padding: "0.75rem 1.5rem",
-          textAlign: "center",
-          cursor: "pointer",
-          "@apply brutalist-element": {},
-
-          "&:hover": {
-            transform: "translate(3px, 3px)",
-            boxShadow: theme("boxShadow.brutalist-hover"),
-          },
-          "&:active": {
-            transform: "translate(6px, 6px)",
-            boxShadow: "none",
-          },
-        },
-        // 主按钮 (砖红色)
-        ".brutalist-button-primary": {
-          backgroundColor: theme("colors.retro-red"),
-          color: theme("colors.white"),
-        },
-        // 输入框
-        ".brutalist-input": {
-          backgroundColor: theme("colors.white"),
-          fontWeight: "700",
-          padding: "0.5rem 1rem 0.5rem 2.5rem",
-          "@apply brutalist-element": {},
-          "&:focus": {
-            outline: `4px solid ${theme("colors.retro-yellow")}`,
-            outlineOffset: "2px",
-          },
-        },
-      });
-    }),
-  ],
+  plugins: [],
 };

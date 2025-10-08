@@ -1,0 +1,83 @@
+/* 1. 核心导入 */
+@import "tailwindcss";
+@plugin 'tailwind-scrollbar';
+
+/* 2. 主题配置 (对应旧的 theme.extend) */
+@theme {
+  /* 核心配色方案 */
+  --colors-retro-yellow: #d4a017;
+  --colors-retro-red: #b3312c;
+  --colors-retro-green: #808000;
+  --colors-retro-blue: #a0c4e8;
+  --colors-retro-bg: #f5f5dc;
+  --colors-retro-black: #3d2b1f;
+  /* 插件中用到了白色，这里我们明确定义一下 */
+  --colors-white: #ffffff;
+
+  /* 字体配置 */
+  --font-family-sans: "Public Sans", sans-serif;
+
+  /* 边框圆角配置 */
+  --border-radius-brutalist: 20px;
+
+  /* 阴影配置 */
+  --box-shadow-brutalist: 6px 6px 0px 0px #3d2b1f;
+  --box-shadow-brutalist-hover: 3px 3px 0px 0px #3d2b1f;
+}
+
+/* 3. 自定义组件 (对应旧的 plugins) */
+
+.brutalist-element,
+.brutalist-card,
+.brutalist-button,
+.brutalist-input {
+  border-width: 4px;
+  border-color: var(--colors-retro-black);
+  border-radius: var(--border-radius-brutalist);
+  box-shadow: var(--box-shadow-brutalist);
+  transition: all 0.1s ease-in-out;
+}
+
+/* 卡片 */
+.brutalist-card {
+  background-color: var(--colors-white);
+}
+
+/* 按钮 */
+.brutalist-button {
+  background-color: var(--colors-retro-yellow);
+  color: var(--colors-white);
+  font-weight: 900;
+  padding: 0.75rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+
+  &:hover {
+    transform: translate(3px, 3px);
+    box-shadow: var(--box-shadow-brutalist-hover);
+  }
+
+  &:active {
+    transform: translate(6px, 6px);
+    box-shadow: none;
+  }
+}
+
+/* 主按钮 (砖红色) */
+.brutalist-button-primary {
+  background-color: var(--colors-retro-red);
+  color: var(--colors-white);
+}
+
+/* 输入框 */
+.brutalist-input {
+  background-color: var(--colors-white);
+  font-weight: 700;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+
+  &:focus {
+    /* 注意：旧的 theme() 函数被标准的 CSS var() 函数替代 */
+    outline: 4px solid var(--colors-retro-yellow);
+    outline-offset: 2px;
+  }
+}

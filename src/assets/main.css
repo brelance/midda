@@ -1,46 +1,5 @@
-@tailwind base;
-@tailwind components;
 @tailwind utilities;
-@plugin 'tailwind-scrollbar';
 
-:root {
-  --background: #fdfaf6;
-  --foreground: #171717;
-}
-
-body,
-* {
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10+ and Edge */
-  user-select: none; /* Standard syntax */
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  /* --color-mirra-green: #bff291; */
-  /* --color-mirra-yellow: #edf0e2; */
-  --color-mirra-green: #99bc85;
-  --color-mirra-yellow: #faf1e6;
-  --color-mirra-blue: #e4efe7;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-/* --- Analysis Result Setting --- */
 #analyzedSentenceOutput {
   line-height: 1.8; /* 减少行高 */
   padding-top: 0.5em; /* 减少上内边距 */

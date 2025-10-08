@@ -45,9 +45,9 @@ const Layout: React.FC<LayoutProps> = ({
     <div className="h-screen bg-[#f5f5dc]">
       {/* 桌面端：三栏布局 */}
       <div className="hidden lg:flex h-full w-full">
-        <div className="w-64 bg-blue-200 border-r-4 border-black flex-shrink-0">
+        <div className="w-64 bg-[#bbe7d0] border-r-4 border-black flex-shrink-0">
           <div className="p-4">
-            <h2 className="text-xl font-black">桌面端Sidebar测试</h2>
+            <h2 className="text-xl font-black">桌面端Sidebar</h2>
           </div>
           <Sidebar
             activeNav={activeNav}
@@ -58,20 +58,22 @@ const Layout: React.FC<LayoutProps> = ({
             onClose={() => {}}
           />
         </div>
-        <MainContent
-          books={books}
-          selectedBook={selectedBook}
-          searchQuery={searchQuery}
-          sortBy={sortBy}
-          onSelectBook={onSelectBook}
-          onSearch={onSearch}
-          onSort={onSort}
-          toggleSidebar={toggleSidebar}
-          toggleDetailsPane={toggleDetailsPane}
-        />
-        <div className="w-80 bg-yellow-200 border-l-4 border-black flex-shrink-0">
+        <div className="flex-1 bg-white">
+          <MainContent
+            books={books}
+            selectedBook={selectedBook}
+            searchQuery={searchQuery}
+            sortBy={sortBy}
+            onSelectBook={onSelectBook}
+            onSearch={onSearch}
+            onSort={onSort}
+            toggleSidebar={toggleSidebar}
+            toggleDetailsPane={toggleDetailsPane}
+          />
+        </div>
+        <div className="w-80 bg-[#fff3b0] border-l-4 border-black flex-shrink-0">
           <div className="p-4">
-            <h2 className="text-xl font-black">桌面端DetailsPane测试</h2>
+            <h2 className="text-xl font-black">桌面端DetailsPane</h2>
           </div>
           <DetailsPane
             selectedBook={selectedBook}
@@ -84,9 +86,9 @@ const Layout: React.FC<LayoutProps> = ({
 
       {/* 平板端：两栏布局 */}
       <div className="hidden md:flex lg:hidden h-full w-full">
-        <div className="w-64 bg-blue-300 border-r-4 border-black flex-shrink-0">
+        <div className="w-64 bg-[#bbe7d0] border-r-4 border-black flex-shrink-0">
           <div className="p-4">
-            <h2 className="text-xl font-black">平板端Sidebar测试</h2>
+            <h2 className="text-xl font-black">平板端Sidebar</h2>
           </div>
           <Sidebar
             activeNav={activeNav}
@@ -97,10 +99,7 @@ const Layout: React.FC<LayoutProps> = ({
             onClose={() => {}}
           />
         </div>
-        <div className="flex-1 bg-green-300">
-          <div className="p-4">
-            <h2 className="text-xl font-black">平板端MainContent测试</h2>
-          </div>
+        <div className="flex-1 bg-white">
           <MainContent
             books={books}
             selectedBook={selectedBook}
@@ -117,17 +116,19 @@ const Layout: React.FC<LayoutProps> = ({
 
       {/* 移动端：单栏布局 */}
       <div className="flex md:hidden h-full w-full">
-        <MainContent
-          books={books}
-          selectedBook={selectedBook}
-          searchQuery={searchQuery}
-          sortBy={sortBy}
-          onSelectBook={onSelectBook}
-          onSearch={onSearch}
-          onSort={onSort}
-          toggleSidebar={toggleSidebar}
-          toggleDetailsPane={toggleDetailsPane}
-        />
+        <div className="flex-1 bg-white">
+          <MainContent
+            books={books}
+            selectedBook={selectedBook}
+            searchQuery={searchQuery}
+            sortBy={sortBy}
+            onSelectBook={onSelectBook}
+            onSearch={onSearch}
+            onSort={onSort}
+            toggleSidebar={toggleSidebar}
+            toggleDetailsPane={toggleDetailsPane}
+          />
+        </div>
       </div>
 
       {/* 移动端侧边栏覆盖层 */}
