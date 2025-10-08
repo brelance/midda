@@ -1,8 +1,8 @@
-import React from 'react';
-import Sidebar from './Sidebar';
-import MainContent from './MainContent';
-import DetailsPane from './DetailsPane';
-import { Book, User, NavigationItem } from '../../types/types';
+import React from "react";
+import Sidebar from "./Sidebar";
+import MainContent from "./MainContent";
+import DetailsPane from "./DetailsPane";
+import { Book, User, NavigationItem } from "../../types/types";
 
 interface LayoutProps {
   books: Book[];
@@ -10,7 +10,7 @@ interface LayoutProps {
   selectedBook: Book | null;
   activeNav: NavigationItem;
   searchQuery: string;
-  sortBy: 'title' | 'author' | 'progress' | 'addedDate';
+  sortBy: "title" | "author" | "progress" | "addedDate";
   isSidebarOpen: boolean;
   isDetailsPaneOpen: boolean;
   onSelectBook: (book: Book) => void;
@@ -45,73 +45,54 @@ const Layout: React.FC<LayoutProps> = ({
     <div className="h-screen bg-[#f5f5dc]">
       {/* 桌面端：三栏布局 */}
       <div className="hidden lg:flex h-full w-full desktop-layout">
-        <div className="w-64 bg-[#bbe7d0] border-r-4 border-black flex-shrink-0">
-          <div className="p-4">
-            <h2 className="text-xl font-black">桌面端Sidebar</h2>
-          </div>
-          <Sidebar
-            activeNav={activeNav}
-            onNavChange={onNavChange}
-            user={user}
-            isMobile={false}
-            isOpen={true}
-            onClose={() => {}}
-          />
-        </div>
-        <div className="flex-1 bg-white">
-          <MainContent
-            books={books}
-            selectedBook={selectedBook}
-            searchQuery={searchQuery}
-            sortBy={sortBy}
-            onSelectBook={onSelectBook}
-            onSearch={onSearch}
-            onSort={onSort}
-            toggleSidebar={toggleSidebar}
-            toggleDetailsPane={toggleDetailsPane}
-          />
-        </div>
-        <div className="w-80 bg-[#fff3b0] border-l-4 border-black flex-shrink-0">
-          <div className="p-4">
-            <h2 className="text-xl font-black">桌面端DetailsPane</h2>
-          </div>
-          <DetailsPane
-            selectedBook={selectedBook}
-            isMobile={false}
-            isOpen={true}
-            onClose={() => {}}
-          />
-        </div>
+        <Sidebar
+          activeNav={activeNav}
+          onNavChange={onNavChange}
+          user={user}
+          isMobile={false}
+          isOpen={true}
+          onClose={() => {}}
+        />
+        <MainContent
+          books={books}
+          selectedBook={selectedBook}
+          searchQuery={searchQuery}
+          sortBy={sortBy}
+          onSelectBook={onSelectBook}
+          onSearch={onSearch}
+          onSort={onSort}
+          toggleSidebar={toggleSidebar}
+          toggleDetailsPane={toggleDetailsPane}
+        />
+        <DetailsPane
+          selectedBook={selectedBook}
+          isMobile={false}
+          isOpen={true}
+          onClose={() => {}}
+        />
       </div>
 
       {/* 平板端：两栏布局 */}
       <div className="hidden md:flex lg:hidden h-full w-full tablet-layout">
-        <div className="w-64 bg-[#bbe7d0] border-r-4 border-black flex-shrink-0">
-          <div className="p-4">
-            <h2 className="text-xl font-black">平板端Sidebar</h2>
-          </div>
-          <Sidebar
-            activeNav={activeNav}
-            onNavChange={onNavChange}
-            user={user}
-            isMobile={false}
-            isOpen={true}
-            onClose={() => {}}
-          />
-        </div>
-        <div className="flex-1 bg-white">
-          <MainContent
-            books={books}
-            selectedBook={selectedBook}
-            searchQuery={searchQuery}
-            sortBy={sortBy}
-            onSelectBook={onSelectBook}
-            onSearch={onSearch}
-            onSort={onSort}
-            toggleSidebar={toggleSidebar}
-            toggleDetailsPane={toggleDetailsPane}
-          />
-        </div>
+        <Sidebar
+          activeNav={activeNav}
+          onNavChange={onNavChange}
+          user={user}
+          isMobile={false}
+          isOpen={true}
+          onClose={() => {}}
+        />
+        <MainContent
+          books={books}
+          selectedBook={selectedBook}
+          searchQuery={searchQuery}
+          sortBy={sortBy}
+          onSelectBook={onSelectBook}
+          onSearch={onSearch}
+          onSort={onSort}
+          toggleSidebar={toggleSidebar}
+          toggleDetailsPane={toggleDetailsPane}
+        />
       </div>
 
       {/* 移动端：单栏布局 */}
