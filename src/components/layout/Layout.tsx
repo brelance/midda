@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({
   return (
     <div className="h-screen bg-[#f5f5dc]">
       {/* 桌面端：三栏布局 */}
-      <div className="hidden lg:flex h-full w-full">
+      <div className="hidden lg:flex h-full w-full desktop-layout">
         <div className="w-64 bg-[#bbe7d0] border-r-4 border-black flex-shrink-0">
           <div className="p-4">
             <h2 className="text-xl font-black">桌面端Sidebar</h2>
@@ -85,7 +85,7 @@ const Layout: React.FC<LayoutProps> = ({
       </div>
 
       {/* 平板端：两栏布局 */}
-      <div className="hidden md:flex lg:hidden h-full w-full">
+      <div className="hidden md:flex lg:hidden h-full w-full tablet-layout">
         <div className="w-64 bg-[#bbe7d0] border-r-4 border-black flex-shrink-0">
           <div className="p-4">
             <h2 className="text-xl font-black">平板端Sidebar</h2>
@@ -115,7 +115,7 @@ const Layout: React.FC<LayoutProps> = ({
       </div>
 
       {/* 移动端：单栏布局 */}
-      <div className="flex md:hidden h-full w-full">
+      <div className="flex md:hidden h-full w-full mobile-layout">
         <div className="flex-1 bg-white">
           <MainContent
             books={books}
@@ -177,7 +177,7 @@ const Layout: React.FC<LayoutProps> = ({
       {/* 平板端详情面板覆盖层 */}
       {isDetailsPaneOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:flex lg:hidden items-center justify-center"
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:flex lg:hidden items-center justify-center tablet-details-overlay"
           onClick={closeDetailsPane}
         >
           <div

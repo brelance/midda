@@ -1,5 +1,241 @@
+@tailwind base;
+@tailwind components;
 @tailwind utilities;
 
+/* 阅读器应用样式 */
+body {
+  font-family: "Public Sans", sans-serif;
+  font-weight: 700;
+  background-color: #f5f5dc;
+  color: #3d2b1f;
+  line-height: 1.2;
+}
+
+/* 隐藏滚动条 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* 书籍选中高亮 */
+.book-item-active .border-dashed {
+  outline: 5px solid #a0c4e8;
+  outline-offset: 4px;
+}
+
+/* 导航选中状态 */
+.nav-item-active {
+  background-color: #b3312c !important;
+  color: #ffffff !important;
+  border-radius: 16px;
+}
+
+/* 响应式面板样式 */
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background-color: #f5f5dc;
+  border-right: 4px solid #3d2b1f;
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.mobile-sidebar.open {
+  transform: translateX(0);
+}
+
+.mobile-details-pane {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background-color: #f5f5dc;
+  border-left: 4px solid #3d2b1f;
+  z-index: 50;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.mobile-details-pane.open {
+  transform: translateX(0);
+}
+
+#analyzedSentenceOutput {
+  line-height: 1.8; /* 减少行高 */
+  padding-top: 0.5em; /* 减少上内边距 */
+  padding-bottom: 0.4em; /* 减少下内边距 */
+  word-spacing: 0.3em; /* 增加词间距 */
+  overflow-wrap: break-word; /* 允许长单词在必要时换行 */
+  word-break: break-all; /* 在必要时允许在单词中间换行 */
+}
+
+@media (max-width: 640px) {
+  #analyzedSentenceOutput {
+    line-height: 3.2; /* 移动设备上略小的行高 */
+    word-spacing: 0.2em; /* 移动设备上略小的词间距 */
+    font-size: 0.95rem; /* 移动设备上略小的字体大小 */
+  }
+}
+
+.can-select-section {
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  -ms-user-select: auto;
+  user-select: auto;
+}
+
+.word-unit-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 2px;
+  padding: 0;
+  vertical-align: baseline;
+  position: relative;
+  min-width: 1.2em; /* 确保有最小宽度 */
+}
+
+.word-token {
+  position: relative;
+  display: inline-block;
+  padding: 0 3px;
+  padding-bottom: 2px;
+  padding-top: 1em; /* 减少上内边距 */
+  font-size: 1.1rem; /* 减小字体大小 */
+  color: #2c3e50;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  line-height: 1.2; /* 略微增加行高 */
+  margin: 0 1px; /* 添加词间距 */
+}
+
+@media (max-width: 640px) {
+  .word-token {
+    font-size: 1rem; /* 移动设备上的字体大小 */
+    padding-top: 1.6em; /* 移动设备上稍小的上内边距 */
+    padding: 0 2px; /* 较小的水平内边距 */
+  }
+}
+
+.word-token::after {
+  content: "";
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  width: 90%;
+  bottom: -2px;
+  height: 3px;
+  background-color: transparent;
+  border-radius: 1.5px;
+  transition: background-color 0.2s ease;
+}
+
+.word-token.pos-名詞::after {
+  background-color: #89cff0;
+}
+.word-token.pos-動詞::after {
+  background-color: #77dd77;
+}
+.word-token.pos-形容詞::after {
+  background-color: #ffb347;
+}
+.word-token.pos-副詞::after {
+  background-color: #c3b1e1;
+}
+.word-token.pos-助詞::after {
+  background-color: #ff6961;
+}
+.word-token.pos-助動詞::after {
+  background-color: #ff8fab;
+}
+.word-token.pos-接続詞::after {
+  background-color: #d2b48c;
+}
+.word-token.pos-感動詞::after {
+  background-color: #aec6cf;
+}
+.word-token.pos-連体詞::after {
+  background-color: #7fffd4;
+}
+.word-token.pos-代名詞::after {
+  background-color: #add8e6;
+}
+.word-token.pos-形状詞::after {
+  background-color: #fdfd96;
+}
+.word-token.pos-記号::after {
+  background-color: transparent !important;
+}
+.word-token.pos-接頭辞::after {
+  background-color: #dcdcdc;
+}
+.word-token.pos-接尾辞::after {
+  background-color: #e6e6fa;
+}
+.word-token.pos-フィラー::after {
+  background-color: #f5f5f5;
+}
+.word-token.pos-その他::after {
+  background-color: #c0c0c0;
+}
+.word-token.pos-default::after {
+  background-color: #e0e0e0;
+}
+
+/* 响应式布局容器可见性保障 */
+.desktop-layout,
+.tablet-layout {
+  display: none !important;
+}
+
+.mobile-layout {
+  display: flex !important;
+}
+
+@media (min-width: 768px) {
+  .mobile-layout {
+    display: none !important;
+  }
+  .tablet-layout {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .desktop-layout {
+    display: flex !important;
+  }
+  .tablet-layout {
+    display: none !important;
+  }
+}
+
+.tablet-details-overlay {
+  display: none !important;
+}
+
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .tablet-details-overlay {
+    display: flex !important;
+  }
+}
 #analyzedSentenceOutput {
   line-height: 1.8; /* 减少行高 */
   padding-top: 0.5em; /* 减少上内边距 */
