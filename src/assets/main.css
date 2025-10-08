@@ -426,3 +426,67 @@ body {
   color: #ffffff !important;
   border-radius: 16px;
 }
+
+/* 响应式面板样式 */
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background-color: #f5f5dc;
+  border-right: 4px solid #3d2b1f;
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.mobile-sidebar.open {
+  transform: translateX(0);
+}
+
+.mobile-details-pane {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background-color: #f5f5dc;
+  border-left: 4px solid #3d2b1f;
+  z-index: 50;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.mobile-details-pane.open {
+  transform: translateX(0);
+}
+
+/* 桌面端保持原有布局 */
+@media (min-width: 1024px) {
+  .mobile-overlay,
+  .mobile-sidebar,
+  .mobile-details-pane {
+    display: none;
+  }
+}
+
+/* 平板端：DetailsPane默认隐藏 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-hidden {
+    display: none;
+  }
+}

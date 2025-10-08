@@ -70,13 +70,25 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortByIndex, setSortByIndex] = useState(0);
 
+  // 响应式状态管理
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDetailsPaneOpen, setIsDetailsPaneOpen] = useState(false);
+
   const handleSelectBook = (book: Book) => {
     setSelectedBook(book);
+    // 在移动端选择书籍时自动打开详情面板
+    if (window.innerWidth < 768) {
+      setIsDetailsPaneOpen(true);
+    }
   };
 
   const handleNavChange = (nav: NavigationItem) => {
     setActiveNav(nav);
     console.log(`导航到: ${nav}`);
+    // 在移动端导航后关闭侧边栏
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
   };
 
   const handleSearch = (query: string) => {
@@ -86,6 +98,22 @@ export default function App() {
   const handleSort = () => {
     setSortByIndex((prev) => (prev + 1) % sortOptions.length);
     console.log(`排序方式: ${sortOptions[sortByIndex]}`);
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const toggleDetailsPane = () => {
+    setIsDetailsPaneOpen(!isDetailsPaneOpen);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
+  const closeDetailsPane = () => {
+    setIsDetailsPaneOpen(false);
   };
 
   const sortBy = sortOptions[sortByIndex];
@@ -98,10 +126,16 @@ export default function App() {
       activeNav={activeNav}
       searchQuery={searchQuery}
       sortBy={sortBy}
+      isSidebarOpen={isSidebarOpen}
+      isDetailsPaneOpen={isDetailsPaneOpen}
       onSelectBook={handleSelectBook}
       onNavChange={handleNavChange}
       onSearch={handleSearch}
       onSort={handleSort}
+      toggleSidebar={toggleSidebar}
+      toggleDetailsPane={toggleDetailsPane}
+      closeSidebar={closeSidebar}
+      closeDetailsPane={closeDetailsPane}
     />
   );
 }

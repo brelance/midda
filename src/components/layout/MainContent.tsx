@@ -8,6 +8,8 @@ interface MainContentProps {
   selectedBook: Book | null;
   searchQuery: string;
   sortBy: 'title' | 'author' | 'progress' | 'addedDate';
+  toggleSidebar: () => void;
+  toggleDetailsPane: () => void;
   onSelectBook: (book: Book) => void;
   onSearch: (query: string) => void;
   onSort: () => void;
@@ -18,6 +20,8 @@ const MainContent: React.FC<MainContentProps> = ({
   selectedBook,
   searchQuery,
   sortBy,
+  toggleSidebar,
+  toggleDetailsPane,
   onSelectBook,
   onSearch,
   onSort,
@@ -45,11 +49,14 @@ const MainContent: React.FC<MainContentProps> = ({
   });
 
   return (
-    <main className="flex-1 flex flex-col overflow-hidden border-r-4 border-black">
+    <main className="flex-1 flex flex-col overflow-hidden border-r-4 border-black md:border-r-0 lg:border-r-4">
       <Header
         searchQuery={searchQuery}
         onSearch={onSearch}
         onSort={onSort}
+        toggleSidebar={toggleSidebar}
+        toggleDetailsPane={toggleDetailsPane}
+        selectedBook={selectedBook}
       />
       <BookGrid
         books={sortedBooks}
