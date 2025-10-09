@@ -1,11 +1,13 @@
-import { ipcMain, dialog } from 'electron';
+import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { EPUBService } from './epubService';
 
 export function setupEpubApiHandler() {
   const epubService = new EPUBService();
 
-  ipcMain.handle('epub:select-file', async () => {
-    const result = await dialog.showOpenDialog({
+  ipcMain.handle('epub:select-file', async (event) => {
+    const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+
+    const result = await dialog.showOpenDialog(parentWindow, {
       properties: ['openFile'],
       filters: [
         { name: 'EPUB Files', extensions: ['epub'] },
