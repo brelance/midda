@@ -14,6 +14,7 @@ interface MainContentProps {
   onSearch: (query: string) => void;
   onSort: () => void;
   onBookAdded?: (bookData: EpubBookData) => void;
+  onStartReading?: () => void;
 }
 
 const MainContent: React.FC<MainContentProps> = ({
@@ -27,6 +28,7 @@ const MainContent: React.FC<MainContentProps> = ({
   onSearch,
   onSort,
   onBookAdded,
+  onStartReading,
 }) => {
   // 过滤书籍
   const filteredBooks = books.filter(book =>
@@ -65,6 +67,7 @@ const MainContent: React.FC<MainContentProps> = ({
         books={sortedBooks}
         selectedBook={selectedBook}
         onSelectBook={onSelectBook}
+        onStartReading={onStartReading}
       />
     </main>
   );

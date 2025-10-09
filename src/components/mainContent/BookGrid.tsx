@@ -7,12 +7,14 @@ interface BookGridProps {
   books: Book[];
   selectedBook: Book | null;
   onSelectBook: (book: Book) => void;
+  onStartReading?: () => void;
 }
 
 const BookGrid: React.FC<BookGridProps> = ({
   books,
   selectedBook,
   onSelectBook,
+  onStartReading,
 }) => {
   return (
     <div className="flex-grow p-4 md:p-6 overflow-y-auto bg-[#f5f5dc] no-scrollbar">
@@ -23,6 +25,7 @@ const BookGrid: React.FC<BookGridProps> = ({
             book={book}
             isSelected={selectedBook?.id === book.id}
             onClick={() => onSelectBook(book)}
+            onStartReading={onStartReading}
           />
         ))}
         <AddBookButton />
