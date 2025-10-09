@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>阅读器APP - 桌面端 (可爱风格粗野主义)</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入无衬线字体 Public Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* 全局可爱风格粗野主义 */
+      :root {
+        --sakura-pink: #ffb7c5;
+        --mint-green: #b2f2bb;
+        --cream-yellow: #fffacd;
+        --sky-blue: #87cefa;
+        --soft-black: #5d4037; /* 使用柔和的深棕色代替纯黑 */
+        --white: #ffffff;
+      }
+
+      body {
+        font-family: "Public Sans", sans-serif;
+        font-weight: 700; /* 默认粗体 */
+        background-color: var(--cream-yellow);
+        color: var(--soft-black);
+        line-height: 1.2; /* 紧凑行距 */
+      }
+
+      /* 粗野主义核心元素：粗边框和硬阴影 */
+      .brutalist-element {
+        border: 4px solid var(--soft-black);
+        border-radius: 20px; /* 夸张的圆角 */
+        box-shadow: 6px 6px 0px 0px var(--soft-black); /* 厚重阴影 */
+        transition: all 0.1s ease-in-out;
+      }
+
+      /* 卡片 */
+      .brutalist-card {
+        background-color: var(--white);
+      }
+
+      /* 按钮 */
+      .brutalist-button {
+        background-color: var(--sakura-pink);
+        color: var(--soft-black);
+        cursor: pointer;
+        text-align: center;
+        font-weight: 900; /* 更粗的字重 */
+        padding: 0.75rem 1.5rem;
+      }
+      .brutalist-button:hover {
+        transform: translate(3px, 3px);
+        box-shadow: 3px 3px 0px 0px var(--soft-black);
+      }
+      .brutalist-button:active {
+        transform: translate(6px, 6px);
+        box-shadow: 0px 0px 0px 0px var(--soft-black);
+      }
+      .brutalist-button-primary {
+        background-color: var(--sky-blue);
+        color: var(--white);
+      }
+
+      /* 书籍封面占位符 */
+      .wireframe-box {
+        background-color: var(--white);
+        border: 3px dashed var(--soft-black);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: var(--soft-black);
+        border-radius: 16px;
+      }
+
+      /* 输入框 */
+      .brutalist-input {
+        background-color: var(--white);
+        font-weight: 700;
+        padding: 0.5rem 1rem 0.5rem 2.5rem; /* 为图标留出空间 */
+      }
+      .brutalist-input:focus {
+        outline: 4px solid var(--sakura-pink);
+        outline-offset: 2px;
+      }
+
+      /* 导航选中状态 */
+      .nav-item-active {
+        background-color: var(--sakura-pink) !important;
+        color: var(--soft-black) !important;
+        border-radius: 16px;
+      }
+
+      /* 书籍选中高亮 */
+      .book-item-active .wireframe-box {
+        outline: 5px solid var(--sky-blue);
+        outline-offset: 4px;
+      }
+
+      /* 进度条 */
+      .progress-bar-bg {
+        background-color: var(--white);
+      }
+      .progress-bar-fill {
+        background-color: var(--mint-green);
+        height: 100%;
+        border-radius: 8px;
+      }
+
+      /* 隐藏滚动条 */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="flex h-screen bg-cream-yellow">
+      <!-- 1. 左侧导航栏 -->
+      <aside
+        class="w-64 flex-shrink-0 bg-cream-yellow border-r-4 border-soft-black flex flex-col p-4"
+      >
+        <!-- Logo -->
+        <div
+          class="h-16 flex items-center justify-center font-black text-3xl mb-4"
+        >
+          阅读器APP
+        </div>
+        <!-- 导航菜单 -->
+        <nav class="flex-grow">
+          <ul>
+            <li>
+              <a
+                href="#"
+                class="nav-item flex items-center p-3 rounded-2xl font-bold text-xl"
+                ><svg
+                  class="w-6 h-6 mr-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"
+                  ></path></svg
+                >书架</a
+              >
+            </li>
+            <li>
+              <a
+                href="#"
+                class="nav-item flex items-center p-3 rounded-2xl mt-2 font-bold text-xl"
+                ><svg
+                  class="w-6 h-6 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="3"
+                    d="M8 16l4-4-4-4m4 4l4-4-4-4"
+                  ></path></svg
+                >发现</a
+              >
+            </li>
+            <li>
+              <a
+                href="#"
+                class="nav-item flex items-center p-3 rounded-2xl mt-2 font-bold text-xl"
+                ><svg
+                  class="w-6 h-6 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="3"
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  ></path></svg
+                >书城</a
+              >
+            </li>
+          </ul>
+        </nav>
+        <!-- 用户信息 -->
+        <div class="pt-4 border-t-4 border-soft-black">
+          <a
+            href="#"
+            class="nav-item flex items-center p-3 rounded-2xl font-bold text-xl"
+          >
+            <svg
+              class="w-7 h-7 mr-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="3"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              ></path>
+            </svg>
+            <span>我的账户</span>
+          </a>
+        </div>
+      </aside>
+
+      <!-- 2. 中间主内容区 -->
+      <main
+        class="flex-1 flex flex-col overflow-hidden border-r-4 border-soft-black"
+      >
+        <!-- 内容区头部 -->
+        <header
+          class="h-20 flex-shrink-0 flex items-center justify-between p-4 border-b-4 border-soft-black bg-cream-yellow"
+        >
+          <h1 class="text-4xl font-black">我的书架</h1>
+          <div class="flex items-center space-x-4">
+            <div class="relative w-64">
+              <input
+                type="text"
+                placeholder="搜索..."
+                class="w-full brutalist-element brutalist-input text-lg"
+              />
+              <svg
+                class="w-6 h-6 text-soft-black absolute left-3 top-1/2 -translate-y-1/2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+            </div>
+            <button class="brutalist-element brutalist-button text-lg">
+              排序
+            </button>
+          </div>
+        </header>
+        <!-- 书籍网格 -->
+        <div class="flex-grow p-6 overflow-y-auto no-scrollbar bg-cream-yellow">
+          <div
+            class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8"
+          >
+            <!-- 书籍项模板 -->
+            <div class="book-item text-center cursor-pointer">
+              <div class="w-full h-48 wireframe-box mb-2">书籍封面</div>
+              <p class="font-black text-lg truncate">很长的书籍名称</p>
+              <p class="text-base">作者名</p>
+            </div>
+            <!-- 重复书籍项... -->
+            <div class="book-item text-center cursor-pointer">
+              <div class="w-full h-48 wireframe-box mb-2">书籍封面</div>
+              <p class="font-black text-lg truncate">书名</p>
+              <p class="text-base">作者名</p>
+            </div>
+            <div class="book-item text-center cursor-pointer">
+              <div class="w-full h-48 wireframe-box mb-2">书籍封面</div>
+              <p class="font-black text-lg truncate">书名</p>
+              <p class="text-base">作者名</p>
+            </div>
+            <div class="book-item text-center cursor-pointer">
+              <div class="w-full h-48 wireframe-box mb-2">书籍封面</div>
+              <p class="font-black text-lg truncate">书名</p>
+              <p class="text-base">作者名</p>
+            </div>
+            <div class="book-item text-center cursor-pointer">
+              <div class="w-full h-48 wireframe-box mb-2">书籍封面</div>
+              <p class="font-black text-lg truncate">书名</p>
+              <p class="text-base">作者名</p>
+            </div>
+            <!-- 添加书籍按钮 -->
+            <div class="text-center">
+              <div
+                class="w-full h-48 wireframe-box mb-2 cursor-pointer flex-col"
+              >
+                <svg
+                  class="w-12 h-12 text-soft-black"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="3"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  ></path>
+                </svg>
+                <span class="mt-2 text-lg font-black">添加书籍</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- 3. 右侧详情/阅读区 -->
+      <aside class="w-80 flex-shrink-0 flex flex-col bg-cream-yellow">
+        <div class="flex-grow p-6">
+          <h2 class="text-3xl font-black mb-4">继续阅读</h2>
+          <div class="brutalist-element brutalist-card p-4">
+            <div class="w-24 h-36 wireframe-box mx-auto">书籍封面</div>
+            <h3 class="font-black text-2xl text-center mt-3">书籍名称</h3>
+            <p class="text-base text-center mt-1">作者名</p>
+            <div class="w-full h-5 mt-4 brutalist-element progress-bar-bg p-1">
+              <div class="progress-bar-fill" style="width: 45%"></div>
+            </div>
+            <div class="brutalist-element text-center mt-3 p-1 bg-white">
+              <span class="font-bold">状态:</span> 已读 45%
+            </div>
+            <button
+              class="w-full brutalist-element brutalist-button brutalist-button-primary mt-4 text-lg"
+            >
+              继续阅读
+            </button>
+          </div>
+
+          <div
+            id="book-details"
+            class="mt-8 opacity-0 transition-opacity duration-300"
+          >
+            <h2 class="text-3xl font-black mb-4">书籍详情</h2>
+            <div class="brutalist-element brutalist-card p-4 text-lg">
+              <p class="text-center">点击左侧书架中的一本书<br />来查看详情</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const navItems = document.querySelectorAll(".nav-item");
+        const bookItems = document.querySelectorAll(".book-item");
+        const bookDetailsSection = document.getElementById("book-details");
+        const continueReadingSection =
+          document.querySelector("aside.w-80 h2").parentElement;
+
+        navItems[0].classList.add("nav-item-active");
+
+        navItems.forEach((item) => {
+          item.addEventListener("click", (e) => {
+            e.preventDefault();
+            navItems.forEach((i) => i.classList.remove("nav-item-active"));
+            item.classList.add("nav-item-active");
+            console.log(`导航到: ${item.textContent.trim()}`);
+          });
+        });
+
+        bookItems.forEach((item) => {
+          item.addEventListener("click", () => {
+            const bookTitle = item.querySelector("p").textContent;
+            console.log(`选中了书籍: ${bookTitle}`);
+
+            continueReadingSection.classList.add("hidden");
+            bookDetailsSection.classList.remove("opacity-0");
+            bookDetailsSection.querySelector(
+              "p"
+            ).innerHTML = `这里显示 <strong class="font-black">${bookTitle}</strong> 的详细信息，例如简介、目录、笔记等。`;
+
+            bookItems.forEach((i) => i.classList.remove("book-item-active"));
+            item.classList.add("book-item-active");
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

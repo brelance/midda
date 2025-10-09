@@ -1,7 +1,4 @@
-@tailwind base;
-@tailwind components;
 @tailwind utilities;
-
 /* 阅读器应用样式 */
 body {
   font-family: "Public Sans", sans-serif;

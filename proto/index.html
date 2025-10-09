@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>阅读器APP - 桌面端线框图</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* 自定义线框图样式 */
+      .wireframe-box {
+        background-color: #f3f4f6; /* light grey background */
+        border: 2px dashed #9ca3af; /* dashed grey border */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #6b7280;
+        font-size: 0.875rem;
+        border-radius: 0.5rem;
+      }
+      /* 隐藏滚动条 */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 text-gray-800">
+    <div class="flex h-screen bg-white">
+      <!-- 1. 左侧导航栏 -->
+      <aside class="w-64 flex-shrink-0 bg-gray-50 border-r flex flex-col">
+        <!-- Logo -->
+        <div
+          class="h-16 flex items-center justify-center font-bold text-xl border-b"
+        >
+          阅读器APP
+        </div>
+        <!-- 导航菜单 -->
+        <nav class="flex-grow p-4">
+          <ul>
+            <li>
+              <a
+                href="#"
+                class="nav-item flex items-center p-3 rounded-lg bg-blue-100 text-blue-600 font-semibold"
+                ><svg
+                  class="w-5 h-5 mr-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"
+                  ></path></svg
+                >书架</a
+              >
+            </li>
+            <li>
+              <a
+                href="#"
+                class="nav-item flex items-center p-3 rounded-lg hover:bg-gray-200 mt-2"
+                ><svg
+                  class="w-5 h-5 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 16l4-4-4-4m4 4l4-4-4-4"
+                  ></path></svg
+                >发现</a
+              >
+            </li>
+            <li>
+              <a
+                href="#"
+                class="nav-item flex items-center p-3 rounded-lg hover:bg-gray-200 mt-2"
+                ><svg
+                  class="w-5 h-5 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  ></path></svg
+                >书城</a
+              >
+            </li>
+          </ul>
+        </nav>
+        <!-- 用户信息 -->
+        <div class="p-4 border-t">
+          <a
+            href="#"
+            class="nav-item flex items-center p-3 rounded-lg hover:bg-gray-200"
+          >
+            <svg
+              class="w-6 h-6 mr-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              ></path>
+            </svg>
+            <span>我的账户</span>
+          </a>
+        </div>
+      </aside>
+
+      <!-- 2. 中间主内容区 -->
+      <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- 内容区头部 -->
+        <header
+          class="h-16 flex items-center justify-between p-4 border-b bg-white"
+        >
+          <h1 class="text-2xl font-bold">我的书架</h1>
+          <div class="flex items-center space-x-4">
+            <div class="relative w-64">
+              <input
+                type="text"
+                placeholder="搜索我的书架..."
+                class="w-full pl-10 pr-4 py-2 border rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <svg
+                class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+            </div>
+            <button class="text-sm">排序方式</button>
+            <button class="text-sm">视图切换</button>
+          </div>
+        </header>
+        <!-- 书籍网格 -->
+        <div class="flex-grow p-6 overflow-y-auto no-scrollbar">
+          <div
+            class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+          >
+            <!-- 书籍项模板 -->
+            <div class="book-item text-center cursor-pointer group">
+              <div
+                class="w-full h-48 wireframe-box mb-2 group-hover:scale-105 transition-transform duration-200"
+              >
+                书籍封面
+              </div>
+              <p class="font-semibold truncate">很长的书籍名称</p>
+              <p class="text-sm text-gray-500">作者名</p>
+            </div>
+            <!-- 重复书籍项... -->
+            <div class="book-item text-center cursor-pointer group">
+              <div
+                class="w-full h-48 wireframe-box mb-2 group-hover:scale-105 transition-transform duration-200"
+              >
+                书籍封面
+              </div>
+              <p class="font-semibold truncate">书名</p>
+              <p class="text-sm text-gray-500">作者名</p>
+            </div>
+            <div class="book-item text-center cursor-pointer group">
+              <div
+                class="w-full h-48 wireframe-box mb-2 group-hover:scale-105 transition-transform duration-200"
+              >
+                书籍封面
+              </div>
+              <p class="font-semibold truncate">书名</p>
+              <p class="text-sm text-gray-500">作者名</p>
+            </div>
+            <div class="book-item text-center cursor-pointer group">
+              <div
+                class="w-full h-48 wireframe-box mb-2 group-hover:scale-105 transition-transform duration-200"
+              >
+                书籍封面
+              </div>
+              <p class="font-semibold truncate">书名</p>
+              <p class="text-sm text-gray-500">作者名</p>
+            </div>
+            <div class="book-item text-center cursor-pointer group">
+              <div
+                class="w-full h-48 wireframe-box mb-2 group-hover:scale-105 transition-transform duration-200"
+              >
+                书籍封面
+              </div>
+              <p class="font-semibold truncate">书名</p>
+              <p class="text-sm text-gray-500">作者名</p>
+            </div>
+            <!-- 添加书籍按钮 -->
+            <div class="text-center">
+              <div
+                class="w-full h-48 wireframe-box mb-2 cursor-pointer hover:bg-gray-200 flex-col"
+              >
+                <svg
+                  class="w-10 h-10 text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  ></path>
+                </svg>
+                <span class="mt-2">添加书籍</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- 3. 右侧详情/阅读区 -->
+      <aside class="w-80 flex-shrink-0 border-l flex flex-col bg-gray-50">
+        <div class="flex-grow p-6">
+          <h2 class="text-lg font-semibold mb-4">继续阅读</h2>
+          <div class="bg-white p-4 rounded-lg shadow-md">
+            <div class="w-24 h-36 wireframe-box mx-auto">书籍封面</div>
+            <h3 class="font-bold text-center mt-3">书籍名称</h3>
+            <p class="text-sm text-gray-500 text-center mt-1">作者名</p>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-4">
+              <div
+                class="bg-blue-500 h-1.5 rounded-full"
+                style="width: 45%"
+              ></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1 text-right">已读 45%</p>
+            <button
+              class="w-full bg-blue-500 text-white py-2 rounded-lg mt-4 hover:bg-blue-600"
+            >
+              继续阅读
+            </button>
+          </div>
+
+          <div id="book-details" class="mt-8 hidden">
+            <h2 class="text-lg font-semibold mb-4">书籍详情</h2>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+              <p class="text-center text-gray-500">
+                点击左侧书架中的一本书<br />来查看详情
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const navItems = document.querySelectorAll(".nav-item");
+        const bookItems = document.querySelectorAll(".book-item");
+        const bookDetailsSection = document.getElementById("book-details");
+
+        // 模拟左侧导航切换
+        navItems.forEach((item) => {
+          item.addEventListener("click", (e) => {
+            e.preventDefault();
+            navItems.forEach((i) => {
+              i.classList.remove(
+                "bg-blue-100",
+                "text-blue-600",
+                "font-semibold"
+              );
+              i.classList.add("hover:bg-gray-200");
+            });
+            item.classList.add("bg-blue-100", "text-blue-600", "font-semibold");
+            item.classList.remove("hover:bg-gray-200");
+            console.log(`导航到: ${item.textContent.trim()}`);
+          });
+        });
+
+        // 模拟点击书籍显示详情
+        bookItems.forEach((item) => {
+          item.addEventListener("click", () => {
+            const bookTitle = item.querySelector("p").textContent;
+            console.log(`选中了书籍: ${bookTitle}`);
+
+            // 在实际应用中，这里会用真实数据更新右侧面板
+            bookDetailsSection.classList.remove("hidden");
+            bookDetailsSection.querySelector(
+              "p"
+            ).innerHTML = `这里显示 <strong class="text-gray-800">${bookTitle}</strong> 的详细信息，例如简介、目录、笔记等。`;
+
+            // 高亮选中的书籍
+            bookItems.forEach((i) =>
+              i.classList.remove("ring-2", "ring-blue-500", "rounded-lg", "p-2")
+            );
+            item.classList.add("ring-2", "ring-blue-500", "rounded-lg", "p-2");
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
