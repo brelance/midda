@@ -7,7 +7,7 @@ interface BookGridProps {
   books: Book[];
   selectedBook: Book | null;
   onSelectBook: (book: Book) => void;
-  onStartReading?: () => void;
+  onStartReading?: (book: Book) => void;
 }
 
 const BookGrid: React.FC<BookGridProps> = ({

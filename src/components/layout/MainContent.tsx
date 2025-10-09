@@ -14,7 +14,7 @@ interface MainContentProps {
   onSearch: (query: string) => void;
   onSort: () => void;
   onBookAdded?: (bookData: EpubBookData) => void;
-  onStartReading?: () => void;
+  onStartReading?: (book: Book) => void;
 }
 
 const MainContent: React.FC<MainContentProps> = ({

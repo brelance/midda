@@ -5,7 +5,7 @@ interface BookItemProps {
   book: Book;
   isSelected: boolean;
   onClick: () => void;
-  onStartReading?: () => void;
+  onStartReading?: (book: Book) => void;
 }
 
 const BookItem: React.FC<BookItemProps> = ({ book, isSelected, onClick, onStartReading }) => {
@@ -16,7 +16,7 @@ const BookItem: React.FC<BookItemProps> = ({ book, isSelected, onClick, onStartR
   const handleStartReading = (e: React.MouseEvent) => {
     e.stopPropagation(); // 阻止事件冒泡
     if (onStartReading) {
-      onStartReading();
+      onStartReading(book);
     }
   };
 

@@ -22,7 +22,7 @@ interface LayoutProps {
   closeSidebar: () => void;
   closeDetailsPane: () => void;
   onBookAdded?: (bookData: EpubBookData) => void;
-  onStartReading?: () => void;
+  onStartReading?: (book: Book) => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -116,6 +116,8 @@ const Layout: React.FC<LayoutProps> = ({
             onSort={onSort}
             toggleSidebar={toggleSidebar}
             toggleDetailsPane={toggleDetailsPane}
+            onBookAdded={onBookAdded}
+            onStartReading={onStartReading}
           />
         </div>
       </div>
