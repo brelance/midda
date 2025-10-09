@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Layout from './components/layout/Layout';
-import { Book, User, NavigationItem } from './types/types';
+import { Book, User, NavigationItem, EpubBookData } from './types/types';
 
 // 模拟数据
 const mockBooks: Book[] = [
@@ -64,7 +64,7 @@ const mockUser: User = {
 const sortOptions = ['title', 'author', 'progress', 'addedDate'] as const;
 
 export default function App() {
-  const [books] = useState<Book[]>(mockBooks);
+  const [books, setBooks] = useState<Book[]>(mockBooks);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [activeNav, setActiveNav] = useState<NavigationItem>('bookshelf');
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,6 +116,35 @@ export default function App() {
     setIsDetailsPaneOpen(false);
   };
 
+  const handleBookAdded = (epubData: EpubBookData) => {
+    // 将EpubBookData转换为Book对象并添加到书籍列表
+    const newBook: Book = {
+      id: epubData.id,
+      title: epubData.title,
+      author: epubData.author,
+      cover: epubData.cover,
+      progress: epubData.progress,
+      status: epubData.status,
+      description: epubData.metadata.description,
+      chapters: epubData.chapters.map(chapter => ({
+        id: chapter.id,
+        title: chapter.title,
+        pageNumber: 0, // EPUB没有页码概念
+        isRead: false,
+        content: chapter.content,
+        href: chapter.href,
+        order: chapter.order
+      })),
+      addedDate: epubData.addedDate,
+      lastReadDate: undefined,
+      filePath: epubData.filePath,
+      metadata: epubData.metadata
+    };
+
+    setBooks(prevBooks => [...prevBooks, newBook]);
+    console.log('新书已添加:', newBook.title);
+  };
+
   const sortBy = sortOptions[sortByIndex];
 
   return (
@@ -136,6 +165,7 @@ export default function App() {
       toggleDetailsPane={toggleDetailsPane}
       closeSidebar={closeSidebar}
       closeDetailsPane={closeDetailsPane}
+      onBookAdded={handleBookAdded}
     />
   );
 }

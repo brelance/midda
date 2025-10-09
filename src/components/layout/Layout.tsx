@@ -2,7 +2,7 @@ import React from "react";
 import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
 import DetailsPane from "./DetailsPane";
-import { Book, User, NavigationItem } from "../../types/types";
+import { Book, User, NavigationItem, EpubBookData } from "../../types/types";
 
 interface LayoutProps {
   books: Book[];
@@ -21,6 +21,7 @@ interface LayoutProps {
   toggleDetailsPane: () => void;
   closeSidebar: () => void;
   closeDetailsPane: () => void;
+  onBookAdded?: (bookData: EpubBookData) => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -40,6 +41,7 @@ const Layout: React.FC<LayoutProps> = ({
   toggleDetailsPane,
   closeSidebar,
   closeDetailsPane,
+  onBookAdded,
 }) => {
   return (
     <div className="h-screen bg-[#f5f5dc]">
@@ -63,6 +65,7 @@ const Layout: React.FC<LayoutProps> = ({
           onSort={onSort}
           toggleSidebar={toggleSidebar}
           toggleDetailsPane={toggleDetailsPane}
+          onBookAdded={onBookAdded}
         />
         <DetailsPane
           selectedBook={selectedBook}
@@ -92,6 +95,7 @@ const Layout: React.FC<LayoutProps> = ({
           onSort={onSort}
           toggleSidebar={toggleSidebar}
           toggleDetailsPane={toggleDetailsPane}
+          onBookAdded={onBookAdded}
         />
       </div>
 

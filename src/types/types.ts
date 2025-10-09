@@ -68,6 +68,8 @@ export interface Book {
   chapters?: Chapter[];
   addedDate: Date;
   lastReadDate?: Date;
+  filePath?: string; // EPUB文件路径
+  metadata?: EpubMetadata; // EPUB元数据
 }
 
 export interface Chapter {
@@ -75,6 +77,40 @@ export interface Chapter {
   title: string;
   pageNumber: number;
   isRead: boolean;
+  content?: string; // 章节内容
+  href?: string; // 章节链接
+  order?: number; // 章节顺序
+}
+
+// EPUB相关接口定义
+export interface EpubMetadata {
+  title: string;
+  creator: string;
+  description?: string;
+  language: string;
+  publisher?: string;
+  identifier: string;
+}
+
+export interface EpubChapter {
+  id: string;
+  title: string;
+  content: string;
+  href: string;
+  order: number;
+}
+
+export interface EpubBookData {
+  id: string;
+  title: string;
+  author: string;
+  cover?: string;
+  chapters: EpubChapter[];
+  metadata: EpubMetadata;
+  filePath: string;
+  addedDate: Date;
+  progress: number;
+  status: 'not-started' | 'reading' | 'completed';
 }
 
 export interface User {

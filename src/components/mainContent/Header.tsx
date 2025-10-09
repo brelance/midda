@@ -1,7 +1,8 @@
 import React from 'react';
 import SearchInput from '../ui/SearchInput';
 import BrutalistButton from '../ui/BrutalistButton';
-import { Book } from '../../types/types';
+import AddBookButton from '../AddBookButton';
+import { Book, EpubBookData } from '../../types/types';
 
 interface HeaderProps {
   searchQuery: string;
@@ -10,6 +11,7 @@ interface HeaderProps {
   toggleSidebar: () => void;
   toggleDetailsPane: () => void;
   selectedBook: Book | null;
+  onBookAdded?: (bookData: EpubBookData) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -18,7 +20,8 @@ const Header: React.FC<HeaderProps> = ({
   onSort,
   toggleSidebar,
   toggleDetailsPane,
-  selectedBook
+  selectedBook,
+  onBookAdded
 }) => {
   return (
     <header className="h-20 flex-shrink-0 flex items-center justify-between p-4 border-b-4 border-black bg-[#f5f5dc]">
@@ -86,6 +89,9 @@ const Header: React.FC<HeaderProps> = ({
         <BrutalistButton onClick={onSort} className="text-sm md:text-lg px-2 md:px-6">
           排序
         </BrutalistButton>
+
+        {/* 添加书籍按钮 */}
+        {onBookAdded && <AddBookButton onBookAdded={onBookAdded} />}
 
         {/* 移动端详情按钮（仅在有选中书籍时显示） */}
         {selectedBook && (

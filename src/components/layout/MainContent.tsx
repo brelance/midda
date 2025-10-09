@@ -1,7 +1,7 @@
 import React from 'react';
 import Header from '../mainContent/Header';
 import BookGrid from '../mainContent/BookGrid';
-import { Book } from '../../types/types';
+import { Book, EpubBookData } from '../../types/types';
 
 interface MainContentProps {
   books: Book[];
@@ -13,6 +13,7 @@ interface MainContentProps {
   onSelectBook: (book: Book) => void;
   onSearch: (query: string) => void;
   onSort: () => void;
+  onBookAdded?: (bookData: EpubBookData) => void;
 }
 
 const MainContent: React.FC<MainContentProps> = ({
@@ -25,6 +26,7 @@ const MainContent: React.FC<MainContentProps> = ({
   onSelectBook,
   onSearch,
   onSort,
+  onBookAdded,
 }) => {
   // 过滤书籍
   const filteredBooks = books.filter(book =>
@@ -57,6 +59,7 @@ const MainContent: React.FC<MainContentProps> = ({
         toggleSidebar={toggleSidebar}
         toggleDetailsPane={toggleDetailsPane}
         selectedBook={selectedBook}
+        onBookAdded={onBookAdded}
       />
       <BookGrid
         books={sortedBooks}
