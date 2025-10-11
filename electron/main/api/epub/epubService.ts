@@ -1,144 +1,256 @@
-import EPub from 'epub';
-// 类型定义
-interface EpubMetadata {
-  title: string;
-  creator: string;
-  description?: string;
-  language: string;
-  publisher?: string;
-  identifier: string;
+import { createHash } from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import EPub from "epub";
+import type {
+  EpubBookData,
+  EpubChapter,
+  EpubMetadata,
+} from "../../../../src/types/types";
+import {
+  EpubCoverError,
+  EpubParseError,
+  type EpubParseStage,
+} from "./errors";
+
+export interface ParseProgress {
+  stage: EpubParseStage;
+  percent?: number;
+  detail?: {
+    chapterId?: string;
+    current?: number;
+    total?: number;
+  };
 }
 
-interface Chapter {
-  id: string;
-  title: string;
-  content: string;
-  href: string;
-  order: number;
+export interface ParseOptions {
+  onProgress?: (progress: ParseProgress) => void;
+  includeRawHtml?: boolean;
+  sourcePath?: string;
 }
 
-interface EpubBookData {
-  id: string;
-  title: string;
-  author: string;
-  cover?: string;
-  chapters: Chapter[];
-  metadata: EpubMetadata;
-  filePath: string;
-  addedDate: Date;
-  progress: number;
-  status: 'not-started' | 'reading' | 'completed';
-}
+type ChapterProgressCallback = (
+  current: number,
+  total: number,
+  chapterId?: string
+) => void;
 
 export class EPUBService {
-  async parseEpubFile(filePath: string): Promise<EpubBookData> {
+  async parseEpubFile(
+    filePath: string,
+    options: ParseOptions = {}
+  ): Promise<EpubBookData> {
+    const { onProgress, includeRawHtml = true, sourcePath } = options;
+    const emit = (progress: ParseProgress) => onProgress?.(progress);
+
+    emit({ stage: "initializing", percent: 5 });
+
+    const id = await this.generateId(sourcePath ?? filePath);
+
     return new Promise((resolve, reject) => {
       const epub = new EPub(filePath);
 
-      epub.on('end', async () => {
+      const handleFailure = (error: unknown, stage: EpubParseStage) => {
+        if (error instanceof EpubParseError || error instanceof EpubCoverError) {
+          reject(error);
+          return;
+        }
+        reject(
+          new EpubParseError(
+            error instanceof Error ? error.message : "EPUB 解析失败",
+            stage,
+            error
+          )
+        );
+      };
+
+      epub.on("error", (error: unknown) => handleFailure(error, "initializing"));
+
+      epub.on("end", async () => {
         try {
-          const metadata = await this.extractMetadata(epub);
-          const cover = await this.extractCover(epub);
-          const chapters = await this.extractChapters(epub);
+          emit({ stage: "metadata", percent: 25 });
+          const metadata = this.extractMetadata(epub, sourcePath);
+
+          emit({ stage: "cover", percent: 40 });
+          let cover: string | undefined;
+          try {
+            cover = await this.extractCover(epub);
+          } catch (error) {
+            // 封面缺失并非致命错误，仅打印警告
+            console.warn("封面提取失败:", error);
+            if (error instanceof EpubCoverError) {
+              cover = undefined;
+            } else {
+              cover = undefined;
+            }
+          }
+
+          emit({ stage: "chapters", percent: 55 });
+          const chapters = await this.extractChapters(
+            epub,
+            includeRawHtml,
+            (current, total, chapterId) => {
+              emit({
+                stage: "chapters",
+                percent: 55 + Math.round((current / total) * 35),
+                detail: { current, total, chapterId },
+              });
+            }
+          );
+
+          emit({ stage: "finalizing", percent: 95 });
 
           resolve({
-            id: this.generateId(filePath),
-            title: metadata.title || '未知标题',
-            author: metadata.creator || '未知作者',
+            id,
+            title: metadata.title || "未知标题",
+            author: this.normalizeAuthor(metadata.creator),
             cover,
             chapters,
             metadata,
             filePath,
             addedDate: new Date(),
             progress: 0,
-            status: 'not-started'
+            status: "not-started",
           });
+
+          emit({ stage: "finalizing", percent: 100 });
         } catch (error) {
-          reject(error);
+          handleFailure(error, "finalizing");
         }
       });
 
-      epub.on('error', reject);
       epub.parse();
     });
   }
 
-  async extractCover(epub: any): Promise<string | undefined> {
+  async extractCoverFromFile(filePath: string): Promise<string | undefined> {
     return new Promise((resolve, reject) => {
-      // 尝试获取封面
-      if (epub.metadata.cover) {
-        epub.getImage(epub.metadata.cover, (error: any, data: Buffer, mimeType: string) => {
-          if (error) {
-            reject(error);
-          } else if (data) {
-            const base64 = `data:${mimeType};base64,${data.toString('base64')}`;
-            resolve(base64);
-          } else {
+      const epub = new EPub(filePath);
+
+      epub.on("error", (error: unknown) => {
+        reject(
+          new EpubParseError(
+            error instanceof Error ? error.message : "封面解析失败",
+            "cover",
+            error
+          )
+        );
+      });
+
+      epub.on("end", async () => {
+        try {
+          const cover = await this.extractCover(epub);
+          resolve(cover);
+        } catch (error) {
+          if (error instanceof EpubCoverError) {
             resolve(undefined);
+          } else {
+            reject(error);
           }
-        });
-      } else {
-        resolve(undefined);
-      }
+        }
+      });
+
+      epub.parse();
     });
   }
 
-  private async extractMetadata(epub: any): Promise<EpubMetadata> {
+  private extractMetadata(epub: any, sourcePath?: string): EpubMetadata {
+    const title = this.normalizeTitle(epub?.metadata?.title);
+    const creator = this.normalizeCreator(epub?.metadata?.creator);
+    const language = this.normalizeLanguage(epub?.metadata?.language);
+    const identifier = this.normalizeIdentifier(epub?.metadata?.identifier);
+    const publisher = this.normalizePublisher(epub?.metadata?.publisher);
+    const description = this.normalizeDescription(epub?.metadata?.description);
+
     return {
-      title: epub.metadata.title || '未知标题',
-      creator: epub.metadata.creator || '未知作者',
-      description: epub.metadata.description,
-      language: epub.metadata.language || 'unknown',
-      publisher: epub.metadata.publisher,
-      identifier: epub.metadata.identifier || ''
+      title,
+      creator,
+      description,
+      language,
+      publisher,
+      identifier,
+      sourcePath,
     };
   }
 
-  private async extractChapters(epub: any): Promise<Chapter[]> {
-    return new Promise((resolve) => {
-      const chapters: Chapter[] = [];
+  private async extractCover(epub: any): Promise<string | undefined> {
+    const coverId = this.resolveCoverId(epub);
+    if (!coverId) {
+      throw new EpubCoverError("未在 EPUB 文件中找到封面资源");
+    }
+
+    return new Promise((resolve, reject) => {
+      epub.getImage(coverId, (error: unknown, data: Buffer, mimeType: string) => {
+        if (error) {
+          reject(new EpubCoverError("封面资源读取失败", error));
+          return;
+        }
+
+        if (!data || !mimeType) {
+          reject(new EpubCoverError("封面资源数据为空"));
+          return;
+        }
+
+        const base64 = `data:${mimeType};base64,${data.toString("base64")}`;
+        resolve(base64);
+      });
+    });
+  }
+
+  private async extractChapters(
+    epub: any,
+    includeRawHtml: boolean,
+    onProgress: ChapterProgressCallback
+  ): Promise<EpubChapter[]> {
+    return new Promise((resolve, reject) => {
+      const chapters: EpubChapter[] = [];
       const spineItems =
         (Array.isArray(epub?.spine?.contents) && epub.spine.contents) ||
         (Array.isArray(epub?.flow) && epub.flow) ||
         [];
-      let processedCount = 0;
 
-      if (spineItems.length === 0) {
+      const total = spineItems.length;
+      if (total === 0) {
         resolve([]);
         return;
       }
 
+      let processed = 0;
+
       spineItems.forEach((item: any, index: number) => {
-        const href = item.href;
-        const targetId = item.id || item.idref || item.href;
+        const href: string = item?.href ?? "";
+        const targetId: string = item?.id || item?.idref || href;
 
         if (!targetId) {
-          processedCount++;
-          if (processedCount === spineItems.length) {
-            chapters.sort((a, b) => a.order - b.order);
-            resolve(chapters);
+          processed += 1;
+          onProgress(processed, total);
+          if (processed === total) {
+            resolve(chapters.sort((a, b) => a.order - b.order));
           }
           return;
         }
 
-        epub.getChapter(targetId, async (error: any, text: string) => {
+        epub.getChapter(targetId, (error: unknown, text: string) => {
           if (error) {
-            console.error(`获取章节 ${targetId} 失败:`, error);
+            console.warn(`获取章节 ${targetId} 失败:`, error);
           } else {
             chapters.push({
               id: targetId,
-              title: this.extractChapterTitle(text) || `章节 ${index + 1}`,
-              content: text,
+              title:
+                this.extractChapterTitle(text) ??
+                item?.title ??
+                `章节 ${index + 1}`,
+              content: includeRawHtml ? text : "",
               href,
-              order: index
+              order: index,
             });
           }
 
-          processedCount++;
-          if (processedCount === spineItems.length) {
-            // 按order排序
-            chapters.sort((a, b) => a.order - b.order);
-            resolve(chapters);
+          processed += 1;
+          onProgress(processed, total, targetId);
+
+          if (processed === total) {
+            resolve(chapters.sort((a, b) => a.order - b.order));
           }
         });
       });
@@ -146,15 +258,99 @@ export class EPUBService {
   }
 
   private extractChapterTitle(content: string): string | undefined {
-    // 尝试从HTML内容中提取标题
+    if (!content) return undefined;
     const titleMatch = content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i);
     if (titleMatch) {
-      return titleMatch[1].replace(/<[^>]*>/g, '').trim();
+      return titleMatch[1].replace(/<[^>]*>/g, "").trim();
     }
     return undefined;
   }
 
-  private generateId(filePath: string): string {
-    return Buffer.from(filePath + Date.now()).toString('base64').slice(0, 16);
+  private resolveCoverId(epub: any): string | undefined {
+    const directCover = epub?.metadata?.cover;
+    if (directCover) {
+      return directCover;
+    }
+
+    const manifest = epub?.manifest ?? {};
+    for (const key of Object.keys(manifest)) {
+      const item = manifest[key];
+      const id = item?.id ?? key;
+      const href = item?.href ?? "";
+      const properties = Array.isArray(item?.properties)
+        ? item.properties.join(" ")
+        : item?.properties ?? "";
+
+      if (
+        /cover/i.test(id) ||
+        /cover/i.test(href) ||
+        /cover/i.test(properties)
+      ) {
+        return id;
+      }
+    }
+
+    return undefined;
+  }
+
+  private normalizeTitle(rawTitle?: string): string {
+    if (!rawTitle) return "未知标题";
+    return this.normalizeWhitespace(rawTitle);
+  }
+
+  private normalizeCreator(rawCreator?: string | string[]): string {
+    if (Array.isArray(rawCreator)) {
+      return rawCreator.map((item) => item?.trim()).filter(Boolean)[0] ?? "未知作者";
+    }
+    if (!rawCreator) return "未知作者";
+    return this.normalizeWhitespace(rawCreator).split(/[;,]/)[0]!.trim() || "未知作者";
+  }
+
+  private normalizeAuthor(rawCreator?: string | string[]): string {
+    return this.normalizeCreator(rawCreator);
+  }
+
+  private normalizeLanguage(rawLanguage?: string): string {
+    if (!rawLanguage) return "unknown";
+    return this.normalizeWhitespace(rawLanguage);
+  }
+
+  private normalizePublisher(rawPublisher?: string): string | undefined {
+    if (!rawPublisher) return undefined;
+    const normalized = this.normalizeWhitespace(rawPublisher);
+    return normalized.length > 0 ? normalized : undefined;
+  }
+
+  private normalizeDescription(rawDescription?: string): string | undefined {
+    if (!rawDescription) return undefined;
+    const normalized = this.normalizeWhitespace(rawDescription);
+    return normalized.length > 0 ? normalized : undefined;
+  }
+
+  private normalizeIdentifier(rawIdentifier?: string | string[]): string {
+    if (Array.isArray(rawIdentifier)) {
+      return rawIdentifier.map((item) => item?.trim()).filter(Boolean)[0] ?? "";
+    }
+    if (!rawIdentifier) return "";
+    return this.normalizeWhitespace(rawIdentifier);
+  }
+
+  private normalizeWhitespace(value: string): string {
+    return value.replace(/\s+/g, " ").trim();
+  }
+
+  private async generateId(filePath: string): Promise<string> {
+    try {
+      const stat = await fs.stat(filePath);
+      const hash = createHash("sha1");
+      hash.update(path.resolve(filePath));
+      hash.update(String(Math.floor(stat.mtimeMs)));
+      return hash.digest("base64url").slice(0, 16);
+    } catch (error) {
+      const hash = createHash("sha1");
+      hash.update(path.resolve(filePath));
+      hash.update(String(Date.now()));
+      return hash.digest("base64url").slice(0, 16);
+    }
   }
 }

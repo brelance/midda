@@ -25,4 +25,5 @@ dist-ssr
 dist-electron
 public
 # backup
-test_epub_books
+test_epub
+proto

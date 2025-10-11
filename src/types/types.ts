@@ -92,6 +92,7 @@ export interface EpubMetadata {
   language: string;
   publisher?: string;
   identifier: string;
+  sourcePath?: string;
 }
 
 export interface EpubChapter {
