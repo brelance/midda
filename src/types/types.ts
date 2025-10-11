@@ -66,8 +66,10 @@ export interface Book {
   status: 'not-started' | 'reading' | 'completed';
   description?: string;
   chapters?: Chapter[];
+  currentChapterId?: string;
   addedDate: Date;
   lastReadDate?: Date;
+  lastReadChapterId?: string;
   filePath?: string; // EPUB文件路径
   metadata?: EpubMetadata; // EPUB元数据
 }

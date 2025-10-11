@@ -194,3 +194,13 @@ body {
     display: flex !important;
   }
 }
+
+.reading-content {
+  font-family: "Public Sans", sans-serif;
+  font-weight: 400;
+}
+
+.reading-content h1,
+.reading-content h2 {
+  font-weight: 900;
+}

@@ -22,6 +22,7 @@ interface LayoutProps {
   closeSidebar: () => void;
   closeDetailsPane: () => void;
   onBookAdded?: (bookData: EpubBookData) => void;
+  onEnterReader?: (book: Book) => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -42,6 +43,7 @@ const Layout: React.FC<LayoutProps> = ({
   closeSidebar,
   closeDetailsPane,
   onBookAdded,
+  onEnterReader,
 }) => {
   return (
     <div className="h-screen bg-[#f5f5dc]">
@@ -66,6 +68,7 @@ const Layout: React.FC<LayoutProps> = ({
           toggleSidebar={toggleSidebar}
           toggleDetailsPane={toggleDetailsPane}
           onBookAdded={onBookAdded}
+          onEnterReader={onEnterReader}
         />
         <DetailsPane
           selectedBook={selectedBook}
@@ -96,6 +99,7 @@ const Layout: React.FC<LayoutProps> = ({
           toggleSidebar={toggleSidebar}
           toggleDetailsPane={toggleDetailsPane}
           onBookAdded={onBookAdded}
+          onEnterReader={onEnterReader}
         />
       </div>
 
@@ -112,6 +116,7 @@ const Layout: React.FC<LayoutProps> = ({
             onSort={onSort}
             toggleSidebar={toggleSidebar}
             toggleDetailsPane={toggleDetailsPane}
+            onEnterReader={onEnterReader}
           />
         </div>
       </div>

@@ -1,8 +1,8 @@
-import React from 'react';
-import SearchInput from '../ui/SearchInput';
-import BrutalistButton from '../ui/BrutalistButton';
-import AddBookButton from '../AddBookButton';
-import { Book, EpubBookData } from '../../types/types';
+import React from "react";
+import SearchInput from "../ui/SearchInput";
+import BrutalistButton from "../ui/BrutalistButton";
+import AddBookButton from "../AddBookButton";
+import { Book, EpubBookData } from "../../types/types";
 
 interface HeaderProps {
   searchQuery: string;
@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({
   toggleSidebar,
   toggleDetailsPane,
   selectedBook,
-  onBookAdded
+  onBookAdded,
 }) => {
   return (
     <header className="h-20 flex-shrink-0 flex items-center justify-between p-4 border-b-4 border-black bg-[#f5f5dc]">
@@ -68,7 +68,9 @@ const Header: React.FC<HeaderProps> = ({
         {/* 移动端搜索按钮 */}
         <button
           className="md:hidden border-4 border-black rounded-[20px] shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] bg-white text-black p-3 hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[6px] active:translate-y-[6px] active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)] transition-all duration-100"
-          onClick={() => {/* TODO: 实现移动端搜索 */}}
+          onClick={() => {
+            /* TODO: 实现移动端搜索 */
+          }}
         >
           <svg
             className="w-6 h-6"
@@ -86,8 +88,11 @@ const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* 排序按钮 */}
-        <BrutalistButton onClick={onSort} className="text-sm md:text-lg px-2 md:px-6">
-          排序
+        <BrutalistButton
+          onClick={onSort}
+          className="text-sm md:text-lg px-2 md:px-6"
+        >
+          排序{" "}
         </BrutalistButton>
 
         {/* 添加书籍按钮 */}

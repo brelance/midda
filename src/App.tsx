@@ -1,6 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Layout from './components/layout/Layout';
+import ReaderPage from './pages/ReaderPage';
 import { Book, User, NavigationItem, EpubBookData } from './types/types';
+
+const retroChapterContent = [
+  `<p>这是一个示例文本，用于填充阅读区域，测试阅读器的排版与滚动性能。每一段文字都携带昭和复古的气息，配合粗野主义的视觉元素，营造出独特的阅读氛围。</p>`,
+  `<p>当你滚动页面时，顶部与底部的工具栏会根据鼠标或触摸位置自动出现，让操作既直观又不打扰沉浸式阅读。</p>`,
+  `<p>阅读页面未来将接入 EPUB 解析能力，章节内容会动态渲染，高亮、批注与词典功能也已经在路线图上。</p>`,
+  `<h2 class="text-3xl font-black mt-10">下一节：粗野主义的魅力</h2>`,
+  `<p>厚重的边框、夸张的阴影以及饱和的配色是这种风格的关键词。它们不仅带来了鲜明的视觉层次，同时也让界面操作更加醒目。</p>`,
+].join('');
 
 // 模拟数据
 const mockBooks: Book[] = [
@@ -11,6 +20,34 @@ const mockBooks: Book[] = [
     progress: 45,
     status: 'reading',
     description: '这是一本非常有趣的书籍，讲述了关于编程和生活的故事。',
+    chapters: [
+      {
+        id: 'chapter-1',
+        title: '第一章：冒险的开始',
+        pageNumber: 1,
+        isRead: true,
+        content: retroChapterContent,
+        order: 1,
+      },
+      {
+        id: 'chapter-2',
+        title: '第二章：昭和风格',
+        pageNumber: 2,
+        isRead: false,
+        content: retroChapterContent,
+        order: 2,
+      },
+      {
+        id: 'chapter-3',
+        title: '第三章：未来展望',
+        pageNumber: 3,
+        isRead: false,
+        content: retroChapterContent,
+        order: 3,
+      },
+    ],
+    currentChapterId: 'chapter-1',
+    lastReadChapterId: 'chapter-1',
     addedDate: new Date('2024-01-01'),
     lastReadDate: new Date('2024-01-15'),
   },
@@ -69,10 +106,16 @@ export default function App() {
   const [activeNav, setActiveNav] = useState<NavigationItem>('bookshelf');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortByIndex, setSortByIndex] = useState(0);
+  const [readerBookId, setReaderBookId] = useState<string | null>(null);
 
   // 响应式状态管理
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDetailsPaneOpen, setIsDetailsPaneOpen] = useState(false);
+
+  const readerBook = useMemo(
+    () => books.find((book) => book.id === readerBookId) ?? null,
+    [books, readerBookId]
+  );
 
   const handleSelectBook = (book: Book) => {
     setSelectedBook(book);
@@ -145,7 +188,75 @@ export default function App() {
     console.log('新书已添加:', newBook.title);
   };
 
+  const updateBookById = (bookId: string, updater: (book: Book) => Book) => {
+    let updated: Book | null = null;
+    setBooks((prevBooks) =>
+      prevBooks.map((book) => {
+        if (book.id === bookId) {
+          const nextBook = updater(book);
+          updated = nextBook;
+          return nextBook;
+        }
+        return book;
+      })
+    );
+    if (updated) {
+      setSelectedBook(updated);
+    }
+  };
+
+  const handleEnterReader = (book: Book) => {
+    setReaderBookId(book.id);
+    setSelectedBook(book);
+    setIsSidebarOpen(false);
+    setIsDetailsPaneOpen(false);
+  };
+
+  const handleExitReader = () => {
+    if (readerBookId) {
+      const latest = books.find((book) => book.id === readerBookId) ?? null;
+      if (latest) {
+        setSelectedBook(latest);
+      }
+    }
+    setReaderBookId(null);
+  };
+
+  const handleReaderChapterChange = (chapterId: string) => {
+    if (!readerBookId) return;
+    updateBookById(readerBookId, (book) => ({
+      ...book,
+      currentChapterId: chapterId,
+      lastReadChapterId: chapterId,
+      lastReadDate: new Date(),
+    }));
+  };
+
+  const handleReaderProgressChange = (progress: number) => {
+    if (!readerBookId) return;
+    const normalized = Math.min(100, Math.max(0, Number(progress.toFixed(1))));
+    updateBookById(readerBookId, (book) => ({
+      ...book,
+      progress: normalized,
+      status: normalized >= 100 ? 'completed' : 'reading',
+    }));
+  };
+
   const sortBy = sortOptions[sortByIndex];
+
+  if (readerBook) {
+    return (
+      <ReaderPage
+        book={readerBook}
+        onExitReader={handleExitReader}
+        onOpenToc={() => console.log('打开目录')}
+        onOpenSearch={() => console.log('打开搜索')}
+        onOpenSettings={() => console.log('打开设置')}
+        onChapterChange={handleReaderChapterChange}
+        onProgressChange={handleReaderProgressChange}
+      />
+    );
+  }
 
   return (
     <Layout
@@ -166,6 +277,7 @@ export default function App() {
       closeSidebar={closeSidebar}
       closeDetailsPane={closeDetailsPane}
       onBookAdded={handleBookAdded}
+      onEnterReader={handleEnterReader}
     />
   );
 }
