@@ -1,6 +1,7 @@
 import React from "react";
 import BrutalistButton from "../ui/BrutalistButton";
 import ReaderBookInfo from "./ReaderBookInfo";
+import { ReadingMode } from "../../types/reader";
 
 interface ReaderHeaderProps {
   bookTitle: string;
@@ -10,6 +11,8 @@ interface ReaderHeaderProps {
   onOpenToc?: () => void;
   onOpenSearch?: () => void;
   onOpenSettings?: () => void;
+  onToggleReadingMode: () => void;
+  readingMode: ReadingMode;
 }
 
 const baseClasses =
@@ -23,6 +26,8 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   onOpenToc,
   onOpenSearch,
   onOpenSettings,
+  onToggleReadingMode,
+  readingMode,
 }) => {
   return (
     <header
@@ -77,6 +82,44 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
         <ReaderBookInfo bookTitle={bookTitle} chapterTitle={chapterTitle} />
 
         <div className="flex items-center gap-3 sm:gap-4">
+          <BrutalistButton
+            onClick={onToggleReadingMode}
+            className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2"
+            aria-label={
+              readingMode === "single" ? "切换到双页模式" : "切换到单页模式"
+            }
+          >
+            <svg
+              className="h-5 w-5 sm:h-6 sm:w-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              {readingMode === "single" ? (
+                <>
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                  <line x1="9" y1="8" x2="15" y2="8" />
+                  <line x1="9" y1="12" x2="15" y2="12" />
+                  <line x1="9" y1="16" x2="13" y2="16" />
+                </>
+              ) : (
+                <>
+                  <path d="M5 5h6a2 2 0 0 1 2 2v12H7a2 2 0 0 1-2-2V5z" />
+                  <path d="M13 7a2 2 0 0 1 2-2h4v12a2 2 0 0 1-2 2h-4V7z" />
+                  <line x1="7" y1="9" x2="11" y2="9" />
+                  <line x1="15" y1="9" x2="19" y2="9" />
+                </>
+              )}
+            </svg>
+            <span className="hidden sm:inline">
+              {readingMode === "single" ? "双页模式" : "单页模式"}
+            </span>
+          </BrutalistButton>
+
           <BrutalistButton
             onClick={onOpenSearch}
             className="flex items-center px-3 py-2 sm:px-4 sm:py-2"

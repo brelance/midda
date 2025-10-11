@@ -204,3 +204,12 @@ body {
 .reading-content h2 {
   font-weight: 900;
 }
+
+.double-page-mode {
+  column-fill: balance;
+  column-gap: 3rem;
+}
+
+.double-page-mode > * {
+  break-inside: avoid-column;
+}

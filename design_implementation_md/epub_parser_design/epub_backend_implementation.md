@@ -89,3 +89,56 @@ export interface EpubMetadata {
 - 在解析阶段追加目录（TOC）结构，支撑多层级章节导航。
 - 对 `copyToLibrary` 提供去重策略（按 `identifier` 判断是否覆盖）。
 - 基于 `onProgress` 增加导入取消能力。
+
+## 2024-XX-XX — TOC 驱动的章节解析增强
+
+### 修改动机
+- EPUB3 书籍常通过 Navigation Document（`properties="nav"`）维护目录，旧实现仅依赖 spine/flow 时会生成大量空章节且缺失标题。
+- 希望章节顺序与目录一致，并尽量沿用发行方定义的标题，同时兼顾 EPUB2 (NCX)。
+
+### 核心思路
+- **Manifest 索引**：`buildManifestIndex` 将 manifest 归档为 `id -> item` 和 `href -> id` 映射，同时记录 nav 文档条目，便于在 TOC/manifest 间互跳。
+- **TOC 优先级**：
+  1. 若 `epub.toc`（来源于 NCX）存在，按 href 映射章节；
+  2. 否则读取 nav 文档 (`getChapterRaw(navId)`)，使用正则抓取 `nav[epub:type="toc"]` 中的 `<a>` 标签，解析标题与相对链接；
+  3. 再不满足时回退到 spine/flow。
+- **路径归一化**：`normalizeZipPath`、`resolveNavHref` 处理 nav 中的相对路径 & fragment，确保可映射回 manifest。
+- **章节抽取**：遍历 TOC 条目逐章 `getChapter`，以 `hasRenderableContent` 过滤空章节；缺省标题使用 `章节 N` 保持连续。
+- **进度保持**：`onProgress` 逻辑保持不变，便于前端继续显示章节解析进度。
+
+### 关键代码片段
+```ts
+// electron/main/api/epub/epubService.ts
+const manifestIndex = this.buildManifestIndex(epub);
+const tocEntries = await this.extractTocEntries(epub, manifestIndex);
+const entries = tocEntries.length > 0
+  ? tocEntries
+  : this.buildFallbackSpineEntries(epub, manifestIndex);
+
+for (const entry of entries) {
+  if (!entry.manifestId || visited.has(entry.manifestId)) continue;
+  await new Promise<void>((resolve) => {
+    epub.getChapter(entry.manifestId, (error, text) => {
+      if (!error && this.hasRenderableContent(text)) {
+        const idx = chapters.length;
+        chapters.push({
+          id: entry.manifestId,
+          title: entry.title?.trim()
+            ?? this.extractChapterTitle(text)
+            ?? `章节 ${idx + 1}`,
+          href: entry.href ?? "",
+          order: idx,
+          content: includeRawHtml ? text : "",
+        });
+      }
+      onProgress(++processed, total, entry.manifestId);
+      resolve();
+    });
+  });
+}
+```
+
+### 维护提示
+- `parseNavDocument` 当前用正则解析 XHTML，如需支持更复杂或多层嵌套，可替换为 DOM 解析器（例如 `jsdom`）。
+- `manifestIndex.navEntries` 取第一个符合条件的 nav 条目，若书籍内存在多语言目录，可在此扩展选择策略。
+- `buildFallbackSpineEntries` 作为兜底路径，保留下来以兼容缺失 TOC 的旧 EPUB。

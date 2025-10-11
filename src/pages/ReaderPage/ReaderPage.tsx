@@ -10,6 +10,7 @@ import ReaderHeader from "../../components/reader/ReaderHeader";
 import ReaderFooter from "../../components/reader/ReaderFooter";
 import ReaderContent from "../../components/reader/ReaderContent";
 import { Book, Chapter } from "../../types/types";
+import { ReadingMode } from "../../types/reader";
 import {
   findChapterIndex,
   getNextChapterId,
@@ -78,6 +79,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
   const [currentChapterId, setCurrentChapterId] = useState(defaultChapterId);
   const [chapterProgress, setChapterProgress] = useState(0);
+  const [readingMode, setReadingMode] = useState<ReadingMode>("single");
 
   useEffect(() => {
     setCurrentChapterId(defaultChapterId);
@@ -125,6 +127,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     handlePointerMove,
     showToolbarsTemporarily,
   } = useReaderToolbarVisibility();
+
+  const toggleReadingMode = useCallback(() => {
+    setReadingMode((prev) => (prev === "single" ? "double" : "single"));
+    showToolbarsTemporarily(1800);
+  }, [showToolbarsTemporarily]);
 
   useEffect(() => {
     showToolbarsTemporarily(1800);
@@ -209,6 +216,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           onOpenToc={onOpenToc ?? (() => undefined)}
           onOpenSearch={onOpenSearch}
           onOpenSettings={onOpenSettings}
+          onToggleReadingMode={toggleReadingMode}
+          readingMode={readingMode}
         />
       }
       content={
@@ -217,6 +226,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           chapterTitle={chapterTitle}
           contentHtml={chapterContentHtml}
           onScroll={handleScroll}
+          readingMode={readingMode}
         />
       }
       footer={

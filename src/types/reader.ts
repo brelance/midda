@@ -1,5 +1,7 @@
 import { Book, Chapter } from "./types";
 
+export type ReadingMode = "single" | "double";
+
 export interface ReaderState {
   book: Book;
   currentChapterId: string;
