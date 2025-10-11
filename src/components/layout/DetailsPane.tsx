@@ -8,12 +8,14 @@ interface DetailsPaneProps {
   isMobile: boolean;
   isOpen: boolean;
   onClose: () => void;
+  showCloseButton?: boolean;
 }
 
 const DetailsPane: React.FC<DetailsPaneProps> = ({
   selectedBook,
   isMobile,
   onClose,
+  showCloseButton = isMobile,
 }) => {
   return (
     <aside className={`
@@ -21,8 +23,8 @@ const DetailsPane: React.FC<DetailsPaneProps> = ({
       flex-shrink-0 flex flex-col bg-[#f5f5dc]
       ${isMobile ? 'border-l-0' : 'border-l-4 border-black'}
     `}>
-      {/* 移动端顶部栏（标题 + 关闭按钮） */}
-      {isMobile && (
+      {/* 顶部栏：移动端及需要关闭按钮的场景显示 */}
+      {showCloseButton && (
         <div className="flex items-center justify-between p-4 border-b-4 border-black">
           <h2 className="text-xl font-black">书籍详情</h2>
           <button

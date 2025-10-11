@@ -101,6 +101,21 @@ const Layout: React.FC<LayoutProps> = ({
           onBookAdded={onBookAdded}
           onEnterReader={onEnterReader}
         />
+
+        {isDetailsPaneOpen && (
+          <div
+            className="mobile-details-pane open"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DetailsPane
+              selectedBook={selectedBook}
+              isMobile={false}
+              isOpen={isDetailsPaneOpen}
+              onClose={closeDetailsPane}
+              showCloseButton={true}
+            />
+          </div>
+        )}
       </div>
 
       {/* 移动端：单栏布局 */}
@@ -161,26 +176,6 @@ const Layout: React.FC<LayoutProps> = ({
               />
             </div>
           )}
-        </div>
-      )}
-
-      {/* 平板端详情面板覆盖层 */}
-      {isDetailsPaneOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:flex lg:hidden items-center justify-center tablet-details-overlay"
-          onClick={closeDetailsPane}
-        >
-          <div
-            className="w-80 h-full bg-[#f5f5dc] border-l-4 border-black"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DetailsPane
-              selectedBook={selectedBook}
-              isMobile={false}
-              isOpen={isDetailsPaneOpen}
-              onClose={closeDetailsPane}
-            />
-          </div>
         </div>
       )}
     </div>

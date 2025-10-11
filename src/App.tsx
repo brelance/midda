@@ -119,8 +119,8 @@ export default function App() {
 
   const handleSelectBook = (book: Book) => {
     setSelectedBook(book);
-    // 在移动端选择书籍时自动打开详情面板
-    if (window.innerWidth < 768) {
+    // 在移动端和平板端选择书籍时自动打开详情面板
+    if (window.innerWidth < 1024) {
       setIsDetailsPaneOpen(true);
     }
   };
