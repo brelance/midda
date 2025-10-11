@@ -204,12 +204,34 @@ export class EPUBService {
   ): Promise<EpubChapter[]> {
     return new Promise((resolve, reject) => {
       const chapters: EpubChapter[] = [];
-      const spineItems =
-        (Array.isArray(epub?.spine?.contents) && epub.spine.contents) ||
-        (Array.isArray(epub?.flow) && epub.flow) ||
-        [];
+      const flowItems = Array.isArray(epub?.flow) ? epub.flow : [];
+      const spineItems = Array.isArray(epub?.spine?.contents)
+        ? epub.spine.contents
+        : [];
+      const baseItems =
+        flowItems.length > 0
+          ? flowItems
+          : spineItems.length > 0
+          ? spineItems
+          : [];
 
-      const total = spineItems.length;
+      const uniqueItems: any[] = [];
+      const seenIds = new Set<string>();
+
+      baseItems.forEach((item: any) => {
+        const targetId: string | undefined =
+          item?.id || item?.idref || item?.href || item?.href_id;
+        if (!targetId) {
+          return;
+        }
+        if (seenIds.has(targetId)) {
+          return;
+        }
+        seenIds.add(targetId);
+        uniqueItems.push(item);
+      });
+
+      const total = uniqueItems.length;
       if (total === 0) {
         resolve([]);
         return;
@@ -217,7 +239,7 @@ export class EPUBService {
 
       let processed = 0;
 
-      spineItems.forEach((item: any, index: number) => {
+      uniqueItems.forEach((item: any, index: number) => {
         const href: string = item?.href ?? "";
         const targetId: string = item?.id || item?.idref || href;
 
@@ -234,16 +256,24 @@ export class EPUBService {
           if (error) {
             console.warn(`获取章节 ${targetId} 失败:`, error);
           } else {
-            chapters.push({
-              id: targetId,
-              title:
+            const normalizedText =
+              typeof text === "string" ? text : String(text ?? "");
+            const hasRenderableContent = this.hasRenderableContent(normalizedText);
+            if (hasRenderableContent) {
+              const chapterTitle =
                 this.extractChapterTitle(text) ??
                 item?.title ??
-                `章节 ${index + 1}`,
-              content: includeRawHtml ? text : "",
-              href,
-              order: index,
-            });
+                `章节 ${index + 1}`;
+              chapters.push({
+                id: targetId,
+                title: chapterTitle,
+                content: includeRawHtml ? text : "",
+                href,
+                order: index,
+              });
+            } else {
+              console.warn(`章节 ${targetId} 无有效内容，已跳过`);
+            }
           }
 
           processed += 1;
@@ -264,6 +294,27 @@ export class EPUBService {
       return titleMatch[1].replace(/<[^>]*>/g, "").trim();
     }
     return undefined;
+  }
+
+  private hasRenderableContent(text: string): boolean {
+    const plainText = text.replace(/<[^>]+>/g, "").replace(/\s+/g, "");
+    if (plainText.length > 0) {
+      return true;
+    }
+
+    const hasMediaTag = /<(img|svg|video|audio)\b[^>]*>/i.test(text);
+    if (!hasMediaTag) {
+      return false;
+    }
+
+    if (/<svg\b/i.test(text)) {
+      return true;
+    }
+
+    const hasMediaSource = /<(img|video|audio)\b[^>]*(src|data)\s*=\s*['"][^'"]+/i.test(
+      text
+    );
+    return hasMediaSource;
   }
 
   private resolveCoverId(epub: any): string | undefined {
