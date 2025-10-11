@@ -29,6 +29,18 @@ export interface ParseOptions {
   sourcePath?: string;
 }
 
+interface ResolvedTocEntry {
+  manifestId: string | undefined;
+  href?: string;
+  title?: string;
+}
+
+interface ManifestIndex {
+  byId: Map<string, any>;
+  hrefToId: Map<string, string>;
+  navEntries: Array<{ id: string; href: string }>;
+}
+
 type ChapterProgressCallback = (
   current: number,
   total: number,
@@ -202,89 +214,70 @@ export class EPUBService {
     includeRawHtml: boolean,
     onProgress: ChapterProgressCallback
   ): Promise<EpubChapter[]> {
-    return new Promise((resolve, reject) => {
-      const chapters: EpubChapter[] = [];
-      const flowItems = Array.isArray(epub?.flow) ? epub.flow : [];
-      const spineItems = Array.isArray(epub?.spine?.contents)
-        ? epub.spine.contents
-        : [];
-      const baseItems =
-        flowItems.length > 0
-          ? flowItems
-          : spineItems.length > 0
-          ? spineItems
-          : [];
+    const manifestIndex = this.buildManifestIndex(epub);
+    const tocEntries = await this.extractTocEntries(epub, manifestIndex);
+    const entries =
+      tocEntries.length > 0
+        ? tocEntries
+        : this.buildFallbackSpineEntries(epub, manifestIndex);
 
-      const uniqueItems: any[] = [];
-      const seenIds = new Set<string>();
+    const total = entries.length;
+    if (total === 0) {
+      return [];
+    }
 
-      baseItems.forEach((item: any) => {
-        const targetId: string | undefined =
-          item?.id || item?.idref || item?.href || item?.href_id;
-        if (!targetId) {
-          return;
-        }
-        if (seenIds.has(targetId)) {
-          return;
-        }
-        seenIds.add(targetId);
-        uniqueItems.push(item);
-      });
+    const chapters: EpubChapter[] = [];
+    const visited = new Set<string>();
+    let processed = 0;
 
-      const total = uniqueItems.length;
-      if (total === 0) {
-        resolve([]);
-        return;
+    for (const entry of entries) {
+      const manifestId = entry.manifestId;
+
+      if (!manifestId || visited.has(manifestId)) {
+        processed += 1;
+        onProgress(processed, total, manifestId);
+        continue;
       }
 
-      let processed = 0;
+      visited.add(manifestId);
+      const manifestItem = manifestIndex.byId.get(manifestId) ?? {};
+      const defaultHref = typeof manifestItem.href === "string" ? manifestItem.href : "";
+      const chapterHref = entry.href ?? defaultHref;
 
-      uniqueItems.forEach((item: any, index: number) => {
-        const href: string = item?.href ?? "";
-        const targetId: string = item?.id || item?.idref || href;
-
-        if (!targetId) {
-          processed += 1;
-          onProgress(processed, total);
-          if (processed === total) {
-            resolve(chapters.sort((a, b) => a.order - b.order));
-          }
-          return;
-        }
-
-        epub.getChapter(targetId, (error: unknown, text: string) => {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise<void>((resolve) => {
+        epub.getChapter(manifestId, (error: unknown, text: string) => {
           if (error) {
-            console.warn(`获取章节 ${targetId} 失败:`, error);
+            console.warn(`获取章节 ${manifestId} 失败:`, error);
           } else {
             const normalizedText =
               typeof text === "string" ? text : String(text ?? "");
-            const hasRenderableContent = this.hasRenderableContent(normalizedText);
-            if (hasRenderableContent) {
+            if (this.hasRenderableContent(normalizedText)) {
+              const orderIndex = chapters.length;
               const chapterTitle =
-                this.extractChapterTitle(text) ??
-                item?.title ??
-                `章节 ${index + 1}`;
+                entry.title?.trim() ||
+                this.extractChapterTitle(normalizedText) ||
+                `章节 ${orderIndex + 1}`;
               chapters.push({
-                id: targetId,
+                id: manifestId,
                 title: chapterTitle,
-                content: includeRawHtml ? text : "",
-                href,
-                order: index,
+                content: includeRawHtml ? normalizedText : "",
+                href: chapterHref,
+                order: orderIndex,
               });
             } else {
-              console.warn(`章节 ${targetId} 无有效内容，已跳过`);
+              console.warn(`章节 ${manifestId} 无有效内容，已跳过`);
             }
           }
 
           processed += 1;
-          onProgress(processed, total, targetId);
-
-          if (processed === total) {
-            resolve(chapters.sort((a, b) => a.order - b.order));
-          }
+          onProgress(processed, total, manifestId);
+          resolve();
         });
       });
-    });
+    }
+
+    return chapters;
   }
 
   private extractChapterTitle(content: string): string | undefined {
@@ -315,6 +308,235 @@ export class EPUBService {
       text
     );
     return hasMediaSource;
+  }
+
+  private buildManifestIndex(epub: any): ManifestIndex {
+    const manifest = epub?.manifest ?? {};
+    const byId = new Map<string, any>();
+    const hrefToId = new Map<string, string>();
+    const navEntries: Array<{ id: string; href: string }> = [];
+
+    Object.entries(manifest).forEach(([id, rawItem]) => {
+      const item = rawItem ?? {};
+      byId.set(id, item);
+
+      if (typeof item.href === "string") {
+        const normalized = this.normalizeZipPath(item.href);
+        hrefToId.set(normalized, id);
+      }
+
+      if (
+        typeof item.properties === "string" &&
+        item.properties
+          .split(/\s+/)
+          .filter(Boolean)
+          .includes("nav")
+      ) {
+        const normalizedHref =
+          typeof item.href === "string" ? this.normalizeZipPath(item.href) : "";
+        navEntries.push({ id, href: normalizedHref });
+      }
+    });
+
+    return { byId, hrefToId, navEntries };
+  }
+
+  private async extractTocEntries(
+    epub: any,
+    manifestIndex: ManifestIndex
+  ): Promise<ResolvedTocEntry[]> {
+    const baseToc = Array.isArray(epub?.toc) ? epub.toc : [];
+    if (baseToc.length > 0) {
+      return baseToc
+        .map((tocItem: any) => {
+          const hrefValue = typeof tocItem?.href === "string" ? tocItem.href : "";
+          const normalizedHref = this.normalizeZipPath(
+            hrefValue.split("#")[0] ?? hrefValue
+          );
+          const manifestId = manifestIndex.hrefToId.get(normalizedHref);
+          if (!manifestId) {
+            return null;
+          }
+          const manifestItem = manifestIndex.byId.get(manifestId) ?? {};
+          return {
+            manifestId,
+            href: manifestItem.href ?? hrefValue,
+            title: tocItem?.title ?? tocItem?.navLabel ?? "",
+          } as ResolvedTocEntry;
+        })
+        .filter((entry): entry is ResolvedTocEntry => entry !== null);
+    }
+
+    const navEntry = manifestIndex.navEntries.find(
+      (candidate) => candidate.href && candidate.id
+    );
+
+    if (!navEntry || !navEntry.id) {
+      return [];
+    }
+
+    try {
+      const navContent: string = await new Promise((resolve, reject) => {
+        epub.getChapterRaw(navEntry.id, (error: unknown, xhtml: string) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(typeof xhtml === "string" ? xhtml : String(xhtml ?? ""));
+        });
+      });
+
+      return this.parseNavDocument(navContent, navEntry.href, manifestIndex);
+    } catch (error) {
+      console.warn("解析 EPUB 导航文档失败:", error);
+      return [];
+    }
+  }
+
+  private buildFallbackSpineEntries(
+    epub: any,
+    manifestIndex: ManifestIndex
+  ): ResolvedTocEntry[] {
+    const flowItems = Array.isArray(epub?.flow) ? epub.flow : [];
+    const spineItems = Array.isArray(epub?.spine?.contents)
+      ? epub.spine.contents
+      : [];
+    const baseItems =
+      flowItems.length > 0
+        ? flowItems
+        : spineItems.length > 0
+        ? spineItems
+        : [];
+
+    const seen = new Set<string>();
+    const entries: ResolvedTocEntry[] = [];
+
+    baseItems.forEach((item: any) => {
+      const manifestId =
+        item?.id ||
+        item?.idref ||
+        (typeof item?.href === "string"
+          ? manifestIndex.hrefToId.get(this.normalizeZipPath(item.href))
+          : undefined);
+
+      if (!manifestId || seen.has(manifestId)) {
+        return;
+      }
+
+      seen.add(manifestId);
+      const manifestItem = manifestIndex.byId.get(manifestId) ?? {};
+      const href =
+        typeof manifestItem.href === "string"
+          ? manifestItem.href
+          : item?.href ??
+            (typeof item?.href === "string"
+              ? this.normalizeZipPath(item.href)
+              : undefined);
+
+      entries.push({
+        manifestId,
+        href,
+        title: item?.title,
+      });
+    });
+
+    return entries;
+  }
+
+  private parseNavDocument(
+    navContent: string,
+    navHref: string,
+    manifestIndex: ManifestIndex
+  ): ResolvedTocEntry[] {
+    const navMatch = navContent.match(
+      /<nav[^>]*epub:type=["']toc["'][^>]*>([\s\S]*?)<\/nav>/i
+    );
+    if (!navMatch) {
+      return [];
+    }
+
+    const navSection = navMatch[1];
+    const navBaseDir = path.posix.dirname(navHref);
+    const anchorRegex = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+
+    const entries: ResolvedTocEntry[] = [];
+    const seen = new Set<string>();
+    let match: RegExpExecArray | null;
+
+    while ((match = anchorRegex.exec(navSection)) !== null) {
+      const rawHref = match[1];
+      const resolved = this.resolveNavHref(navBaseDir, navHref, rawHref);
+      if (!resolved) {
+        continue;
+      }
+
+      const manifestId = manifestIndex.hrefToId.get(resolved.path);
+      if (!manifestId || seen.has(manifestId)) {
+        continue;
+      }
+
+      seen.add(manifestId);
+      const manifestItem = manifestIndex.byId.get(manifestId) ?? {};
+      const baseHref =
+        typeof manifestItem.href === "string"
+          ? manifestItem.href
+          : resolved.path;
+      const finalHref =
+        resolved.fragment && !baseHref.includes("#")
+          ? `${baseHref}#${resolved.fragment}`
+          : baseHref;
+
+      const title = match[2]
+        .replace(/<[^>]*>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      entries.push({
+        manifestId,
+        href: finalHref,
+        title,
+      });
+    }
+
+    return entries;
+  }
+
+  private resolveNavHref(
+    navBaseDir: string,
+    navHref: string,
+    rawHref: string
+  ): { path: string; fragment?: string } | null {
+    if (typeof rawHref !== "string") {
+      return null;
+    }
+
+    const [hrefPathPart, fragmentPart] = rawHref.split("#");
+    const trimmedPath = hrefPathPart?.trim() ?? "";
+    const normalizedPath = trimmedPath.length
+      ? this.normalizeZipPath(
+          path.posix.normalize(
+            trimmedPath.startsWith("/")
+              ? trimmedPath.slice(1)
+              : navBaseDir && navBaseDir !== "."
+              ? `${navBaseDir}/${trimmedPath}`
+              : trimmedPath
+          )
+        )
+      : this.normalizeZipPath(navHref);
+
+    const fragment = fragmentPart?.trim();
+
+    return {
+      path: normalizedPath,
+      fragment: fragment && fragment.length > 0 ? fragment : undefined,
+    };
+  }
+
+  private normalizeZipPath(value: string): string {
+    return value
+      .replace(/\\/g, "/")
+      .replace(/^\.\//, "")
+      .replace(/\/{2,}/g, "/");
   }
 
   private resolveCoverId(epub: any): string | undefined {
