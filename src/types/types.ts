@@ -1,10 +1,3 @@
-export interface SubtitleLineData {
-  startTime: number;
-  endTime: number;
-  originalText: string;
-  tokens: TokenData[];
-}
-
 export interface TokenData {
   word: string;
   pos: string;
@@ -12,15 +5,26 @@ export interface TokenData {
   romaji?: string;
 }
 
-export type CueNode = Node & {
-  type: "cue";
-  data: {
-    start: number; // 开始时间 (毫秒)
-    end: number; // 结束时间 (毫秒)
-    text: string; // 字幕文本
-    translation: string;
-  };
-};
+export interface SentenceAnalysisRecord {
+  id: number;
+  bookId: string;
+  text: string;
+  tokens: TokenData[];
+  chapterId?: string;
+  paragraphId?: string;
+  sentenceId?: string;
+  sentenceHash: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// TODO: 迁移旧的视频字幕类型到新的电子书语句分析结构后移除
+export interface SubtitleLineData {
+  startTime: number;
+  endTime: number;
+  originalText: string;
+  tokens: TokenData[];
+}
 
 export interface WordDetail {
   originalWord: string;

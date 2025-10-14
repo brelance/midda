@@ -5,21 +5,20 @@ import {
   posChineseMap,
   speakJapanese,
 } from "../../utils/helper";
-import { TokenData, WordDetail, CueNode } from "../../types/types";
+import { TokenData, WordDetail } from "../../types/types";
 import { queuedSendGeminiRequest } from "../../services/apiQueue";
 import { getPrompt } from "../../services/analyzeSentence";
 import DraggablePopup from "../DraggablePopup";
 
 interface AnalysisSentenceProps {
-  subtitle: CueNode;
-  videoId: string;
+  text: string;
+  bookId: string;
   analyzedTokens: TokenData[];
   useStream?: boolean;
 }
-
 export default function AnalysisSentence({
-  subtitle,
-  videoId,
+  text,
+  bookId,
   analyzedTokens = [],
   useStream = false,
 }: AnalysisSentenceProps) {
@@ -40,7 +39,7 @@ export default function AnalysisSentence({
     setTokens(analyzedTokens);
   }, [analyzedTokens]);
 
-  const originalSentence = subtitle.data.text;
+  const originalSentence = text;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,16 +64,6 @@ export default function AnalysisSentence({
         setTokens(receivedTokens);
 
         console.log("[SentenceAnalyzer]: " + receivedTokens);
-
-        // 更新数据库
-        window.api.db.subtitles.addSubtitlesByVideoId(videoId, [
-          {
-            startTime: subtitle.data.start,
-            endTime: subtitle.data.end,
-            originalText: subtitle.data.text,
-            tokens: receivedTokens,
-          },
-        ]);
       } catch (error) {
         console.error(
           `Gemini API Error for sentence "${originalSentence}":`,
@@ -90,7 +79,7 @@ export default function AnalysisSentence({
 
     // 依赖项数组应包含 effect 中使用的所有外部变量
     // 添加 `tokens` 是为了防止在某些边缘情况下（例如 props 改变为空数组）发生不必要的重发请求
-  }, [originalSentence, videoId, analyzedTokens, useStream]);
+  }, [originalSentence, bookId, analyzedTokens, useStream]);
 
   const handleWordClick = async (
     e: React.MouseEvent<HTMLSpanElement>,

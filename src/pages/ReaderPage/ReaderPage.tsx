@@ -9,7 +9,10 @@ import ReaderLayout from "../../components/reader/ReaderLayout";
 import ReaderHeader from "../../components/reader/ReaderHeader";
 import ReaderFooter from "../../components/reader/ReaderFooter";
 import ReaderContent from "../../components/reader/ReaderContent";
-import { Book, Chapter } from "../../types/types";
+import ReaderSentenceAnalysisPanel, {
+  ReaderSentenceAnalysisItem,
+} from "../../components/reader/ReaderSentenceAnalysisPanel";
+import { Book, Chapter, TokenData } from "../../types/types";
 import { ReadingMode } from "../../types/reader";
 import {
   findChapterIndex,
@@ -24,6 +27,8 @@ import {
 } from "../../utils/reader/progressUtils";
 import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
 import { useReaderShortcuts } from "../../hooks/useReaderShortcuts";
+import { queuedSendGeminiRequest } from "../../services/apiQueue";
+import { getPrompt } from "../../services/analyzeSentence";
 
 interface ReaderPageProps {
   book: Book;
@@ -44,6 +49,44 @@ const buildFallbackContent = (): string => {
   ];
 
   return paragraphs.map((text) => `<p>${text}</p>`).join("");
+};
+
+interface SentenceSeed {
+  id: string;
+  text: string;
+  chapterId: string;
+  paragraphIndex: number;
+  sentenceIndex: number;
+}
+
+const SENTENCE_SPLIT_REGEX = /(?<=[。！？!?\.．])/u;
+
+const extractSentencesFromHtml = (
+  html: string,
+  chapterId: string
+): SentenceSeed[] => {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  const rawText = container.textContent ?? "";
+  const normalized = rawText.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return [];
+  }
+  const segments = normalized
+    .split(SENTENCE_SPLIT_REGEX)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  return segments.map((text, index) => ({
+    id: `${chapterId}-${index}`,
+    text,
+    chapterId,
+    paragraphIndex: 0,
+    sentenceIndex: index,
+  }));
 };
 
 const ReaderPage: React.FC<ReaderPageProps> = ({
@@ -80,6 +123,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [currentChapterId, setCurrentChapterId] = useState(defaultChapterId);
   const [chapterProgress, setChapterProgress] = useState(0);
   const [readingMode, setReadingMode] = useState<ReadingMode>("single");
+  const [isSentenceAnalysisActive, setIsSentenceAnalysisActive] = useState(false);
+  const [sentenceItems, setSentenceItems] = useState<
+    ReaderSentenceAnalysisItem[]
+  >([]);
 
   useEffect(() => {
     setCurrentChapterId(defaultChapterId);
@@ -96,6 +143,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       ? chapters[currentIndex]
       : null;
 
+  const chapterTitle = currentChapter?.title ?? "章节内容";
+  const chapterContentHtml =
+    currentChapter?.content ?? buildFallbackContent();
+  const activeChapterId = currentChapter?.id ?? "";
   useEffect(() => {
     setChapterProgress(0);
     const node = contentRef.current;
@@ -133,9 +184,169 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     showToolbarsTemporarily(1800);
   }, [showToolbarsTemporarily]);
 
+  const handleToggleSentenceAnalysis = useCallback(() => {
+    setIsSentenceAnalysisActive((prev) => {
+      const next = !prev;
+      showToolbarsTemporarily(1800);
+      if (!next) {
+        setSentenceItems([]);
+      }
+      return next;
+    });
+  }, [showToolbarsTemporarily]);
+
+  const handleRetrySentence = useCallback((sentenceId: string) => {
+    setSentenceItems((prev) =>
+      prev.map((item) =>
+        item.id === sentenceId
+          ? { ...item, status: "idle", tokens: undefined, error: undefined }
+          : item
+      )
+    );
+  }, []);
+
   useEffect(() => {
     showToolbarsTemporarily(1800);
   }, [showToolbarsTemporarily]);
+
+  useEffect(() => {
+    if (!isSentenceAnalysisActive) {
+      return;
+    }
+    if (!activeChapterId) {
+      setSentenceItems([]);
+      return;
+    }
+    const sentences = extractSentencesFromHtml(
+      chapterContentHtml,
+      activeChapterId
+    );
+    setSentenceItems((prev) => {
+      const previousById = new Map(prev.map((item) => [item.id, item]));
+      return sentences.map((sentence) => {
+        const existing = previousById.get(sentence.id);
+        if (existing) {
+          return existing;
+        }
+        return {
+          ...sentence,
+          status: "idle" as ReaderSentenceAnalysisItem["status"],
+        };
+      });
+    });
+  }, [isSentenceAnalysisActive, chapterContentHtml, activeChapterId]);
+
+  useEffect(() => {
+    if (!isSentenceAnalysisActive || !activeChapterId || sentenceItems.length === 0) {
+      return;
+    }
+    if (!window?.api?.db?.sentenceAnalysis) {
+      return;
+    }
+    let cancelled = false;
+
+    const analyzeSentences = async () => {
+      for (const item of sentenceItems) {
+        if (cancelled) {
+          break;
+        }
+        if (item.status !== "idle") {
+          continue;
+        }
+
+        setSentenceItems((prev) =>
+          prev.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, status: "loading", error: undefined }
+              : entry
+          )
+        );
+
+        try {
+          const context = { chapterId: activeChapterId, sentenceId: item.id };
+          const cached = await window.api.db.sentenceAnalysis.getBySentence(
+            book.id,
+            item.text,
+            context
+          );
+          if (cancelled) {
+            return;
+          }
+
+          if (cached && cached.tokens && cached.tokens.length > 0) {
+            setSentenceItems((prev) =>
+              prev.map((entry) =>
+                entry.id === item.id
+                  ? {
+                      ...entry,
+                      status: "loaded",
+                      tokens: cached.tokens,
+                      error: undefined,
+                    }
+                  : entry
+              )
+            );
+            continue;
+          }
+
+          const prompt = getPrompt(item.text);
+          const tokens: TokenData[] = await queuedSendGeminiRequest(prompt);
+          if (cancelled) {
+            return;
+          }
+
+          setSentenceItems((prev) =>
+            prev.map((entry) =>
+              entry.id === item.id
+                ? {
+                    ...entry,
+                    status: "loaded",
+                    tokens,
+                    error: undefined,
+                  }
+                : entry
+            )
+          );
+
+          await window.api.db.sentenceAnalysis.upsert({
+            bookId: book.id,
+            text: item.text,
+            tokens,
+            chapterId: activeChapterId,
+            sentenceId: item.id,
+          });
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
+
+          const message =
+            error instanceof Error
+              ? error.message
+              : "分析过程中出现未知错误";
+
+          setSentenceItems((prev) =>
+            prev.map((entry) =>
+              entry.id === item.id
+                ? {
+                    ...entry,
+                    status: "error",
+                    error: message,
+                    tokens: undefined,
+                  }
+                : entry
+            )
+          );
+        }
+      }
+    };
+
+    analyzeSentences();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSentenceAnalysisActive, sentenceItems, book.id, activeChapterId]);
 
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
@@ -201,10 +412,6 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     enabled: totalChapters > 0,
   });
 
-  const chapterTitle = currentChapter?.title ?? "章节内容";
-  const chapterContentHtml =
-    currentChapter?.content ?? buildFallbackContent();
-
   return (
     <ReaderLayout
       header={
@@ -216,18 +423,31 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           onOpenToc={onOpenToc ?? (() => undefined)}
           onOpenSearch={onOpenSearch}
           onOpenSettings={onOpenSettings}
+          onToggleSentenceAnalysis={handleToggleSentenceAnalysis}
+          isSentenceAnalysisActive={isSentenceAnalysisActive}
           onToggleReadingMode={toggleReadingMode}
           readingMode={readingMode}
         />
       }
       content={
-        <ReaderContent
-          ref={contentRef}
-          chapterTitle={chapterTitle}
-          contentHtml={chapterContentHtml}
-          onScroll={handleScroll}
-          readingMode={readingMode}
-        />
+        isSentenceAnalysisActive ? (
+          <ReaderSentenceAnalysisPanel
+            ref={contentRef}
+            sentences={sentenceItems}
+            bookId={book.id}
+            chapterId={activeChapterId}
+            onRetry={handleRetrySentence}
+            onScroll={handleScroll}
+          />
+        ) : (
+          <ReaderContent
+            ref={contentRef}
+            chapterTitle={chapterTitle}
+            contentHtml={chapterContentHtml}
+            onScroll={handleScroll}
+            readingMode={readingMode}
+          />
+        )
       }
       footer={
         <ReaderFooter

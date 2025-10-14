@@ -11,6 +11,8 @@ interface ReaderHeaderProps {
   onOpenToc?: () => void;
   onOpenSearch?: () => void;
   onOpenSettings?: () => void;
+  onToggleSentenceAnalysis?: () => void;
+  isSentenceAnalysisActive?: boolean;
   onToggleReadingMode: () => void;
   readingMode: ReadingMode;
 }
@@ -26,6 +28,8 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   onOpenToc,
   onOpenSearch,
   onOpenSettings,
+  onToggleSentenceAnalysis,
+  isSentenceAnalysisActive = false,
   onToggleReadingMode,
   readingMode,
 }) => {
@@ -82,6 +86,38 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
         <ReaderBookInfo bookTitle={bookTitle} chapterTitle={chapterTitle} />
 
         <div className="flex items-center gap-3 sm:gap-4">
+          <BrutalistButton
+            onClick={onToggleSentenceAnalysis}
+            className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 ${
+              isSentenceAnalysisActive ? "border-4 border-[#007AFF]" : ""
+            }`}
+            disabled={!onToggleSentenceAnalysis}
+            aria-label={
+              isSentenceAnalysisActive ? "关闭句子分析" : "开启句子分析"
+            }
+            aria-pressed={isSentenceAnalysisActive}
+            title="逐句分析当前章节"
+          >
+            <svg
+              className="h-5 w-5 sm:h-6 sm:w-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 19h16" />
+              <rect x="4" y="4" width="16" height="12" rx="2" />
+              <path d="M8 8h4" />
+              <path d="M8 12h8" />
+            </svg>
+            <span className="hidden sm:inline">
+              {isSentenceAnalysisActive ? "关闭分析" : "句子分析"}
+            </span>
+          </BrutalistButton>
+
           <BrutalistButton
             onClick={onToggleReadingMode}
             className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2"

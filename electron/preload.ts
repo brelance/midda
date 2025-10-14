@@ -1,6 +1,16 @@
 import { electronAPI } from "@electron-toolkit/preload";
 import { contextBridge, ipcRenderer } from "electron";
-import { TokenData } from "../src/types/types";
+import type { TokenData, WordDetail } from "../src/types/types";
+import type {
+  LibraryBookUpsertPayload,
+  LibraryChapterUpsertPayload,
+  ChapterReadingPositionUpsertPayload,
+  SentenceAnalysisUpsertPayload,
+  SentenceAnalysisContext,
+  SentenceAnalysisListFilters,
+  SentenceAnalysisJobUpsertPayload,
+  SentenceAnalysisJobStatus,
+} from "../src/types/database";
 const api = {
   ai: {
     sendGeminiRequest: (prompt: string): Promise<TokenData[]> =>
@@ -9,11 +19,11 @@ const api = {
 
   wordDetail: {
     sendWordDetailRequest: (
-      word: any,
-      pos: any,
-      sentence: any,
-      furigana: any,
-      romaji: any
+      word: string,
+      pos: string,
+      sentence: string,
+      furigana: string,
+      romaji: string
     ) =>
       ipcRenderer.send("word-detail-request", {
         word,
@@ -23,12 +33,12 @@ const api = {
         romaji,
       }),
 
-    onWordDetailResponse: (callback: (arg0: any) => void) =>
+    onWordDetailResponse: (callback: (value: WordDetail) => void) =>
       ipcRenderer.on("word-detail-response", (_event, value) =>
         callback(value)
       ),
 
-    onWordDetailError: (callback: (arg0: any) => void) =>
+    onWordDetailError: (callback: (message: string) => void) =>
       ipcRenderer.on("word-detail-error", (_event, message) =>
         callback(message)
       ),
@@ -40,24 +50,80 @@ const api = {
   },
 
   db: {
-    subtitles: {
-      addSubtitlesByVideoId: (videoId: any, subtitles: any) =>
+    books: {
+      upsert: (payload: LibraryBookUpsertPayload) =>
+        ipcRenderer.invoke("db:books:upsert", payload),
+      get: (bookId: string) => ipcRenderer.invoke("db:books:get", bookId),
+      getAll: () => ipcRenderer.invoke("db:books:getAll"),
+      delete: (bookId: string) =>
+        ipcRenderer.invoke("db:books:delete", bookId),
+    },
+    chapters: {
+      bulkUpsert: (payload: LibraryChapterUpsertPayload[]) =>
+        ipcRenderer.invoke("db:chapters:bulkUpsert", payload),
+      getByBook: (bookId: string) =>
+        ipcRenderer.invoke("db:chapters:getByBook", bookId),
+      deleteByBook: (bookId: string) =>
+        ipcRenderer.invoke("db:chapters:deleteByBook", bookId),
+    },
+    readingPositions: {
+      upsert: (payload: ChapterReadingPositionUpsertPayload) =>
+        ipcRenderer.invoke("db:readingPositions:upsert", payload),
+      get: (bookId: string, chapterId: string) =>
+        ipcRenderer.invoke("db:readingPositions:get", bookId, chapterId),
+      delete: (bookId: string, chapterId: string) =>
+        ipcRenderer.invoke("db:readingPositions:delete", bookId, chapterId),
+    },
+    sentenceAnalysis: {
+      upsert: (payload: SentenceAnalysisUpsertPayload) =>
+        ipcRenderer.invoke("db:sentenceAnalysis:upsert", payload),
+      getBySentence: (
+        bookId: string,
+        text: string,
+        context?: SentenceAnalysisContext
+      ) =>
         ipcRenderer.invoke(
-          "db:subtitles:addSubtitlesByVideoId",
-          videoId,
-          subtitles
+          "db:sentenceAnalysis:getBySentence",
+          bookId,
+          text,
+          context
         ),
-      getSubtitlesByVideoId: (videoId: any) =>
-        ipcRenderer.invoke("db:subtitles:getSubtitlesByVideoId", videoId),
-      updateToken: (lineId: any, tokenIndex: any, tokenData: any) =>
+      listByContext: (
+        bookId: string,
+        filters?: SentenceAnalysisListFilters
+      ) =>
         ipcRenderer.invoke(
-          "db:subtitles:updateToken",
-          lineId,
-          tokenIndex,
-          tokenData
+          "db:sentenceAnalysis:listByContext",
+          bookId,
+          filters
         ),
-      deleteSubtitlesByVideoId: (videoId: any) =>
-        ipcRenderer.invoke("db:subtitles:deleteSubtitlesByVideoId", videoId),
+    },
+    sentenceAnalysisJobs: {
+      enqueue: (payload: SentenceAnalysisJobUpsertPayload) =>
+        ipcRenderer.invoke("db:sentenceAnalysisJobs:enqueue", payload),
+      updateStatus: (
+        jobId: number,
+        status: SentenceAnalysisJobStatus,
+        options?: { error?: string; resultRecordId?: number }
+      ) =>
+        ipcRenderer.invoke(
+          "db:sentenceAnalysisJobs:updateStatus",
+          jobId,
+          status,
+          options
+        ),
+      getPending: (limit?: number) =>
+        ipcRenderer.invoke("db:sentenceAnalysisJobs:getPending", limit),
+      delete: (jobId: number) =>
+        ipcRenderer.invoke("db:sentenceAnalysisJobs:delete", jobId),
+    },
+    userPreferences: {
+      set: (key: string, value: string) =>
+        ipcRenderer.invoke("db:userPreferences:set", key, value),
+      get: (key: string) =>
+        ipcRenderer.invoke("db:userPreferences:get", key),
+      delete: (key: string) =>
+        ipcRenderer.invoke("db:userPreferences:delete", key),
     },
   },
 

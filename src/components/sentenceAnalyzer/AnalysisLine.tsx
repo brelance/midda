@@ -1,32 +1,32 @@
 import React from "react";
-import { SubtitleLineData, CueNode, TokenData } from "../../types/types";
+import { TokenData } from "../../types/types";
 import AnalysisSentence from "./SentenceAnalyzer";
 
 const EMPTY_ANALYZED_TOKENS: TokenData[] = [];
 
 interface SubtitleLineProps {
-  cue: CueNode;
-  videoId: string;
-  subtitleLineData: SubtitleLineData | undefined;
+  text: string;
+  bookId: string;
+  analyzedTokens?: TokenData[];
   openAnalysis: boolean;
 }
 
 const AnalysisLine: React.FC<SubtitleLineProps> = ({
-  cue,
-  videoId,
-  subtitleLineData,
+  text,
+  bookId,
+  analyzedTokens,
   openAnalysis,
 }) => {
   return (
     <div>
       {openAnalysis ? (
         <AnalysisSentence
-          subtitle={cue}
-          videoId={videoId}
-          analyzedTokens={subtitleLineData?.tokens || EMPTY_ANALYZED_TOKENS}
+          text={text}
+          bookId={bookId}
+          analyzedTokens={analyzedTokens || EMPTY_ANALYZED_TOKENS}
         />
       ) : (
-        cue.data.text
+        text
       )}
     </div>
   );

@@ -1,4 +1,21 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
+import type { TokenData, WordDetail, SentenceAnalysisRecord } from "./types/types";
+import type {
+  LibraryBookRecord,
+  LibraryBookUpsertPayload,
+  LibraryChapterRecord,
+  LibraryChapterUpsertPayload,
+  ChapterReadingPositionRecord,
+  ChapterReadingPositionUpsertPayload,
+  SentenceAnalysisUpsertPayload,
+  SentenceAnalysisJobRecord,
+  SentenceAnalysisJobStatus,
+  SentenceAnalysisJobUpsertPayload,
+  UserPreferenceRecord,
+  SentenceAnalysisListFilters,
+  SentenceAnalysisContext,
+} from "./types/database";
+
 declare global {
   interface Window {
     electron: ElectronAPI & {
@@ -10,61 +27,61 @@ declare global {
   }
 }
 
-import {
-  LocalVideoFile,
-  SubtitleLineData,
-  TokenData,
-  Video,
-  JimakuResult,
-  TorrentStatus, // Add TorrentStatus
-  WordDictResult,
-} from "../types/models";
-
 export interface IElectronAPI {
-  readVideoFiles: () => LocalVideoFile[];
-
   db: {
-    subtitles: {
-      addSubtitlesByVideoId: (
-        videoId: string,
-        subtitles: SubtitleLineData[]
-      ) => Promise<{ success: boolean; message: string }>;
-      getSubtitlesByVideoId: (
-        videoId: string
-      ) => Promise<SubtitleLineData[] | null>;
-      updateToken: (
-        lineId: number,
-        tokenIndex: number,
-        tokenData: Partial<TokenData>
-      ) => Promise<{ success: boolean }>;
-      deleteSubtitlesByVideoId: (
-        videoId: string
-      ) => Promise<{ success: boolean }>;
+    books: {
+      upsert: (payload: LibraryBookUpsertPayload) => Promise<LibraryBookRecord>;
+      get: (bookId: string) => Promise<LibraryBookRecord | null>;
+      getAll: () => Promise<LibraryBookRecord[]>;
+      delete: (bookId: string) => Promise<boolean>;
     };
-    translation: {
-      addTranslationSentence: (
-        data: TranslationSentenceData
-      ) => Promise<{ success: boolean; message?: string }>;
-      getTranslationSentence: (
-        videoId: string,
-        startTime: number
-      ) => Promise<TranslationSentenceData | null>;
-      getTranslationSentencesByVideoId: (
-        videoId: string
-      ) => Promise<TranslationSentenceData[] | null>;
-      updateTranslationSentence: (
-        data: TranslationSentenceData
-      ) => Promise<{ success: boolean; message?: string }>;
-      deleteTranslationSentence: (
-        videoId: string,
-        startTime: number
-      ) => Promise<{ success: boolean }>;
-      deleteTranslationSentencesByVideoId: (
-        videoId: string
-      ) => Promise<{ success: boolean }>;
-      addTranslationSentences: (
-        data: TranslationSentenceData[]
-      ) => Promise<{ success: boolean; message?: string }>;
+    chapters: {
+      bulkUpsert: (
+        payload: LibraryChapterUpsertPayload[]
+      ) => Promise<LibraryChapterRecord[]>;
+      getByBook: (bookId: string) => Promise<LibraryChapterRecord[]>;
+      deleteByBook: (bookId: string) => Promise<boolean>;
+    };
+    readingPositions: {
+      upsert: (
+        payload: ChapterReadingPositionUpsertPayload
+      ) => Promise<ChapterReadingPositionRecord>;
+      get: (
+        bookId: string,
+        chapterId: string
+      ) => Promise<ChapterReadingPositionRecord | null>;
+      delete: (bookId: string, chapterId: string) => Promise<boolean>;
+    };
+    sentenceAnalysis: {
+      upsert: (
+        payload: SentenceAnalysisUpsertPayload
+      ) => Promise<SentenceAnalysisRecord>;
+      getBySentence: (
+        bookId: string,
+        text: string,
+        context?: SentenceAnalysisContext
+      ) => Promise<SentenceAnalysisRecord | null>;
+      listByContext: (
+        bookId: string,
+        filters?: SentenceAnalysisListFilters
+      ) => Promise<SentenceAnalysisRecord[]>;
+    };
+    sentenceAnalysisJobs: {
+      enqueue: (
+        payload: SentenceAnalysisJobUpsertPayload
+      ) => Promise<SentenceAnalysisJobRecord>;
+      updateStatus: (
+        jobId: number,
+        status: SentenceAnalysisJobStatus,
+        options?: { error?: string; resultRecordId?: number }
+      ) => Promise<boolean>;
+      getPending: (limit?: number) => Promise<SentenceAnalysisJobRecord[]>;
+      delete: (jobId: number) => Promise<boolean>;
+    };
+    userPreferences: {
+      set: (key: string, value: string) => Promise<UserPreferenceRecord>;
+      get: (key: string) => Promise<UserPreferenceRecord | null>;
+      delete: (key: string) => Promise<boolean>;
     };
   };
 
@@ -89,5 +106,13 @@ export interface IElectronAPI {
     onWordDetailResponse: (callback: (value: WordDetail) => void) => void;
     onWordDetailError: (callback: (message: string) => void) => void;
     cleanupListeners: () => void;
+  };
+
+  epub: {
+    selectFile: () => Promise<string | null>;
+    parseFile: (filePath: string) => Promise<any>;
+    getCover: (filePath: string) => Promise<string | undefined>;
+    onParseProgress: (callback: (progress: any) => void) => void;
+    cleanupEpubListeners: () => void;
   };
 }
