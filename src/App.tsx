@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Layout from "./components/layout/Layout";
 import ReaderPage from "./pages/ReaderPage";
 import { Book, User, NavigationItem, EpubBookData } from "./types/types";
@@ -188,22 +188,25 @@ export default function App() {
     console.log("新书已添加:", newBook.title);
   };
 
-  const updateBookById = (bookId: string, updater: (book: Book) => Book) => {
-    let updated: Book | null = null;
-    setBooks((prevBooks) =>
-      prevBooks.map((book) => {
-        if (book.id === bookId) {
-          const nextBook = updater(book);
-          updated = nextBook;
-          return nextBook;
-        }
-        return book;
-      })
-    );
-    if (updated) {
-      setSelectedBook(updated);
-    }
-  };
+  const updateBookById = useCallback(
+    (bookId: string, updater: (book: Book) => Book) => {
+      let updated: Book | null = null;
+      setBooks((prevBooks) =>
+        prevBooks.map((book) => {
+          if (book.id === bookId) {
+            const nextBook = updater(book);
+            updated = nextBook;
+            return nextBook;
+          }
+          return book;
+        })
+      );
+      if (updated) {
+        setSelectedBook(updated);
+      }
+    },
+    []
+  );
 
   const handleEnterReader = (book: Book) => {
     setReaderBookId(book.id);
@@ -222,25 +225,31 @@ export default function App() {
     setReaderBookId(null);
   };
 
-  const handleReaderChapterChange = (chapterId: string) => {
-    if (!readerBookId) return;
-    updateBookById(readerBookId, (book) => ({
-      ...book,
-      currentChapterId: chapterId,
-      lastReadChapterId: chapterId,
-      lastReadDate: new Date(),
-    }));
-  };
+  const handleReaderChapterChange = useCallback(
+    (chapterId: string) => {
+      if (!readerBookId) return;
+      updateBookById(readerBookId, (book) => ({
+        ...book,
+        currentChapterId: chapterId,
+        lastReadChapterId: chapterId,
+        lastReadDate: new Date(),
+      }));
+    },
+    [readerBookId, updateBookById]
+  );
 
-  const handleReaderProgressChange = (progress: number) => {
-    if (!readerBookId) return;
-    const normalized = Math.min(100, Math.max(0, Number(progress.toFixed(1))));
-    updateBookById(readerBookId, (book) => ({
-      ...book,
-      progress: normalized,
-      status: normalized >= 100 ? "completed" : "reading",
-    }));
-  };
+  const handleReaderProgressChange = useCallback(
+    (progress: number) => {
+      if (!readerBookId) return;
+      const normalized = Math.min(100, Math.max(0, Number(progress.toFixed(1))));
+      updateBookById(readerBookId, (book) => ({
+        ...book,
+        progress: normalized,
+        status: normalized >= 100 ? "completed" : "reading",
+      }));
+    },
+    [readerBookId, updateBookById]
+  );
 
   const sortBy = sortOptions[sortByIndex];
 

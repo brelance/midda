@@ -52,6 +52,7 @@ export function setupGeminiApiHandler(): void {
           try {
             const tokens = JSON.parse(text) as TokenData[];
             if (tokens.length > 0) {
+              console.log(tokens);
               return tokens; // 直接返回结果
             } else {
               throw new Error("Non-streaming response contained no tokens.");

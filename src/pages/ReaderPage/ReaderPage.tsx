@@ -127,6 +127,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [sentenceItems, setSentenceItems] = useState<
     ReaderSentenceAnalysisItem[]
   >([]);
+  const sentenceItemsRef = useRef<ReaderSentenceAnalysisItem[]>([]);
+  const processingRef = useRef(false);
+  const analysisActiveRef = useRef(isSentenceAnalysisActive);
 
   useEffect(() => {
     setCurrentChapterId(defaultChapterId);
@@ -144,8 +147,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       : null;
 
   const chapterTitle = currentChapter?.title ?? "章节内容";
-  const chapterContentHtml =
-    currentChapter?.content ?? buildFallbackContent();
+  const chapterContentHtml = useMemo(
+    () => currentChapter?.content ?? buildFallbackContent(),
+    [currentChapter]
+  );
   const activeChapterId = currentChapter?.id ?? "";
   useEffect(() => {
     setChapterProgress(0);
@@ -189,94 +194,78 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       const next = !prev;
       showToolbarsTemporarily(1800);
       if (!next) {
-        setSentenceItems([]);
+        setSentenceItems(() => {
+          sentenceItemsRef.current = [];
+          return [];
+        });
       }
       return next;
     });
   }, [showToolbarsTemporarily]);
-
-  const handleRetrySentence = useCallback((sentenceId: string) => {
-    setSentenceItems((prev) =>
-      prev.map((item) =>
-        item.id === sentenceId
-          ? { ...item, status: "idle", tokens: undefined, error: undefined }
-          : item
-      )
-    );
-  }, []);
 
   useEffect(() => {
     showToolbarsTemporarily(1800);
   }, [showToolbarsTemporarily]);
 
   useEffect(() => {
-    if (!isSentenceAnalysisActive) {
-      return;
-    }
-    if (!activeChapterId) {
-      setSentenceItems([]);
-      return;
-    }
-    const sentences = extractSentencesFromHtml(
-      chapterContentHtml,
-      activeChapterId
-    );
-    setSentenceItems((prev) => {
-      const previousById = new Map(prev.map((item) => [item.id, item]));
-      return sentences.map((sentence) => {
-        const existing = previousById.get(sentence.id);
-        if (existing) {
-          return existing;
-        }
-        return {
-          ...sentence,
-          status: "idle" as ReaderSentenceAnalysisItem["status"],
-        };
-      });
-    });
-  }, [isSentenceAnalysisActive, chapterContentHtml, activeChapterId]);
+    sentenceItemsRef.current = sentenceItems;
+  }, [sentenceItems]);
 
   useEffect(() => {
-    if (!isSentenceAnalysisActive || !activeChapterId || sentenceItems.length === 0) {
-      return;
-    }
-    if (!window?.api?.db?.sentenceAnalysis) {
-      return;
-    }
-    let cancelled = false;
+    analysisActiveRef.current = isSentenceAnalysisActive;
+  }, [isSentenceAnalysisActive]);
 
-    const analyzeSentences = async () => {
-      for (const item of sentenceItems) {
-        if (cancelled) {
+  const processPendingSentences = useCallback(async () => {
+    if (
+      !isSentenceAnalysisActive ||
+      !analysisActiveRef.current ||
+      !activeChapterId ||
+      processingRef.current ||
+      !window?.api?.db?.sentenceAnalysis ||
+      !window?.api?.ai?.sendGeminiRequest
+    ) {
+      return;
+    }
+
+    processingRef.current = true;
+
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        if (!analysisActiveRef.current) {
           break;
         }
-        if (item.status !== "idle") {
-          continue;
-        }
 
-        setSentenceItems((prev) =>
-          prev.map((entry) =>
-            entry.id === item.id
-              ? { ...entry, status: "loading", error: undefined }
-              : entry
-          )
+        const nextIdle = sentenceItemsRef.current.find(
+          (item) => item.status === "idle"
         );
 
+        if (!nextIdle) {
+          break;
+        }
+
+        setSentenceItems((prev) => {
+          const next = prev.map((entry) =>
+            entry.id === nextIdle.id
+              ? { ...entry, status: "loading", error: undefined }
+              : entry
+          );
+          sentenceItemsRef.current = next;
+          return next;
+        });
+
         try {
-          const context = { chapterId: activeChapterId, sentenceId: item.id };
+          const context = { chapterId: activeChapterId, sentenceId: nextIdle.id };
           const cached = await window.api.db.sentenceAnalysis.getBySentence(
             book.id,
-            item.text,
+            nextIdle.text,
             context
           );
-          if (cancelled) {
-            return;
-          }
 
           if (cached && cached.tokens && cached.tokens.length > 0) {
-            setSentenceItems((prev) =>
-              prev.map((entry) =>
-                entry.id === item.id
+            setSentenceItems((prev) => {
+              const next = prev.map((entry) =>
+                entry.id === nextIdle.id
                   ? {
                       ...entry,
                       status: "loaded",
@@ -284,20 +273,19 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
                       error: undefined,
                     }
                   : entry
-              )
-            );
+              );
+              sentenceItemsRef.current = next;
+              return next;
+            });
             continue;
           }
 
-          const prompt = getPrompt(item.text);
+          const prompt = getPrompt(nextIdle.text);
           const tokens: TokenData[] = await queuedSendGeminiRequest(prompt);
-          if (cancelled) {
-            return;
-          }
 
-          setSentenceItems((prev) =>
-            prev.map((entry) =>
-              entry.id === item.id
+          setSentenceItems((prev) => {
+            const next = prev.map((entry) =>
+              entry.id === nextIdle.id
                 ? {
                     ...entry,
                     status: "loaded",
@@ -305,29 +293,27 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
                     error: undefined,
                   }
                 : entry
-            )
-          );
+            );
+            sentenceItemsRef.current = next;
+            return next;
+          });
 
           await window.api.db.sentenceAnalysis.upsert({
             bookId: book.id,
-            text: item.text,
+            text: nextIdle.text,
             tokens,
             chapterId: activeChapterId,
-            sentenceId: item.id,
+            sentenceId: nextIdle.id,
           });
         } catch (error) {
-          if (cancelled) {
-            return;
-          }
-
           const message =
             error instanceof Error
               ? error.message
               : "分析过程中出现未知错误";
 
-          setSentenceItems((prev) =>
-            prev.map((entry) =>
-              entry.id === item.id
+          setSentenceItems((prev) => {
+            const next = prev.map((entry) =>
+              entry.id === nextIdle.id
                 ? {
                     ...entry,
                     status: "error",
@@ -335,18 +321,96 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
                     tokens: undefined,
                   }
                 : entry
-            )
-          );
+            );
+            sentenceItemsRef.current = next;
+            return next;
+          });
         }
       }
-    };
+    } finally {
+      processingRef.current = false;
+    }
+  }, [isSentenceAnalysisActive, activeChapterId, book.id]);
 
-    analyzeSentences();
+  const handleRetrySentence = useCallback(
+    (sentenceId: string) => {
+      setSentenceItems((prev) => {
+        const next = prev.map((item) =>
+          item.id === sentenceId
+            ? { ...item, status: "idle", tokens: undefined, error: undefined }
+            : item
+        );
+        sentenceItemsRef.current = next;
+        return next;
+      });
+      if (analysisActiveRef.current) {
+        void processPendingSentences();
+      }
+    },
+    [processPendingSentences]
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isSentenceAnalysisActive, sentenceItems, book.id, activeChapterId]);
+  useEffect(() => {
+    if (!isSentenceAnalysisActive) {
+      return;
+    }
+    if (!activeChapterId) {
+      if (sentenceItemsRef.current.length > 0) {
+        sentenceItemsRef.current = [];
+        setSentenceItems([]);
+      }
+      return;
+    }
+    const sentences = extractSentencesFromHtml(
+      chapterContentHtml,
+      activeChapterId
+    );
+
+    const previous = sentenceItemsRef.current;
+    const previousById = new Map(previous.map((item) => [item.id, item]));
+    let needsUpdate = previous.length !== sentences.length;
+    const nextState = sentences.map((sentence) => {
+      const existing = previousById.get(sentence.id);
+      if (existing) {
+        if (
+          !needsUpdate &&
+          existing.paragraphIndex === sentence.paragraphIndex &&
+          existing.sentenceIndex === sentence.sentenceIndex &&
+          existing.text === sentence.text
+        ) {
+          return existing;
+        }
+        needsUpdate = true;
+        return existing;
+      }
+      needsUpdate = true;
+      return {
+        ...sentence,
+        status: "idle" as ReaderSentenceAnalysisItem["status"],
+      };
+    });
+
+    if (!needsUpdate) {
+      if (
+        !processingRef.current &&
+        previous.some((item) => item.status === "idle")
+      ) {
+        void processPendingSentences();
+      }
+      return;
+    }
+
+    sentenceItemsRef.current = nextState;
+    setSentenceItems(nextState);
+    if (analysisActiveRef.current) {
+      void processPendingSentences();
+    }
+  }, [
+    isSentenceAnalysisActive,
+    chapterContentHtml,
+    activeChapterId,
+    processPendingSentences,
+  ]);
 
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
