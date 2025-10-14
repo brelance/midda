@@ -500,6 +500,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             sentences={sentenceItems}
             bookId={book.id}
             chapterId={activeChapterId}
+            chapterTitle={chapterTitle}
             onRetry={handleRetrySentence}
             onScroll={handleScroll}
           />
