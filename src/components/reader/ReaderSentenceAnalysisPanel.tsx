@@ -57,9 +57,9 @@ const ReaderSentenceAnalysisPanel = forwardRef<
                 <p className="text-base font-semibold text-[#3d2b1f] sm:text-lg">
                   {item.text}
                 </p>
-                <span className="text-sm text-[#6b5b4b]">
+                {/* <span className="text-sm text-[#6b5b4b]">
                   句子 {item.sentenceIndex + 1}
-                </span>
+                </span> */}
               </header>
 
               {item.status === "loading" && (
@@ -82,13 +82,15 @@ const ReaderSentenceAnalysisPanel = forwardRef<
                 </div>
               )}
 
-              {item.status === "loaded" && item.tokens && item.tokens.length > 0 && (
-                <SentenceAnalyzer
-                  text={item.text}
-                  bookId={bookId}
-                  analyzedTokens={item.tokens}
-                />
-              )}
+              {item.status === "loaded" &&
+                item.tokens &&
+                item.tokens.length > 0 && (
+                  <SentenceAnalyzer
+                    text={item.text}
+                    bookId={bookId}
+                    analyzedTokens={item.tokens}
+                  />
+                )}
 
               {item.status === "loaded" &&
                 (!item.tokens || item.tokens.length === 0) && (

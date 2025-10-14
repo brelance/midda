@@ -1,100 +1,13 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Layout from "./components/layout/Layout";
 import ReaderPage from "./pages/ReaderPage";
-import { Book, User, NavigationItem, EpubBookData } from "./types/types";
+import { Book, User, NavigationItem, EpubBookData, Chapter } from "./types/types";
 import {
+  LibraryBookRecord,
   LibraryBookUpsertPayload,
+  LibraryChapterRecord,
   LibraryChapterUpsertPayload,
 } from "./types/database";
-
-const retroChapterContent = [
-  `<p>这是一个示例文本，用于填充阅读区域，测试阅读器的排版与滚动性能。每一段文字都携带昭和复古的气息，配合粗野主义的视觉元素，营造出独特的阅读氛围。</p>`,
-  `<p>当你滚动页面时，顶部与底部的工具栏会根据鼠标或触摸位置自动出现，让操作既直观又不打扰沉浸式阅读。</p>`,
-  `<p>阅读页面未来将接入 EPUB 解析能力，章节内容会动态渲染，高亮、批注与词典功能也已经在路线图上。</p>`,
-  `<h2 class="text-3xl font-black mt-10">下一节：粗野主义的魅力</h2>`,
-  `<p>厚重的边框、夸张的阴影以及饱和的配色是这种风格的关键词。它们不仅带来了鲜明的视觉层次，同时也让界面操作更加醒目。</p>`,
-].join("");
-
-// 模拟数据
-const mockBooks: Book[] = [
-  {
-    id: "1",
-    title: "很长的书籍名称",
-    author: "作者名",
-    progress: 45,
-    status: "reading",
-    description: "这是一本非常有趣的书籍，讲述了关于编程和生活的故事。",
-    chapters: [
-      {
-        id: "chapter-1",
-        title: "第一章：冒险的开始",
-        pageNumber: 1,
-        isRead: true,
-        content: retroChapterContent,
-        order: 1,
-      },
-      {
-        id: "chapter-2",
-        title: "第二章：昭和风格",
-        pageNumber: 2,
-        isRead: false,
-        content: retroChapterContent,
-        order: 2,
-      },
-      {
-        id: "chapter-3",
-        title: "第三章：未来展望",
-        pageNumber: 3,
-        isRead: false,
-        content: retroChapterContent,
-        order: 3,
-      },
-    ],
-    currentChapterId: "chapter-1",
-    lastReadChapterId: "chapter-1",
-    addedDate: new Date("2024-01-01"),
-    lastReadDate: new Date("2024-01-15"),
-  },
-  {
-    id: "2",
-    title: "书名",
-    author: "作者名",
-    progress: 100,
-    status: "completed",
-    description: "一本已经读完的好书。",
-    addedDate: new Date("2023-12-01"),
-    lastReadDate: new Date("2024-01-10"),
-  },
-  {
-    id: "3",
-    title: "新书推荐",
-    author: "知名作者",
-    progress: 0,
-    status: "not-started",
-    description: "一本值得期待的新书。",
-    addedDate: new Date("2024-01-20"),
-  },
-  {
-    id: "4",
-    title: "技术书籍",
-    author: "技术专家",
-    progress: 75,
-    status: "reading",
-    description: "深入讲解现代软件开发技术。",
-    addedDate: new Date("2023-11-15"),
-    lastReadDate: new Date("2024-01-18"),
-  },
-  {
-    id: "5",
-    title: "文学经典",
-    author: "文学大师",
-    progress: 30,
-    status: "reading",
-    description: "经典的文学作品，值得细细品味。",
-    addedDate: new Date("2023-10-01"),
-    lastReadDate: new Date("2024-01-12"),
-  },
-];
 
 const mockUser: User = {
   id: "user1",
@@ -102,10 +15,61 @@ const mockUser: User = {
   email: "user@example.com",
 };
 
+const parseDbTimestamp = (value?: string): Date | undefined => {
+  if (!value) return undefined;
+  const normalized = value.replace(" ", "T");
+  const hasTimezone = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(normalized);
+  const withTimezone = hasTimezone ? normalized : `${normalized}Z`;
+  const parsed = new Date(withTimezone);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
+const mapDbBookToBook = (record: LibraryBookRecord): Book => {
+  const addedDate = parseDbTimestamp(record.addedAt) ?? new Date();
+  const lastReadDate = record.lastReadChapterId
+    ? parseDbTimestamp(record.updatedAt)
+    : undefined;
+
+  return {
+    id: record.id,
+    title: record.title,
+    author: record.author ?? "未知作者",
+    cover: record.coverPath ?? undefined,
+    progress: record.progress,
+    status: record.status,
+    description: record.description ?? undefined,
+    chapters: undefined,
+    currentChapterId: record.currentChapterId ?? undefined,
+    lastReadChapterId: record.lastReadChapterId ?? undefined,
+    addedDate,
+    lastReadDate,
+    filePath: record.filePath,
+    metadata: {
+      title: record.title,
+      creator: record.author ?? "未知作者",
+      description: record.description ?? undefined,
+      language: record.metadataLanguage ?? "unknown",
+      publisher: record.metadataPublisher ?? undefined,
+      identifier: record.metadataIdentifier ?? record.id,
+      sourcePath: record.sourcePath ?? undefined,
+    },
+  };
+};
+
+const mapDbChapterToChapter = (record: LibraryChapterRecord): Chapter => ({
+  id: record.chapterId,
+  title: record.title ?? `章节 ${record.orderIndex + 1}`,
+  pageNumber: 0,
+  isRead: record.isRead,
+  content: record.contentHtml ?? "",
+  href: record.href ?? undefined,
+  order: record.orderIndex,
+});
+
 const sortOptions = ["title", "author", "progress", "addedDate"] as const;
 
 export default function App() {
-  const [books, setBooks] = useState<Book[]>(mockBooks);
+  const [books, setBooks] = useState<Book[]>([]);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [activeNav, setActiveNav] = useState<NavigationItem>("bookshelf");
   const [searchQuery, setSearchQuery] = useState("");
@@ -116,13 +80,86 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDetailsPaneOpen, setIsDetailsPaneOpen] = useState(false);
 
+  const ensureBookChapters = useCallback(
+    async (bookId: string) => {
+      const target = books.find((item) => item.id === bookId);
+      if (!target || (target.chapters && target.chapters.length > 0)) {
+        return;
+      }
+      if (typeof window === "undefined" || !window.api?.db?.chapters?.getByBook) {
+        return;
+      }
+      try {
+        const chapterRecords = await window.api.db.chapters.getByBook(bookId);
+        const chapters = chapterRecords.map(mapDbChapterToChapter);
+        setBooks((prev) =>
+          prev.map((item) =>
+            item.id === bookId ? { ...item, chapters } : item
+          )
+        );
+        setSelectedBook((prev) =>
+          prev && prev.id === bookId ? { ...prev, chapters } : prev
+        );
+      } catch (error) {
+        console.error(`加载章节失败 (${bookId}):`, error);
+      }
+    },
+    [books]
+  );
+
   const readerBook = useMemo(
     () => books.find((book) => book.id === readerBookId) ?? null,
     [books, readerBookId]
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    let cancelled = false;
+    const loadBooks = async () => {
+      if (!window.api?.db?.books?.getAll) {
+        console.warn("数据库 API 未就绪，跳过书籍加载。");
+        return;
+      }
+      try {
+        const records = await window.api.db.books.getAll();
+        if (cancelled) {
+          return;
+        }
+        const mapped = records.map(mapDbBookToBook);
+        setBooks(mapped);
+        setSelectedBook((prev) => {
+          if (!prev) return prev;
+          const next = mapped.find((item) => item.id === prev.id);
+          return next ?? null;
+        });
+        setReaderBookId((prev) => {
+          if (!prev) return null;
+          const exists = mapped.some((item) => item.id === prev);
+          return exists ? prev : null;
+        });
+      } catch (error) {
+        console.error("加载书籍列表失败:", error);
+      }
+    };
+    void loadBooks();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (readerBook && (!readerBook.chapters || readerBook.chapters.length === 0)) {
+      void ensureBookChapters(readerBook.id);
+    }
+  }, [readerBook, ensureBookChapters]);
+
   const handleSelectBook = (book: Book) => {
     setSelectedBook(book);
+    if (!book.chapters || book.chapters.length === 0) {
+      void ensureBookChapters(book.id);
+    }
     // 在移动端和平板端选择书籍时自动打开详情面板
     if (window.innerWidth < 1024) {
       setIsDetailsPaneOpen(true);
@@ -233,7 +270,15 @@ export default function App() {
         throw error;
       }
 
-      setBooks((prevBooks) => [...prevBooks, newBook]);
+      setBooks((prevBooks) => {
+        const existingIndex = prevBooks.findIndex((item) => item.id === newBook.id);
+        if (existingIndex >= 0) {
+          const next = [...prevBooks];
+          next[existingIndex] = newBook;
+          return next;
+        }
+        return [...prevBooks, newBook];
+      });
       console.log("新书已添加:", newBook.title);
     },
     []
@@ -260,6 +305,9 @@ export default function App() {
   );
 
   const handleEnterReader = (book: Book) => {
+    if (!book.chapters || book.chapters.length === 0) {
+      void ensureBookChapters(book.id);
+    }
     setReaderBookId(book.id);
     setSelectedBook(book);
     setIsSidebarOpen(false);
