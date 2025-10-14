@@ -120,7 +120,7 @@ const Layout: React.FC<LayoutProps> = ({
 
       {/* 移动端：单栏布局 */}
       <div className="flex md:hidden h-full w-full mobile-layout">
-        <div className="flex-1 bg-white">
+        <div className="flex-1">
           <MainContent
             books={books}
             selectedBook={selectedBook}

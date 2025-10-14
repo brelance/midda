@@ -75,18 +75,19 @@ body {
 }
 
 #analyzedSentenceOutput {
-  line-height: 1.45; /* 更紧凑的行高 */
-  padding: 0.3em 0; /* 收紧上下留白 */
-  word-spacing: 0.18em; /* 缩短词间距 */
+  line-height: 1.8; /* 减少行高 */
+  padding-top: 0.5em; /* 减少上内边距 */
+  padding-bottom: 0.4em; /* 减少下内边距 */
+  word-spacing: 0.3em; /* 增加词间距 */
   overflow-wrap: break-word; /* 允许长单词在必要时换行 */
   word-break: break-all; /* 在必要时允许在单词中间换行 */
 }
 
 @media (max-width: 640px) {
   #analyzedSentenceOutput {
-    line-height: 2.2; /* 移动端更紧凑的行高 */
-    word-spacing: 0.14em; /* 缩小移动端词间距 */
-    font-size: 0.92rem; /* 略小的移动端字体 */
+    line-height: 3.2; /* 移动设备上略小的行高 */
+    word-spacing: 0.2em; /* 移动设备上略小的词间距 */
+    font-size: 0.95rem; /* 移动设备上略小的字体大小 */
   }
 }
 
@@ -101,32 +102,32 @@ body {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  margin: 0 1px;
+  margin: 0 2px;
   padding: 0;
   vertical-align: baseline;
   position: relative;
-  min-width: 1em; /* 保持最小宽度 */
+  min-width: 1.2em; /* 确保有最小宽度 */
 }
 
 .word-token {
   position: relative;
   display: inline-block;
-  padding: 0 2px;
-  padding-bottom: 1px;
-  padding-top: 0.7em; /* 收紧上方空间 */
-  font-size: 1rem; /* 更紧凑的字号 */
+  padding: 0 3px;
+  padding-bottom: 2px;
+  padding-top: 1em; /* 减少上内边距 */
+  font-size: 1.1rem; /* 减小字体大小 */
   color: #2c3e50;
   cursor: pointer;
   transition: color 0.2s ease;
-  line-height: 1.1; /* 收紧行高 */
-  margin: 0 0.5px; /* 缩小词间距 */
+  line-height: 1.2; /* 略微增加行高 */
+  margin: 0 1px; /* 添加词间距 */
 }
 
 @media (max-width: 640px) {
   .word-token {
-    font-size: 0.95rem; /* 移动设备上的更小字体 */
-    padding-top: 1.1em; /* 调整移动端上内边距 */
-    padding: 0 1px; /* 更紧凑的水平内边距 */
+    font-size: 1rem; /* 移动设备上的字体大小 */
+    padding-top: 1.6em; /* 移动设备上稍小的上内边距 */
+    padding: 0 2px; /* 较小的水平内边距 */
   }
 }
 
@@ -233,18 +234,19 @@ body {
   }
 }
 #analyzedSentenceOutput {
-  line-height: 1.45; /* 更紧凑的行高 */
-  padding: 0.3em 0; /* 收紧上下留白 */
-  word-spacing: 0.18em; /* 缩短词间距 */
+  line-height: 1.8; /* 减少行高 */
+  padding-top: 0.5em; /* 减少上内边距 */
+  padding-bottom: 0.4em; /* 减少下内边距 */
+  word-spacing: 0.3em; /* 增加词间距 */
   overflow-wrap: break-word; /* 允许长单词在必要时换行 */
   word-break: break-all; /* 在必要时允许在单词中间换行 */
 }
 
 @media (max-width: 640px) {
   #analyzedSentenceOutput {
-    line-height: 2.2; /* 移动端更紧凑的行高 */
-    word-spacing: 0.14em; /* 缩小移动端词间距 */
-    font-size: 0.92rem; /* 略小的移动端字体 */
+    line-height: 3.2; /* 移动设备上略小的行高 */
+    word-spacing: 0.2em; /* 移动设备上略小的词间距 */
+    font-size: 0.95rem; /* 移动设备上略小的字体大小 */
   }
 }
 
@@ -259,32 +261,32 @@ body {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  margin: 0 1px;
+  margin: 0 2px;
   padding: 0;
   vertical-align: baseline;
   position: relative;
-  min-width: 1em; /* 保持最小宽度 */
+  min-width: 1.2em; /* 确保有最小宽度 */
 }
 
 .word-token {
   position: relative;
   display: inline-block;
-  padding: 0 2px;
-  padding-bottom: 1px;
-  padding-top: 0.7em; /* 收紧上方空间 */
-  font-size: 1rem; /* 更紧凑的字号 */
+  padding: 0 3px;
+  padding-bottom: 2px;
+  padding-top: 1em; /* 减少上内边距 */
+  font-size: 1.1rem; /* 减小字体大小 */
   color: #2c3e50;
   cursor: pointer;
   transition: color 0.2s ease;
-  line-height: 1.1; /* 收紧行高 */
-  margin: 0 0.5px; /* 缩小词间距 */
+  line-height: 1.2; /* 略微增加行高 */
+  margin: 0 1px; /* 添加词间距 */
 }
 
 @media (max-width: 640px) {
   .word-token {
-    font-size: 0.95rem; /* 移动设备上的更小字体 */
-    padding-top: 1.1em; /* 调整移动端上内边距 */
-    padding: 0 1px; /* 更紧凑的水平内边距 */
+    font-size: 1rem; /* 移动设备上的字体大小 */
+    padding-top: 1.6em; /* 移动设备上稍小的上内边距 */
+    padding: 0 2px; /* 较小的水平内边距 */
   }
 }
 
@@ -379,11 +381,11 @@ body {
 
 .ruby-text {
   position: absolute;
-  top: -1.05em; /* 更靠近底部文字 */
+  top: -1.2em; /* 向上移动，减少距离 */
   left: 50%;
   transform: translateX(-50%); /* 居中对齐 */
   width: max-content; /* 允许比基本文字更宽 */
-  font-size: 0.52em; /* 更小的假名字体 */
+  font-size: 0.55em; /* 减小字体 */
   color: #555;
   user-select: none;
   line-height: 1;
@@ -397,8 +399,8 @@ body {
 
 @media (max-width: 640px) {
   .ruby-text {
-    font-size: 0.52em; /* 移动设备上更紧凑的假名 */
-    top: -1.15em; /* 调整移动端假名位置 */
+    font-size: 0.55em; /* 移动设备上更小的假名字体 */
+    top: -1.3em; /* 移动设备上调整假名位置 */
   }
 }
 
@@ -438,9 +440,9 @@ body {
 }
 
 .romaji-text {
-  font-size: 0.58em; /* 更小的罗马音 */
+  font-size: 0.6em; /* 减小字体 */
   color: #7f8c8d;
-  margin-top: 0; /* 去除额外留白 */
+  margin-top: 1px; /* 减少上边距 */
   line-height: 1;
   user-select: none;
   text-align: center;
@@ -449,7 +451,7 @@ body {
 
 @media (max-width: 640px) {
   .romaji-text {
-    font-size: 0.6em; /* 移动设备上保持紧凑 */
+    font-size: 0.65em; /* 移动设备上更小的罗马音字体 */
   }
 }
 
