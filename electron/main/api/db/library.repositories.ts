@@ -117,9 +117,7 @@ export class BookRepository {
     ORDER BY updated_at DESC
   `);
 
-  private readonly deleteStmt = db.prepare(
-    `DELETE FROM books WHERE id = ?`
-  );
+  private readonly deleteStmt = db.prepare(`DELETE FROM books WHERE id = ?`);
 
   upsert(payload: BookUpsertPayload): BookRecord {
     const defaults: Pick<BookUpsertPayload, "status" | "progress"> = {
@@ -130,6 +128,15 @@ export class BookRepository {
     const runResult = this.upsertStmt.run({
       ...defaults,
       ...payload,
+      author: payload.author ?? null,
+      description: payload.description ?? null,
+      coverPath: payload.coverPath ?? null,
+      sourcePath: payload.sourcePath ?? null,
+      currentChapterId: payload.currentChapterId ?? null,
+      lastReadChapterId: payload.lastReadChapterId ?? null,
+      metadataLanguage: payload.metadataLanguage ?? null,
+      metadataPublisher: payload.metadataPublisher ?? null,
+      metadataIdentifier: payload.metadataIdentifier ?? null,
     });
 
     if (runResult.changes === 0) {
@@ -281,6 +288,10 @@ export class ChapterRepository {
       for (const item of items) {
         this.upsertStmt.run({
           ...item,
+          title: item.title ?? null,
+          href: item.href ?? null,
+          contentHtml: item.contentHtml ?? null,
+          wordCount: item.wordCount ?? null,
           isRead: item.isRead ? 1 : 0,
         });
       }
@@ -384,16 +395,17 @@ export class ChapterReadingPositionRepository {
     WHERE book_id = ? AND chapter_id = ?
   `);
 
-  upsert(payload: ChapterReadingPositionUpsertPayload): ChapterReadingPositionRecord {
+  upsert(
+    payload: ChapterReadingPositionUpsertPayload
+  ): ChapterReadingPositionRecord {
     const result = this.upsertStmt.run(payload);
     if (result.changes === 0) {
       throw new Error("Failed to upsert reading position");
     }
 
-    const row = this.getStmt.get(
-      payload.bookId,
-      payload.chapterId
-    ) as ChapterReadingPositionRow | undefined;
+    const row = this.getStmt.get(payload.bookId, payload.chapterId) as
+      | ChapterReadingPositionRow
+      | undefined;
 
     if (!row) {
       throw new Error("Failed to read position after upsert");
@@ -487,6 +499,13 @@ export class SentenceAnalysisRepository {
       updated_at = CURRENT_TIMESTAMP
   `);
 
+  private readonly ensureBookExistsStmt = db.prepare(`
+    SELECT 1
+    FROM books
+    WHERE id = ?
+    LIMIT 1
+  `);
+
   private readonly getByHashStmt = db.prepare(`
     SELECT
       id,
@@ -523,6 +542,14 @@ export class SentenceAnalysisRepository {
   `);
 
   upsert(payload: SentenceAnalysisUpsertPayload): SentenceAnalysisRecord {
+    const bookExists = this.ensureBookExistsStmt.get(payload.bookId);
+
+    if (!bookExists) {
+      throw new Error(
+        `书籍 ${payload.bookId} 不存在，无法写入句子分析记录。请先确保书籍已落库。`
+      );
+    }
+
     const sentenceHash = computeSentenceHash(
       payload.bookId,
       payload.text,
@@ -535,6 +562,9 @@ export class SentenceAnalysisRepository {
 
     const result = this.upsertStmt.run({
       ...payload,
+      chapterId: payload.chapterId ?? null,
+      paragraphId: payload.paragraphId ?? null,
+      sentenceId: payload.sentenceId ?? null,
       sentenceHash,
       tokensJson,
     });
@@ -543,10 +573,9 @@ export class SentenceAnalysisRepository {
       throw new Error("Failed to upsert sentence analysis record");
     }
 
-    const row = this.getByHashStmt.get(
-      payload.bookId,
-      sentenceHash
-    ) as SentenceAnalysisRow | undefined;
+    const row = this.getByHashStmt.get(payload.bookId, sentenceHash) as
+      | SentenceAnalysisRow
+      | undefined;
 
     if (!row) {
       throw new Error("Failed to load sentence analysis after upsert");
@@ -571,14 +600,16 @@ export class SentenceAnalysisRepository {
       context?.paragraphId,
       context?.sentenceId
     );
-    const row = this.getByHashStmt.get(
-      bookId,
-      sentenceHash
-    ) as SentenceAnalysisRow | undefined;
+    const row = this.getByHashStmt.get(bookId, sentenceHash) as
+      | SentenceAnalysisRow
+      | undefined;
     return row ? mapSentenceAnalysisRow(row) : null;
   }
 
-  listByContext(bookId: string, filters?: { chapterId?: string; paragraphId?: string }): SentenceAnalysisRecord[] {
+  listByContext(
+    bookId: string,
+    filters?: { chapterId?: string; paragraphId?: string }
+  ): SentenceAnalysisRecord[] {
     const rows = this.getByContextStmt.all({
       bookId,
       chapterId: filters?.chapterId ?? null,
@@ -733,7 +764,9 @@ export class SentenceAnalysisJobRepository {
     WHERE job_id = ?
   `);
 
-  enqueue(payload: SentenceAnalysisJobUpsertPayload): SentenceAnalysisJobRecord {
+  enqueue(
+    payload: SentenceAnalysisJobUpsertPayload
+  ): SentenceAnalysisJobRecord {
     const sentenceHash =
       payload.sentenceHash ??
       computeSentenceHash(
@@ -761,7 +794,11 @@ export class SentenceAnalysisJobRepository {
     return job;
   }
 
-  updateStatus(jobId: number, status: SentenceAnalysisJobStatus, options?: { error?: string; resultRecordId?: number }): boolean {
+  updateStatus(
+    jobId: number,
+    status: SentenceAnalysisJobStatus,
+    options?: { error?: string; resultRecordId?: number }
+  ): boolean {
     const res = this.updateStatusStmt.run({
       jobId,
       status,
@@ -797,7 +834,10 @@ export class SentenceAnalysisJobRepository {
     WHERE book_id = ? AND sentence_hash = ?
   `);
 
-  private getByHash(bookId: string, sentenceHash: string): SentenceAnalysisJobRecord | null {
+  private getByHash(
+    bookId: string,
+    sentenceHash: string
+  ): SentenceAnalysisJobRecord | null {
     const row = this.getByHashStmt.get(bookId, sentenceHash) as
       | SentenceAnalysisJobRow
       | undefined;
@@ -889,9 +929,7 @@ interface UserPreferenceRow {
   updated_at: string;
 }
 
-function mapUserPreferenceRow(
-  row: UserPreferenceRow
-): UserPreferenceRecord {
+function mapUserPreferenceRow(row: UserPreferenceRow): UserPreferenceRecord {
   return {
     key: row.key,
     value: row.value,

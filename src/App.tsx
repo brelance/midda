@@ -2,6 +2,10 @@ import { useCallback, useMemo, useState } from "react";
 import Layout from "./components/layout/Layout";
 import ReaderPage from "./pages/ReaderPage";
 import { Book, User, NavigationItem, EpubBookData } from "./types/types";
+import {
+  LibraryBookUpsertPayload,
+  LibraryChapterUpsertPayload,
+} from "./types/database";
 
 const retroChapterContent = [
   `<p>这是一个示例文本，用于填充阅读区域，测试阅读器的排版与滚动性能。每一段文字都携带昭和复古的气息，配合粗野主义的视觉元素，营造出独特的阅读氛围。</p>`,
@@ -159,34 +163,81 @@ export default function App() {
     setIsDetailsPaneOpen(false);
   };
 
-  const handleBookAdded = (epubData: EpubBookData) => {
-    // 将EpubBookData转换为Book对象并添加到书籍列表
-    const newBook: Book = {
-      id: epubData.id,
-      title: epubData.title,
-      author: epubData.author,
-      cover: epubData.cover,
-      progress: epubData.progress,
-      status: epubData.status,
-      description: epubData.metadata.description,
-      chapters: epubData.chapters.map((chapter) => ({
-        id: chapter.id,
-        title: chapter.title,
-        pageNumber: 0, // EPUB没有页码概念
-        isRead: false,
-        content: chapter.content,
-        href: chapter.href,
-        order: chapter.order,
-      })),
-      addedDate: epubData.addedDate,
-      lastReadDate: undefined,
-      filePath: epubData.filePath,
-      metadata: epubData.metadata,
-    };
+  const handleBookAdded = useCallback(
+    async (epubData: EpubBookData) => {
+      // 将EpubBookData转换为Book对象并添加到书籍列表
+      const newBook: Book = {
+        id: epubData.id,
+        title: epubData.title,
+        author: epubData.author,
+        cover: epubData.cover,
+        progress: epubData.progress,
+        status: epubData.status,
+        description: epubData.metadata.description,
+        chapters: epubData.chapters.map((chapter) => ({
+          id: chapter.id,
+          title: chapter.title,
+          pageNumber: 0, // EPUB没有页码概念
+          isRead: false,
+          content: chapter.content,
+          href: chapter.href,
+          order: chapter.order,
+        })),
+        addedDate: epubData.addedDate,
+        lastReadDate: undefined,
+        filePath: epubData.filePath,
+        metadata: epubData.metadata,
+      };
 
-    setBooks((prevBooks) => [...prevBooks, newBook]);
-    console.log("新书已添加:", newBook.title);
-  };
+      const firstChapterId = epubData.chapters[0]?.id;
+
+      try {
+        if (window?.api?.db?.books?.upsert) {
+          const bookPayload: LibraryBookUpsertPayload = {
+            id: epubData.id,
+            title: epubData.title,
+            author: epubData.author,
+            description: epubData.metadata.description,
+            coverPath: epubData.cover,
+            filePath: epubData.filePath,
+            sourcePath: epubData.metadata.sourcePath,
+            status: epubData.status,
+            progress: epubData.progress,
+            currentChapterId: firstChapterId,
+            lastReadChapterId: firstChapterId,
+            metadataLanguage: epubData.metadata.language,
+            metadataPublisher: epubData.metadata.publisher,
+            metadataIdentifier: epubData.metadata.identifier,
+          };
+
+          await window.api.db.books.upsert(bookPayload);
+
+          const chapterPayloads: LibraryChapterUpsertPayload[] =
+            epubData.chapters.map((chapter) => ({
+              bookId: epubData.id,
+              chapterId: chapter.id,
+              title: chapter.title,
+              href: chapter.href,
+              orderIndex: chapter.order,
+              contentHtml: chapter.content,
+            }));
+
+          if (chapterPayloads.length > 0) {
+            await window.api.db.chapters.bulkUpsert(chapterPayloads);
+          }
+        } else {
+          console.warn("window.api.db 未定义，跳过书籍落库。");
+        }
+      } catch (error) {
+        console.error("持久化书籍数据失败:", error);
+        throw error;
+      }
+
+      setBooks((prevBooks) => [...prevBooks, newBook]);
+      console.log("新书已添加:", newBook.title);
+    },
+    []
+  );
 
   const updateBookById = useCallback(
     (bookId: string, updater: (book: Book) => Book) => {

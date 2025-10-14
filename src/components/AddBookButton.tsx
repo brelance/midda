@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { EpubBookData } from '../types/types';
+import React, { useState } from "react";
+import { EpubBookData } from "../types/types";
 
 interface AddBookButtonProps {
-  onBookAdded: (bookData: EpubBookData) => void;
+  onBookAdded: (bookData: EpubBookData) => Promise<void> | void;
 }
 
 const AddBookButton: React.FC<AddBookButtonProps> = ({ onBookAdded }) => {
@@ -20,13 +20,12 @@ const AddBookButton: React.FC<AddBookButtonProps> = ({ onBookAdded }) => {
       }
 
       const bookData = await window.api.epub.parseFile(filePath);
-
-      onBookAdded(bookData);
+      await onBookAdded(bookData);
       setIsModalOpen(false);
     } catch (error) {
-      console.error('添加书籍失败:', error);
+      console.error("添加书籍失败:", error);
       // 显示用户友好的错误提示
-      alert('添加书籍失败，请检查文件格式是否正确');
+      alert("添加书籍失败，请检查文件格式是否正确");
     } finally {
       setIsLoading(false);
     }

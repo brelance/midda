@@ -11,7 +11,7 @@ interface HeaderProps {
   toggleSidebar: () => void;
   toggleDetailsPane: () => void;
   selectedBook: Book | null;
-  onBookAdded?: (bookData: EpubBookData) => void;
+  onBookAdded?: (bookData: EpubBookData) => Promise<void> | void;
 }
 
 const Header: React.FC<HeaderProps> = ({
