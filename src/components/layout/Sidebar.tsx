@@ -1,7 +1,7 @@
-import React from 'react';
-import NavMenu from '../sidebar/NavMenu';
-import UserProfile from '../sidebar/UserProfile';
-import { User, NavigationItem } from '../../types/types';
+import React from "react";
+import NavMenu from "../sidebar/NavMenu";
+import UserProfile from "../sidebar/UserProfile";
+import { User, NavigationItem } from "../../types/types";
 
 interface SidebarProps {
   activeNav: NavigationItem;
@@ -20,16 +20,22 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose,
 }) => {
   return (
-    <aside className={`
-      ${isMobile ? 'w-full h-full' : 'w-64'}
+    <aside
+      className={`
+      ${isMobile ? "w-full h-full" : "w-64"}
       flex-shrink-0 bg-[#f5f5dc]
-      ${isMobile ? 'border-r-0' : 'border-r-4 border-black'}
+      ${isMobile ? "border-r-0" : "border-r-4 border-black"}
       flex flex-col p-4
-    `}>
+    `}
+    >
       {/* 移动端顶部栏（Logo + 关闭按钮） */}
       <div className="flex items-center justify-between mb-4">
-        <div className={`flex items-center justify-center ${isMobile ? 'text-2xl' : 'text-3xl'} font-black`}>
-          阅读器APP
+        <div
+          className={`flex items-center justify-center ${
+            isMobile ? "text-2xl" : "text-3xl"
+          } font-black`}
+        >
+          MIDDA
         </div>
 
         {/* 移动端关闭按钮 */}

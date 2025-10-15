@@ -113,7 +113,7 @@ const Layout: React.FC<LayoutProps> = ({
           >
             <DetailsPane
               selectedBook={selectedBook}
-              isMobile={false}
+              isMobile={true}
               isOpen={isDetailsPaneOpen}
               onClose={closeDetailsPane}
               showCloseButton={true}
