@@ -40,6 +40,18 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   isSentenceAnalysisRunning = false,
 }) => {
   const isAnalysisMode = viewMode === "analysis";
+  const [isAnalysisPlaybackActive, setIsAnalysisPlaybackActive] =
+    React.useState(false);
+
+  React.useEffect(() => {
+    if (!isAnalysisMode) {
+      setIsAnalysisPlaybackActive(false);
+    }
+  }, [isAnalysisMode]);
+
+  const handleToggleAnalysisPlayback = () => {
+    setIsAnalysisPlaybackActive((prev) => !prev);
+  };
 
   const renderModeToggleButton = () => (
     <BrutalistButton
@@ -185,6 +197,40 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
         </svg>
         <span className="hidden sm:inline">
           {isSentenceAnalysisRunning ? "停止分析" : "开始分析"}
+        </span>
+      </BrutalistButton>
+
+      <BrutalistButton
+        onClick={handleToggleAnalysisPlayback}
+        className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2"
+        aria-label={
+          isAnalysisPlaybackActive ? "暂停句子分析" : "播放句子分析"
+        }
+        aria-pressed={isAnalysisPlaybackActive}
+        title={isAnalysisPlaybackActive ? "暂停句子分析" : "播放句子分析"}
+      >
+        <svg
+          className="h-5 w-5 sm:h-6 sm:w-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          {isAnalysisPlaybackActive ? (
+            <>
+              <line x1="10" y1="9" x2="10" y2="15" />
+              <line x1="14" y1="9" x2="14" y2="15" />
+            </>
+          ) : (
+            <path d="M10 9l5 3-5 3z" />
+          )}
+        </svg>
+        <span className="hidden sm:inline">
+          {isAnalysisPlaybackActive ? "暂停" : "播放"}
         </span>
       </BrutalistButton>
 
