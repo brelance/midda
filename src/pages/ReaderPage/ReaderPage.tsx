@@ -13,7 +13,7 @@ import ReaderSentenceAnalysisPanel, {
   ReaderSentenceAnalysisItem,
 } from "../../components/reader/ReaderSentenceAnalysisPanel";
 import { Book, Chapter, TokenData } from "../../types/types";
-import { ReadingMode } from "../../types/reader";
+import { ReadingMode, ReaderViewMode } from "../../types/reader";
 import {
   findChapterIndex,
   getNextChapterId,
@@ -379,14 +379,15 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [currentChapterId, setCurrentChapterId] = useState(defaultChapterId);
   const [chapterProgress, setChapterProgress] = useState(0);
   const [readingMode, setReadingMode] = useState<ReadingMode>("single");
-  const [isSentenceAnalysisActive, setIsSentenceAnalysisActive] =
+  const [viewMode, setViewMode] = useState<ReaderViewMode>("reading");
+  const [isSentenceAnalysisRunning, setIsSentenceAnalysisRunning] =
     useState(false);
   const [sentenceItems, setSentenceItems] = useState<
     ReaderSentenceAnalysisItem[]
   >([]);
   const sentenceItemsRef = useRef<ReaderSentenceAnalysisItem[]>([]);
   const processingRef = useRef(false);
-  const analysisActiveRef = useRef(isSentenceAnalysisActive);
+  const analysisRunningRef = useRef(isSentenceAnalysisRunning);
 
   useEffect(() => {
     setCurrentChapterId(defaultChapterId);
@@ -444,19 +445,35 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     showToolbarsTemporarily(1800);
   }, [showToolbarsTemporarily]);
 
-  const handleToggleSentenceAnalysis = useCallback(() => {
-    setIsSentenceAnalysisActive((prev) => {
+  const resetSentenceAnalysisItems = useCallback(() => {
+    setSentenceItems(() => {
+      sentenceItemsRef.current = [];
+      return [];
+    });
+  }, [sentenceItemsRef]);
+
+  const handleEnterAnalysisMode = useCallback(() => {
+    setViewMode("analysis");
+    showToolbarsTemporarily(1800);
+  }, [showToolbarsTemporarily]);
+
+  const handleExitAnalysisMode = useCallback(() => {
+    setIsSentenceAnalysisRunning(false);
+    resetSentenceAnalysisItems();
+    setViewMode("reading");
+    showToolbarsTemporarily(1800);
+  }, [resetSentenceAnalysisItems, showToolbarsTemporarily]);
+
+  const handleToggleSentenceAnalysisRunning = useCallback(() => {
+    setIsSentenceAnalysisRunning((prev) => {
       const next = !prev;
-      showToolbarsTemporarily(1800);
       if (!next) {
-        setSentenceItems(() => {
-          sentenceItemsRef.current = [];
-          return [];
-        });
+        resetSentenceAnalysisItems();
       }
       return next;
     });
-  }, [showToolbarsTemporarily]);
+    showToolbarsTemporarily(1800);
+  }, [resetSentenceAnalysisItems, showToolbarsTemporarily]);
 
   useEffect(() => {
     showToolbarsTemporarily(1800);
@@ -467,13 +484,14 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   }, [sentenceItems]);
 
   useEffect(() => {
-    analysisActiveRef.current = isSentenceAnalysisActive;
-  }, [isSentenceAnalysisActive]);
+    analysisRunningRef.current = isSentenceAnalysisRunning;
+  }, [isSentenceAnalysisRunning]);
 
   const processPendingSentences = useCallback(async () => {
     if (
-      !isSentenceAnalysisActive ||
-      !analysisActiveRef.current ||
+      viewMode !== "analysis" ||
+      !isSentenceAnalysisRunning ||
+      !analysisRunningRef.current ||
       !activeChapterId ||
       processingRef.current ||
       !window?.api?.db?.sentenceAnalysis ||
@@ -487,7 +505,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     try {
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        if (!analysisActiveRef.current) {
+        if (!analysisRunningRef.current) {
           break;
         }
 
@@ -586,7 +604,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     } finally {
       processingRef.current = false;
     }
-  }, [isSentenceAnalysisActive, activeChapterId, book.id]);
+  }, [viewMode, isSentenceAnalysisRunning, activeChapterId, book.id]);
 
   const handleRetrySentence = useCallback(
     (sentenceId: string) => {
@@ -599,7 +617,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         sentenceItemsRef.current = next;
         return next;
       });
-      if (analysisActiveRef.current) {
+      if (analysisRunningRef.current) {
         void processPendingSentences();
       }
     },
@@ -607,9 +625,14 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   );
 
   useEffect(() => {
-    if (!isSentenceAnalysisActive) {
+    if (viewMode !== "analysis") {
+      if (sentenceItemsRef.current.length > 0) {
+        sentenceItemsRef.current = [];
+        setSentenceItems([]);
+      }
       return;
     }
+
     if (!activeChapterId) {
       if (sentenceItemsRef.current.length > 0) {
         sentenceItemsRef.current = [];
@@ -617,6 +640,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       }
       return;
     }
+
     const sentences = extractSentencesFromHtml(
       chapterContentHtml,
       activeChapterId
@@ -649,6 +673,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     if (!needsUpdate) {
       if (
         !processingRef.current &&
+        analysisRunningRef.current &&
         previous.some((item) => item.status === "idle")
       ) {
         void processPendingSentences();
@@ -658,15 +683,16 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
     sentenceItemsRef.current = nextState;
     setSentenceItems(nextState);
-    if (analysisActiveRef.current) {
+    if (analysisRunningRef.current) {
       void processPendingSentences();
     }
-  }, [
-    isSentenceAnalysisActive,
-    chapterContentHtml,
-    activeChapterId,
-    processPendingSentences,
-  ]);
+  }, [viewMode, chapterContentHtml, activeChapterId, processPendingSentences]);
+
+  useEffect(() => {
+    if (isSentenceAnalysisRunning && viewMode === "analysis") {
+      void processPendingSentences();
+    }
+  }, [isSentenceAnalysisRunning, viewMode, processPendingSentences]);
 
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
@@ -740,14 +766,17 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           onOpenToc={onOpenToc ?? (() => undefined)}
           onOpenSearch={onOpenSearch}
           onOpenSettings={onOpenSettings}
-          onToggleSentenceAnalysis={handleToggleSentenceAnalysis}
-          isSentenceAnalysisActive={isSentenceAnalysisActive}
           onToggleReadingMode={toggleReadingMode}
           readingMode={readingMode}
+          viewMode={viewMode}
+          onEnterAnalysisMode={handleEnterAnalysisMode}
+          onExitAnalysisMode={handleExitAnalysisMode}
+          onToggleSentenceAnalysisRunning={handleToggleSentenceAnalysisRunning}
+          isSentenceAnalysisRunning={isSentenceAnalysisRunning}
         />
       }
       content={
-        isSentenceAnalysisActive ? (
+        viewMode === "analysis" ? (
           <ReaderSentenceAnalysisPanel
             ref={contentRef}
             sentences={sentenceItems}

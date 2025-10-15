@@ -1,6 +1,7 @@
 import { Book, Chapter } from "./types";
 
 export type ReadingMode = "single" | "double";
+export type ReaderViewMode = "reading" | "analysis";
 
 export interface ReaderState {
   book: Book;
