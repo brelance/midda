@@ -61,6 +61,44 @@ interface SentenceSeed {
 
 const SENTENCE_SPLIT_REGEX = /(?<=[。！？!?\.．])/u;
 
+const PARAGRAPH_TAGS = new Set([
+  "p",
+  "pre",
+  "li",
+  "dd",
+  "dt",
+  "td",
+  "th",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+]);
+
+const BLOCK_CONTAINER_TAGS = new Set([
+  "div",
+  "section",
+  "article",
+  "aside",
+  "main",
+  "header",
+  "footer",
+  "nav",
+  "blockquote",
+  "figure",
+  "figcaption",
+  "ul",
+  "ol",
+  "table",
+  "tbody",
+  "thead",
+  "tfoot",
+  "tr",
+  "body",
+]);
+
 const extractSentencesFromHtml = (
   html: string,
   chapterId: string
@@ -68,20 +106,144 @@ const extractSentencesFromHtml = (
   if (typeof window === "undefined") {
     return [];
   }
+
   const container = document.createElement("div");
   container.innerHTML = html;
-  const rawText = container.textContent ?? "";
-  const normalized = rawText.replace(/\s+/g, " ").trim();
-  if (!normalized) {
+
+  const collapseAsciiWhitespace = (value: string): string =>
+    value.replace(/\u00A0/g, " ").replace(/[\t\f\v\r ]+/g, " ");
+
+  const trimAsciiWhitespace = (value: string): string =>
+    value.replace(/^[\t\f\v\r \u00A0]+/, "").replace(/[\t\f\v\r \u00A0]+$/, "");
+
+  const normalizeParagraphText = (element: Element): string => {
+    const raw = element.textContent ?? "";
+    if (!raw) {
+      return "";
+    }
+
+    const sanitized = raw.replace(/\r\n?/g, "\n");
+    const lines = sanitized
+      .split("\n")
+      .map((line) => trimAsciiWhitespace(collapseAsciiWhitespace(line)))
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      return "";
+    }
+
+    return lines.join(" ");
+  };
+
+  const sentences: SentenceSeed[] = [];
+  let paragraphIndex = 0;
+
+  const processParagraph = (text: string) => {
+    const segments = text
+      .split(SENTENCE_SPLIT_REGEX)
+      .map((segment) => trimAsciiWhitespace(collapseAsciiWhitespace(segment)))
+      .filter(Boolean);
+
+    if (segments.length === 0) {
+      return;
+    }
+
+    segments.forEach((segment, sentenceIndex) => {
+      sentences.push({
+        id: `${chapterId}-${paragraphIndex}-${sentenceIndex}`,
+        text: segment,
+        chapterId,
+        paragraphIndex,
+        sentenceIndex,
+      });
+    });
+    paragraphIndex += 1;
+  };
+
+  const inlineBuffer: string[] = [];
+
+  const appendToBuffer = (value: string | null | undefined) => {
+    if (!value) {
+      return;
+    }
+    inlineBuffer.push(value);
+  };
+
+  const flushInlineBuffer = () => {
+    if (inlineBuffer.length === 0) {
+      return;
+    }
+    const combined = inlineBuffer.join("");
+    inlineBuffer.length = 0;
+
+    const normalized = combined
+      .replace(/\r\n?/g, "\n")
+      .split("\n")
+      .map((line) => trimAsciiWhitespace(collapseAsciiWhitespace(line)))
+      .filter(Boolean)
+      .join(" ");
+
+    if (normalized) {
+      processParagraph(normalized);
+    }
+  };
+
+  const traverseNode = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      appendToBuffer(node.textContent);
+      return;
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    const element = node as Element;
+    const tagName = element.tagName.toLowerCase();
+
+    if (tagName === "br") {
+      appendToBuffer("\n");
+      return;
+    }
+
+    if (PARAGRAPH_TAGS.has(tagName)) {
+      flushInlineBuffer();
+      const normalized = normalizeParagraphText(element);
+      if (normalized) {
+        processParagraph(normalized);
+      }
+      return;
+    }
+
+    Array.from(element.childNodes).forEach(traverseNode);
+
+    if (BLOCK_CONTAINER_TAGS.has(tagName)) {
+      flushInlineBuffer();
+    }
+  };
+
+  Array.from(container.childNodes).forEach(traverseNode);
+  flushInlineBuffer();
+
+  if (sentences.length > 0) {
+    return sentences;
+  }
+
+  const fallbackText = trimAsciiWhitespace(
+    collapseAsciiWhitespace(container.textContent ?? "")
+  );
+
+  if (!fallbackText) {
     return [];
   }
-  const segments = normalized
+
+  const fallbackSegments = fallbackText
     .split(SENTENCE_SPLIT_REGEX)
-    .map((segment) => segment.trim())
+    .map((segment) => trimAsciiWhitespace(collapseAsciiWhitespace(segment)))
     .filter(Boolean);
 
-  return segments.map((text, index) => ({
-    id: `${chapterId}-${index}`,
+  return fallbackSegments.map((text, index) => ({
+    id: `${chapterId}-0-${index}`,
     text,
     chapterId,
     paragraphIndex: 0,
@@ -102,7 +264,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const chapters: Chapter[] = useMemo(() => book.chapters ?? [], [book]);
 
   const defaultChapterId = useMemo(() => {
-    if (initialChapterId && chapters.some((item) => item.id === initialChapterId)) {
+    if (
+      initialChapterId &&
+      chapters.some((item) => item.id === initialChapterId)
+    ) {
       return initialChapterId;
     }
     if (
@@ -118,12 +283,18 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       return book.lastReadChapterId;
     }
     return chapters.length > 0 ? chapters[0].id : "";
-  }, [book.currentChapterId, book.lastReadChapterId, chapters, initialChapterId]);
+  }, [
+    book.currentChapterId,
+    book.lastReadChapterId,
+    chapters,
+    initialChapterId,
+  ]);
 
   const [currentChapterId, setCurrentChapterId] = useState(defaultChapterId);
   const [chapterProgress, setChapterProgress] = useState(0);
   const [readingMode, setReadingMode] = useState<ReadingMode>("single");
-  const [isSentenceAnalysisActive, setIsSentenceAnalysisActive] = useState(false);
+  const [isSentenceAnalysisActive, setIsSentenceAnalysisActive] =
+    useState(false);
   const [sentenceItems, setSentenceItems] = useState<
     ReaderSentenceAnalysisItem[]
   >([]);
@@ -142,9 +313,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     [chapters, currentChapterId]
   );
   const currentChapter =
-    currentIndex >= 0 && chapters[currentIndex]
-      ? chapters[currentIndex]
-      : null;
+    currentIndex >= 0 && chapters[currentIndex] ? chapters[currentIndex] : null;
 
   const chapterTitle = currentChapter?.title ?? "章节内容";
   const chapterContentHtml = useMemo(
@@ -255,7 +424,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         });
 
         try {
-          const context = { chapterId: activeChapterId, sentenceId: nextIdle.id };
+          const context = {
+            chapterId: activeChapterId,
+            sentenceId: nextIdle.id,
+          };
           const cached = await window.api.db.sentenceAnalysis.getBySentence(
             book.id,
             nextIdle.text,
@@ -307,9 +479,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           });
         } catch (error) {
           const message =
-            error instanceof Error
-              ? error.message
-              : "分析过程中出现未知错误";
+            error instanceof Error ? error.message : "分析过程中出现未知错误";
 
           setSentenceItems((prev) => {
             const next = prev.map((entry) =>
@@ -412,14 +582,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     processPendingSentences,
   ]);
 
-  const handleScroll = useCallback(
-    (event: React.UIEvent<HTMLDivElement>) => {
-      const target = event.currentTarget;
-      const progress = calculateScrollProgress(target);
-      setChapterProgress(progress);
-    },
-    []
-  );
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const progress = calculateScrollProgress(target);
+    setChapterProgress(progress);
+  }, []);
 
   const prevChapterId = useMemo(
     () => getPrevChapterId(chapters, currentIndex),
