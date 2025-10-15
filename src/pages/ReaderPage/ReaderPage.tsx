@@ -99,6 +99,40 @@ const BLOCK_CONTAINER_TAGS = new Set([
   "body",
 ]);
 
+const OPENING_QUOTE_CHARS = new Set([
+  "「",
+  "『",
+  "“",
+  "‘",
+  "‹",
+  "«",
+  "〈",
+  "《",
+  "｢",
+  "（",
+  "(",
+  "［",
+  "【",
+  "〔",
+]);
+
+const CLOSING_TO_OPENING_QUOTE = new Map<string, string>([
+  ["」", "「"],
+  ["』", "『"],
+  ["”", "“"],
+  ["’", "‘"],
+  ["›", "‹"],
+  ["»", "«"],
+  ["〉", "〈"],
+  ["》", "《"],
+  ["｣", "｢"],
+  ["）", "（"],
+  [")", "("],
+  ["］", "［"],
+  ["】", "【"],
+  ["〕", "〔"],
+]);
+
 const extractSentencesFromHtml = (
   html: string,
   chapterId: string
@@ -138,11 +172,61 @@ const extractSentencesFromHtml = (
   const sentences: SentenceSeed[] = [];
   let paragraphIndex = 0;
 
+  const mergeSegmentsByQuotes = (segments: string[]): string[] => {
+    if (segments.length <= 1) {
+      return segments;
+    }
+
+    const result: string[] = [];
+    let pending = "";
+    const stack: string[] = [];
+
+    const processChar = (char: string) => {
+      if (OPENING_QUOTE_CHARS.has(char)) {
+        stack.push(char);
+        return;
+      }
+      const opener = CLOSING_TO_OPENING_QUOTE.get(char);
+      if (!opener) {
+        return;
+      }
+      if (stack.length > 0 && stack[stack.length - 1] === opener) {
+        stack.pop();
+        return;
+      }
+      const index = stack.lastIndexOf(opener);
+      if (index !== -1) {
+        stack.splice(index, 1);
+      }
+    };
+
+    segments.forEach((segment) => {
+      pending = pending ? pending + segment : segment;
+
+      for (const char of segment) {
+        processChar(char);
+      }
+
+      if (stack.length === 0) {
+        result.push(pending);
+        pending = "";
+      }
+    });
+
+    if (pending) {
+      result.push(pending);
+    }
+
+    return result;
+  };
+
   const processParagraph = (text: string) => {
-    const segments = text
+    const rawSegments = text
       .split(SENTENCE_SPLIT_REGEX)
       .map((segment) => trimAsciiWhitespace(collapseAsciiWhitespace(segment)))
       .filter(Boolean);
+
+    const segments = mergeSegmentsByQuotes(rawSegments);
 
     if (segments.length === 0) {
       return;
@@ -242,7 +326,9 @@ const extractSentencesFromHtml = (
     .map((segment) => trimAsciiWhitespace(collapseAsciiWhitespace(segment)))
     .filter(Boolean);
 
-  return fallbackSegments.map((text, index) => ({
+  const mergedFallbackSegments = mergeSegmentsByQuotes(fallbackSegments);
+
+  return mergedFallbackSegments.map((text, index) => ({
     id: `${chapterId}-0-${index}`,
     text,
     chapterId,

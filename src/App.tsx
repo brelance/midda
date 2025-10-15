@@ -284,6 +284,60 @@ export default function App() {
     []
   );
 
+  const handleDeleteBook = useCallback(
+    async (bookToDelete: Book) => {
+      if (typeof window === "undefined" || !window.api?.db?.books?.delete) {
+        console.warn("数据库 API 未就绪，无法删除书籍。");
+        return;
+      }
+
+      try {
+        const deleted = await window.api.db.books.delete(bookToDelete.id);
+        if (!deleted) {
+          throw new Error("书籍删除未生效");
+        }
+
+        const chaptersDeletion = window.api.db.chapters?.deleteByBook
+          ? window.api.db.chapters.deleteByBook(bookToDelete.id)
+          : Promise.resolve(false);
+
+        const removeFile = window.api.epub?.removeFromLibrary
+          ? window.api.epub.removeFromLibrary(bookToDelete.id)
+          : Promise.resolve(false);
+
+        await Promise.all([chaptersDeletion, removeFile]);
+
+        const isCurrentlySelected = selectedBook?.id === bookToDelete.id;
+
+        setBooks((prevBooks) =>
+          prevBooks.filter((book) => book.id !== bookToDelete.id)
+        );
+
+        setSelectedBook((prevSelected) =>
+          prevSelected?.id === bookToDelete.id ? null : prevSelected
+        );
+
+        setReaderBookId((prevReaderId) =>
+          prevReaderId === bookToDelete.id ? null : prevReaderId
+        );
+
+        if (isCurrentlySelected) {
+          setIsDetailsPaneOpen(false);
+        }
+
+      } catch (error) {
+        console.error("删除书籍失败:", error);
+        if (
+          typeof window !== "undefined" &&
+          typeof window.alert === "function"
+        ) {
+          window.alert("删除书籍失败，请稍后重试");
+        }
+      }
+    },
+    [selectedBook?.id]
+  );
+
   const updateBookById = useCallback(
     (bookId: string, updater: (book: Book) => Book) => {
       let updated: Book | null = null;
@@ -386,6 +440,7 @@ export default function App() {
       closeDetailsPane={closeDetailsPane}
       onBookAdded={handleBookAdded}
       onEnterReader={handleEnterReader}
+      onDeleteBook={handleDeleteBook}
     />
   );
 }

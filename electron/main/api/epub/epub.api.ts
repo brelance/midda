@@ -2,7 +2,7 @@ import { BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
 import { EPUBService, type ParseProgress } from "./epubService";
 import { assertValidEpub } from "./validators";
-import { copyToLibrary } from "./storage";
+import { copyToLibrary, removeFromLibrary } from "./storage";
 import { EpubBaseError, EpubValidationError } from "./errors";
 
 function formatIpcError(error: unknown): Error {
@@ -82,6 +82,20 @@ export function setupEpubApiHandler(): void {
       return await epubService.extractCoverFromFile(filePath);
     } catch (error) {
       console.error("封面提取失败:", error);
+      throw formatIpcError(error);
+    }
+  });
+
+  ipcMain.handle("epub:remove-from-library", async (_, rawBookId: string) => {
+    try {
+      if (typeof rawBookId !== "string" || rawBookId.trim().length === 0) {
+        throw new EpubValidationError("未提供有效的书籍标识");
+      }
+      const bookId = rawBookId.trim();
+      await removeFromLibrary(bookId);
+      return true;
+    } catch (error) {
+      console.error("删除 EPUB 文件失败:", error);
       throw formatIpcError(error);
     }
   });

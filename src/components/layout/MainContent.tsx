@@ -15,6 +15,7 @@ interface MainContentProps {
   onSort: () => void;
   onBookAdded?: (bookData: EpubBookData) => void;
   onEnterReader?: (book: Book) => void;
+  onDeleteBook?: (book: Book) => void;
 }
 
 const MainContent: React.FC<MainContentProps> = ({
@@ -29,6 +30,7 @@ const MainContent: React.FC<MainContentProps> = ({
   onSort,
   onBookAdded,
   onEnterReader,
+  onDeleteBook,
 }) => {
   // 过滤书籍
   const filteredBooks = books.filter(book =>
@@ -68,6 +70,7 @@ const MainContent: React.FC<MainContentProps> = ({
         selectedBook={selectedBook}
         onSelectBook={onSelectBook}
         onEnterReader={onEnterReader}
+        onDeleteBook={onDeleteBook}
       />
     </main>
   );

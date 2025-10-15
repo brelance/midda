@@ -112,6 +112,7 @@ export interface IElectronAPI {
     selectFile: () => Promise<string | null>;
     parseFile: (filePath: string) => Promise<any>;
     getCover: (filePath: string) => Promise<string | undefined>;
+    removeFromLibrary: (bookId: string) => Promise<boolean>;
     onParseProgress: (callback: (progress: any) => void) => void;
     cleanupEpubListeners: () => void;
   };

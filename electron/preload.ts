@@ -134,6 +134,8 @@ const api = {
       ipcRenderer.invoke("epub:parse-file", filePath),
     getCover: (filePath: string): Promise<string | undefined> =>
       ipcRenderer.invoke("epub:get-cover", filePath),
+    removeFromLibrary: (bookId: string): Promise<boolean> =>
+      ipcRenderer.invoke("epub:remove-from-library", bookId),
 
     // 监听器（如果需要异步通知）
     onParseProgress: (callback: (progress: any) => void) =>
