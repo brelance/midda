@@ -26,12 +26,27 @@ interface ReaderSentenceAnalysisPanelProps {
   chapterTitle?: string;
   onRetry: (sentenceId: string) => void;
   onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
+  activeSentenceId?: string | null;
+  onSentenceSelect?: (sentenceId: string) => void;
 }
 
 const ReaderSentenceAnalysisPanel = forwardRef<
   HTMLDivElement,
   ReaderSentenceAnalysisPanelProps
->(({ sentences, bookId, chapterId, chapterTitle, onRetry, onScroll }, ref) => {
+>(
+  (
+    {
+      sentences,
+      bookId,
+      chapterId,
+      chapterTitle,
+      onRetry,
+      onScroll,
+      activeSentenceId,
+      onSentenceSelect,
+    },
+    ref
+  ) => {
   const hasSentences = sentences.length > 0;
 
   return (
@@ -54,9 +69,25 @@ const ReaderSentenceAnalysisPanel = forwardRef<
               key={item.id}
               className="border-b border-[#e5ded6] pb-4 last:border-b-0 last:pb-0"
             >
-              <p className="text-base leading-snug text-[#3d2b1f] sm:text-lg">
+              <button
+                type="button"
+                disabled={!onSentenceSelect}
+                aria-pressed={item.id === activeSentenceId}
+                onClick={
+                  onSentenceSelect ? () => onSentenceSelect(item.id) : undefined
+                }
+                className={`w-full rounded-md border border-transparent px-2 py-1 text-left text-base leading-snug transition sm:text-lg ${
+                  item.id === activeSentenceId
+                    ? "border-[#007AFF] bg-[#e7f0ff] text-[#1f2a44]"
+                    : "text-[#3d2b1f]"
+                } ${
+                  onSentenceSelect
+                    ? "hover:bg-[#f3ede3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3d2b1f]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fdf8f2]"
+                    : ""
+                } ${!onSentenceSelect ? "cursor-default" : ""}`}
+              >
                 {item.text}
-              </p>
+              </button>
               {item.status === "loading" && (
                 <div className="mt-2 flex items-center gap-3 rounded-md border border-dashed border-[#d8cfc4] bg-[#fdf8f2] px-3 py-2 text-xs text-[#6b5b4b] sm:text-sm">
                   <div className="loading-spinner h-5 w-5 border-[3px] border-[#d8cfc4] border-t-[#3d2b1f]" />
@@ -105,7 +136,8 @@ const ReaderSentenceAnalysisPanel = forwardRef<
       )}
     </div>
   );
-});
+  }
+);
 
 ReaderSentenceAnalysisPanel.displayName = "ReaderSentenceAnalysisPanel";
 

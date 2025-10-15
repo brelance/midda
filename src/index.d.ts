@@ -1,6 +1,11 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
 import type { TokenData, WordDetail, SentenceAnalysisRecord } from "./types/types";
 import type {
+  TtsSentencePayload,
+  TtsStartRequestOptions,
+  TtsStateUpdate,
+} from "./types/tts";
+import type {
   LibraryBookRecord,
   LibraryBookUpsertPayload,
   LibraryChapterRecord,
@@ -115,5 +120,18 @@ export interface IElectronAPI {
     removeFromLibrary: (bookId: string) => Promise<boolean>;
     onParseProgress: (callback: (progress: any) => void) => void;
     cleanupEpubListeners: () => void;
+  };
+
+  tts: {
+    start: (
+      sentences: TtsSentencePayload[],
+      options?: TtsStartRequestOptions
+    ) => Promise<TtsStateUpdate>;
+    pause: () => Promise<TtsStateUpdate>;
+    resume: () => Promise<TtsStateUpdate>;
+    stop: () => Promise<TtsStateUpdate>;
+    jumpTo: (index: number) => Promise<TtsStateUpdate>;
+    onStateChange: (callback: (state: TtsStateUpdate) => void) => () => void;
+    cleanup: () => void;
   };
 }

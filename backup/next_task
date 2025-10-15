@@ -1,0 +1,1 @@
+现在我想为我的epub语法分析阅读器添加新的功能，在readHeadr(midda/src/components/reader/ReaderHeader.tsx)中添加一个新按钮，用户点击该按钮，则会使用electron的tts朗读该章节。当启用tts时，请你进行elctron后端以及react前端的设计，给出实现计划，将该计划写入design_implementation_md/tts目录下的一个md文档

@@ -14,6 +14,11 @@ import ReaderSentenceAnalysisPanel, {
 } from "../../components/reader/ReaderSentenceAnalysisPanel";
 import { Book, Chapter, TokenData } from "../../types/types";
 import { ReadingMode, ReaderViewMode } from "../../types/reader";
+import type {
+  TtsPlaybackStatus,
+  TtsSentencePayload,
+  TtsStateUpdate,
+} from "../../types/tts";
 import {
   findChapterIndex,
   getNextChapterId,
@@ -57,6 +62,12 @@ interface SentenceSeed {
   chapterId: string;
   paragraphIndex: number;
   sentenceIndex: number;
+}
+
+interface AnalysisPlaybackState {
+  status: TtsPlaybackStatus;
+  currentIndex: number | null;
+  currentSentenceId: string | null;
 }
 
 const SENTENCE_SPLIT_REGEX = /(?<=[。！？!?\.．])/u;
@@ -388,6 +399,37 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const sentenceItemsRef = useRef<ReaderSentenceAnalysisItem[]>([]);
   const processingRef = useRef(false);
   const analysisRunningRef = useRef(isSentenceAnalysisRunning);
+  const [analysisPlaybackState, setAnalysisPlaybackState] =
+    useState<AnalysisPlaybackState>({
+      status: "idle",
+      currentIndex: null,
+      currentSentenceId: null,
+    });
+  const analysisSentencesQueue = useMemo<TtsSentencePayload[]>(
+    () =>
+      sentenceItems.map((item) => ({
+        id: item.id,
+        text: item.text,
+      })),
+    [sentenceItems]
+  );
+
+  const resetAnalysisPlaybackState = useCallback(() => {
+    setAnalysisPlaybackState({
+      status: "idle",
+      currentIndex: null,
+      currentSentenceId: null,
+    });
+  }, []);
+
+  const stopAnalysisPlayback = useCallback(() => {
+    resetAnalysisPlaybackState();
+    if (window?.api?.tts?.stop) {
+      void window.api.tts
+        .stop()
+        .catch((error) => console.error("停止TTS失败:", error));
+    }
+  }, [resetAnalysisPlaybackState]);
 
   useEffect(() => {
     setCurrentChapterId(defaultChapterId);
@@ -450,7 +492,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       sentenceItemsRef.current = [];
       return [];
     });
-  }, [sentenceItemsRef]);
+    resetAnalysisPlaybackState();
+  }, [resetAnalysisPlaybackState, sentenceItemsRef]);
 
   const handleEnterAnalysisMode = useCallback(() => {
     setViewMode("analysis");
@@ -458,22 +501,123 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   }, [showToolbarsTemporarily]);
 
   const handleExitAnalysisMode = useCallback(() => {
+    stopAnalysisPlayback();
     setIsSentenceAnalysisRunning(false);
     resetSentenceAnalysisItems();
     setViewMode("reading");
     showToolbarsTemporarily(1800);
-  }, [resetSentenceAnalysisItems, showToolbarsTemporarily]);
+  }, [
+    resetSentenceAnalysisItems,
+    showToolbarsTemporarily,
+    stopAnalysisPlayback,
+  ]);
 
   const handleToggleSentenceAnalysisRunning = useCallback(() => {
     setIsSentenceAnalysisRunning((prev) => {
       const next = !prev;
       if (!next) {
+        stopAnalysisPlayback();
         resetSentenceAnalysisItems();
       }
       return next;
     });
     showToolbarsTemporarily(1800);
-  }, [resetSentenceAnalysisItems, showToolbarsTemporarily]);
+  }, [
+    resetSentenceAnalysisItems,
+    showToolbarsTemporarily,
+    stopAnalysisPlayback,
+  ]);
+
+  const handleAnalysisPlaybackToggle = useCallback(async () => {
+    if (viewMode !== "analysis" || sentenceItems.length === 0) {
+      return;
+    }
+
+    const ttsApi = window?.api?.tts;
+    if (!ttsApi) {
+      return;
+    }
+
+    try {
+      if (analysisPlaybackState.status === "playing") {
+        await ttsApi.pause();
+      } else if (analysisPlaybackState.status === "paused") {
+        await ttsApi.resume();
+      } else {
+        const startIndex = analysisPlaybackState.currentIndex ?? 0;
+        await ttsApi.start(analysisSentencesQueue, { startIndex });
+      }
+      showToolbarsTemporarily(1800);
+    } catch (error) {
+      console.error("TTS控制失败:", error);
+    }
+  }, [
+    analysisPlaybackState.currentIndex,
+    analysisPlaybackState.status,
+    analysisSentencesQueue,
+    sentenceItems.length,
+    showToolbarsTemporarily,
+    viewMode,
+  ]);
+
+  const handleSentenceSelect = useCallback(
+    async (sentenceId: string) => {
+      if (viewMode !== "analysis") {
+        return;
+      }
+
+      const sentenceIndex = sentenceItems.findIndex(
+        (item) => item.id === sentenceId
+      );
+
+      if (sentenceIndex === -1) {
+        return;
+      }
+
+      const ttsApi = window?.api?.tts;
+      if (!ttsApi) {
+        return;
+      }
+
+      setAnalysisPlaybackState((prev) => ({
+        ...prev,
+        currentIndex: sentenceIndex,
+        currentSentenceId: sentenceId,
+      }));
+
+      try {
+        if (analysisPlaybackState.status === "idle") {
+          if (analysisSentencesQueue.length === 0) {
+            return;
+          }
+          await ttsApi.start(analysisSentencesQueue, {
+            startIndex: sentenceIndex,
+          });
+        } else {
+          await ttsApi.jumpTo(sentenceIndex);
+        }
+
+        showToolbarsTemporarily(1800);
+      } catch (error) {
+        console.error("跳转TTS失败:", error);
+      }
+    },
+    [
+      analysisPlaybackState.status,
+      analysisSentencesQueue,
+      sentenceItems,
+      showToolbarsTemporarily,
+      viewMode,
+    ]
+  );
+
+  const isTtsAvailable =
+    typeof window !== "undefined" && Boolean(window.api?.tts);
+  const isAnalysisPlaybackDisabled =
+    !isTtsAvailable || viewMode !== "analysis" || sentenceItems.length === 0;
+  const sentenceSelectionHandler = isAnalysisPlaybackDisabled
+    ? undefined
+    : handleSentenceSelect;
 
   useEffect(() => {
     showToolbarsTemporarily(1800);
@@ -486,6 +630,50 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   useEffect(() => {
     analysisRunningRef.current = isSentenceAnalysisRunning;
   }, [isSentenceAnalysisRunning]);
+
+  useEffect(() => {
+    if (viewMode !== "analysis") {
+      stopAnalysisPlayback();
+    }
+  }, [stopAnalysisPlayback, viewMode]);
+
+  useEffect(() => {
+    stopAnalysisPlayback();
+  }, [currentChapterId, stopAnalysisPlayback]);
+
+  useEffect(() => {
+    const ttsApi = window?.api?.tts;
+    if (!ttsApi?.onStateChange) {
+      return;
+    }
+
+    const unsubscribe = ttsApi.onStateChange((state: TtsStateUpdate) => {
+      setAnalysisPlaybackState((prev) => {
+        if (
+          prev.status === state.status &&
+          prev.currentIndex === state.currentIndex &&
+          prev.currentSentenceId === state.currentSentenceId
+        ) {
+          return prev;
+        }
+
+        return {
+          status: state.status,
+          currentIndex: state.currentIndex,
+          currentSentenceId: state.currentSentenceId,
+        };
+      });
+
+      if (state.error) {
+        console.error("TTS错误:", state.error);
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+      ttsApi.cleanup?.();
+    };
+  }, []);
 
   const processPendingSentences = useCallback(async () => {
     if (
@@ -773,6 +961,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           onExitAnalysisMode={handleExitAnalysisMode}
           onToggleSentenceAnalysisRunning={handleToggleSentenceAnalysisRunning}
           isSentenceAnalysisRunning={isSentenceAnalysisRunning}
+          onToggleAnalysisPlayback={handleAnalysisPlaybackToggle}
+          analysisPlaybackStatus={analysisPlaybackState.status}
+          isAnalysisPlaybackDisabled={isAnalysisPlaybackDisabled}
         />
       }
       content={
@@ -785,6 +976,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             chapterTitle={chapterTitle}
             onRetry={handleRetrySentence}
             onScroll={handleScroll}
+            activeSentenceId={analysisPlaybackState.currentSentenceId}
+            onSentenceSelect={sentenceSelectionHandler}
           />
         ) : (
           <ReaderContent

@@ -5,6 +5,7 @@ import { setupWordDetailApiHandler } from "./api/llm/word_detail/detail.api";
 import { setupWordDictApiHandler } from "./api/llm/word_detail/wordict.api";
 import { setupGeminiApiHandler } from "./api/llm/gemini.api";
 import { setupEpubApiHandler } from "./api/epub/epub.api";
+import { setupTtsApiHandler } from "./api/tts/tts.api";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import { app, BrowserWindow } from "electron";
 
@@ -103,6 +104,7 @@ app.whenReady().then(() => {
 
   // 新增EPUB处理器
   setupEpubApiHandler();
+  setupTtsApiHandler();
 
   createWindow();
 

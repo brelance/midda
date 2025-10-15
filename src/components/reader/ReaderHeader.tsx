@@ -2,6 +2,7 @@ import React from "react";
 import BrutalistButton from "../ui/BrutalistButton";
 import ReaderBookInfo from "./ReaderBookInfo";
 import { ReadingMode, ReaderViewMode } from "../../types/reader";
+import type { TtsPlaybackStatus } from "../../types/tts";
 
 interface ReaderHeaderProps {
   bookTitle: string;
@@ -18,6 +19,9 @@ interface ReaderHeaderProps {
   onExitAnalysisMode: () => void;
   onToggleSentenceAnalysisRunning?: () => void;
   isSentenceAnalysisRunning?: boolean;
+  onToggleAnalysisPlayback?: () => void;
+  analysisPlaybackStatus?: TtsPlaybackStatus;
+  isAnalysisPlaybackDisabled?: boolean;
 }
 
 const baseClasses =
@@ -38,20 +42,12 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   onExitAnalysisMode,
   onToggleSentenceAnalysisRunning,
   isSentenceAnalysisRunning = false,
+  onToggleAnalysisPlayback,
+  analysisPlaybackStatus = "idle",
+  isAnalysisPlaybackDisabled = false,
 }) => {
   const isAnalysisMode = viewMode === "analysis";
-  const [isAnalysisPlaybackActive, setIsAnalysisPlaybackActive] =
-    React.useState(false);
-
-  React.useEffect(() => {
-    if (!isAnalysisMode) {
-      setIsAnalysisPlaybackActive(false);
-    }
-  }, [isAnalysisMode]);
-
-  const handleToggleAnalysisPlayback = () => {
-    setIsAnalysisPlaybackActive((prev) => !prev);
-  };
+  const isAnalysisPlaybackActive = analysisPlaybackStatus === "playing";
 
   const renderModeToggleButton = () => (
     <BrutalistButton
@@ -174,9 +170,7 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
           isSentenceAnalysisRunning ? "border-4 border-[#007AFF]" : ""
         }`}
         disabled={!onToggleSentenceAnalysisRunning}
-        aria-label={
-          isSentenceAnalysisRunning ? "停止句子分析" : "开始句子分析"
-        }
+        aria-label={isSentenceAnalysisRunning ? "停止句子分析" : "开始句子分析"}
         aria-pressed={isSentenceAnalysisRunning}
         title="逐句分析当前章节"
       >
@@ -201,13 +195,24 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
       </BrutalistButton>
 
       <BrutalistButton
-        onClick={handleToggleAnalysisPlayback}
+        onClick={onToggleAnalysisPlayback}
         className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2"
+        disabled={!onToggleAnalysisPlayback || isAnalysisPlaybackDisabled}
         aria-label={
-          isAnalysisPlaybackActive ? "暂停句子分析" : "播放句子分析"
+          isAnalysisPlaybackActive
+            ? "暂停TTS"
+            : analysisPlaybackStatus === "paused"
+              ? "继续TTS"
+              : "播放TTS"
         }
         aria-pressed={isAnalysisPlaybackActive}
-        title={isAnalysisPlaybackActive ? "暂停句子分析" : "播放句子分析"}
+        title={
+          isAnalysisPlaybackActive
+            ? "暂停TTS"
+            : analysisPlaybackStatus === "paused"
+              ? "继续TTS"
+              : "播放TTS"
+        }
       >
         <svg
           className="h-5 w-5 sm:h-6 sm:w-6"
@@ -230,7 +235,11 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
           )}
         </svg>
         <span className="hidden sm:inline">
-          {isAnalysisPlaybackActive ? "暂停" : "播放"}
+          {isAnalysisPlaybackActive
+            ? "暂停"
+            : analysisPlaybackStatus === "paused"
+              ? "继续"
+              : "播放"}
         </span>
       </BrutalistButton>
 

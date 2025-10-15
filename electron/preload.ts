@@ -2,6 +2,11 @@ import { electronAPI } from "@electron-toolkit/preload";
 import { contextBridge, ipcRenderer } from "electron";
 import type { TokenData, WordDetail } from "../src/types/types";
 import type {
+  TtsSentencePayload,
+  TtsStartRequestOptions,
+  TtsStateUpdate,
+} from "../src/types/tts";
+import type {
   LibraryBookUpsertPayload,
   LibraryChapterUpsertPayload,
   ChapterReadingPositionUpsertPayload,
@@ -145,6 +150,43 @@ const api = {
 
     cleanupEpubListeners: () => {
       ipcRenderer.removeAllListeners("epub:parse-progress");
+    },
+  },
+
+  tts: {
+    start: (
+      sentences: TtsSentencePayload[],
+      options?: TtsStartRequestOptions
+    ): Promise<TtsStateUpdate> =>
+      ipcRenderer.invoke("tts:start", { sentences, ...options }),
+    pause: (): Promise<TtsStateUpdate> => ipcRenderer.invoke("tts:pause"),
+    resume: (): Promise<TtsStateUpdate> => ipcRenderer.invoke("tts:resume"),
+    stop: (): Promise<TtsStateUpdate> => ipcRenderer.invoke("tts:stop"),
+    jumpTo: (index: number): Promise<TtsStateUpdate> =>
+      ipcRenderer.invoke("tts:jump-to", { index }),
+    onStateChange: (
+      callback: (state: TtsStateUpdate) => void
+    ): (() => void) => {
+      let isDisposed = false;
+      const listener = (_event: Electron.IpcRendererEvent, state: TtsStateUpdate) => {
+        callback(state);
+      };
+
+      ipcRenderer.on("tts:state", listener);
+
+      void ipcRenderer.invoke("tts:subscribe").then((state: TtsStateUpdate) => {
+        if (!isDisposed) {
+          callback(state);
+        }
+      });
+
+      return () => {
+        isDisposed = true;
+        ipcRenderer.removeListener("tts:state", listener);
+      };
+    },
+    cleanup: () => {
+      ipcRenderer.removeAllListeners("tts:state");
     },
   },
 };
