@@ -12,6 +12,7 @@ import ReaderContent from "../../components/reader/ReaderContent";
 import ReaderSentenceAnalysisPanel, {
   ReaderSentenceAnalysisItem,
 } from "../../components/reader/ReaderSentenceAnalysisPanel";
+import ReaderSettingsModal from "../../components/reader/ReaderSettingsModal";
 import { Book, Chapter, TokenData } from "../../types/types";
 import { ReadingMode, ReaderViewMode } from "../../types/reader";
 import type {
@@ -143,6 +144,12 @@ const CLOSING_TO_OPENING_QUOTE = new Map<string, string>([
   ["】", "【"],
   ["〕", "〔"],
 ]);
+
+const TTS_LANGUAGE_OPTIONS = [
+  { value: "system", label: "跟随系统（默认语音）" },
+  { value: "ja-JP", label: "日语" },
+  { value: "en-US", label: "英语" },
+];
 
 const extractSentencesFromHtml = (
   html: string,
@@ -354,7 +361,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   onExitReader,
   onOpenToc,
   onOpenSearch,
-  onOpenSettings,
+  onOpenSettings: onOpenSettingsProp,
   onChapterChange,
   onProgressChange,
 }) => {
@@ -413,6 +420,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       })),
     [sentenceItems]
   );
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [analysisTtsLanguage, setAnalysisTtsLanguage] =
+    useState<string>("ja-JP");
 
   const resetAnalysisPlaybackState = useCallback(() => {
     setAnalysisPlaybackState({
@@ -495,6 +505,24 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     resetAnalysisPlaybackState();
   }, [resetAnalysisPlaybackState, sentenceItemsRef]);
 
+  const handleOpenSettings = useCallback(() => {
+    setIsSettingsModalOpen(true);
+    showToolbarsTemporarily(1800);
+    onOpenSettingsProp?.();
+  }, [onOpenSettingsProp, showToolbarsTemporarily]);
+
+  const handleCloseSettings = useCallback(() => {
+    setIsSettingsModalOpen(false);
+  }, []);
+
+  const handleTtsLanguageChange = useCallback(
+    (language: string) => {
+      setAnalysisTtsLanguage(language);
+      stopAnalysisPlayback();
+    },
+    [stopAnalysisPlayback]
+  );
+
   const handleEnterAnalysisMode = useCallback(() => {
     setViewMode("analysis");
     showToolbarsTemporarily(1800);
@@ -545,7 +573,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         await ttsApi.resume();
       } else {
         const startIndex = analysisPlaybackState.currentIndex ?? 0;
-        await ttsApi.start(analysisSentencesQueue, { startIndex });
+        const languageOption =
+          analysisTtsLanguage === "system" ? undefined : analysisTtsLanguage;
+        await ttsApi.start(analysisSentencesQueue, {
+          startIndex,
+          language: languageOption,
+        });
       }
       showToolbarsTemporarily(1800);
     } catch (error) {
@@ -554,6 +587,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   }, [
     analysisPlaybackState.currentIndex,
     analysisPlaybackState.status,
+    analysisTtsLanguage,
     analysisSentencesQueue,
     sentenceItems.length,
     showToolbarsTemporarily,
@@ -590,8 +624,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           if (analysisSentencesQueue.length === 0) {
             return;
           }
+          const languageOption =
+            analysisTtsLanguage === "system" ? undefined : analysisTtsLanguage;
           await ttsApi.start(analysisSentencesQueue, {
             startIndex: sentenceIndex,
+            language: languageOption,
           });
         } else {
           await ttsApi.jumpTo(sentenceIndex);
@@ -604,6 +641,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     },
     [
       analysisPlaybackState.status,
+      analysisTtsLanguage,
       analysisSentencesQueue,
       sentenceItems,
       showToolbarsTemporarily,
@@ -944,72 +982,82 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   });
 
   return (
-    <ReaderLayout
-      header={
-        <ReaderHeader
-          bookTitle={book.title}
-          chapterTitle={chapterTitle}
-          isVisible={isHeaderVisible}
-          onBack={onExitReader}
-          onOpenToc={onOpenToc ?? (() => undefined)}
-          onOpenSearch={onOpenSearch}
-          onOpenSettings={onOpenSettings}
-          onToggleReadingMode={toggleReadingMode}
-          readingMode={readingMode}
-          viewMode={viewMode}
-          onEnterAnalysisMode={handleEnterAnalysisMode}
-          onExitAnalysisMode={handleExitAnalysisMode}
-          onToggleSentenceAnalysisRunning={handleToggleSentenceAnalysisRunning}
-          isSentenceAnalysisRunning={isSentenceAnalysisRunning}
-          onToggleAnalysisPlayback={handleAnalysisPlaybackToggle}
-          analysisPlaybackStatus={analysisPlaybackState.status}
-          isAnalysisPlaybackDisabled={isAnalysisPlaybackDisabled}
-        />
-      }
-      content={
-        viewMode === "analysis" ? (
-          <ReaderSentenceAnalysisPanel
-            ref={contentRef}
-            sentences={sentenceItems}
-            bookId={book.id}
-            chapterId={activeChapterId}
+    <>
+      <ReaderLayout
+        header={
+          <ReaderHeader
+            bookTitle={book.title}
             chapterTitle={chapterTitle}
-            onRetry={handleRetrySentence}
-            onScroll={handleScroll}
-            activeSentenceId={analysisPlaybackState.currentSentenceId}
-            onSentenceSelect={sentenceSelectionHandler}
-          />
-        ) : (
-          <ReaderContent
-            ref={contentRef}
-            chapterTitle={chapterTitle}
-            contentHtml={chapterContentHtml}
-            onScroll={handleScroll}
+            isVisible={isHeaderVisible}
+            onBack={onExitReader}
+            onOpenToc={onOpenToc ?? (() => undefined)}
+            onOpenSearch={onOpenSearch}
+            onOpenSettings={handleOpenSettings}
+            onToggleReadingMode={toggleReadingMode}
             readingMode={readingMode}
+            viewMode={viewMode}
+            onEnterAnalysisMode={handleEnterAnalysisMode}
+            onExitAnalysisMode={handleExitAnalysisMode}
+            onToggleSentenceAnalysisRunning={handleToggleSentenceAnalysisRunning}
+            isSentenceAnalysisRunning={isSentenceAnalysisRunning}
+            onToggleAnalysisPlayback={handleAnalysisPlaybackToggle}
+            analysisPlaybackStatus={analysisPlaybackState.status}
+            isAnalysisPlaybackDisabled={isAnalysisPlaybackDisabled}
           />
-        )
-      }
-      footer={
-        <ReaderFooter
-          isVisible={isFooterVisible}
-          onPrevChapter={handlePrevChapter}
-          onNextChapter={handleNextChapter}
-          disablePrev={
-            totalChapters === 0 ||
-            currentIndex < 0 ||
-            isFirstChapter(currentIndex)
-          }
-          disableNext={
-            totalChapters === 0 ||
-            currentIndex < 0 ||
-            isLastChapter(chapters, currentIndex)
-          }
-          progress={bookProgress}
-        />
-      }
-      onMouseMove={handleMouseMove}
-      onTouchStart={handleTouchStart}
-    />
+        }
+        content={
+          viewMode === "analysis" ? (
+            <ReaderSentenceAnalysisPanel
+              ref={contentRef}
+              sentences={sentenceItems}
+              bookId={book.id}
+              chapterId={activeChapterId}
+              chapterTitle={chapterTitle}
+              onRetry={handleRetrySentence}
+              onScroll={handleScroll}
+              activeSentenceId={analysisPlaybackState.currentSentenceId}
+              onSentenceSelect={sentenceSelectionHandler}
+            />
+          ) : (
+            <ReaderContent
+              ref={contentRef}
+              chapterTitle={chapterTitle}
+              contentHtml={chapterContentHtml}
+              onScroll={handleScroll}
+              readingMode={readingMode}
+            />
+          )
+        }
+        footer={
+          <ReaderFooter
+            isVisible={isFooterVisible}
+            onPrevChapter={handlePrevChapter}
+            onNextChapter={handleNextChapter}
+            disablePrev={
+              totalChapters === 0 ||
+              currentIndex < 0 ||
+              isFirstChapter(currentIndex)
+            }
+            disableNext={
+              totalChapters === 0 ||
+              currentIndex < 0 ||
+              isLastChapter(chapters, currentIndex)
+            }
+            progress={bookProgress}
+          />
+        }
+        onMouseMove={handleMouseMove}
+        onTouchStart={handleTouchStart}
+      />
+
+      <ReaderSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={handleCloseSettings}
+        ttsLanguage={analysisTtsLanguage}
+        onTtsLanguageChange={handleTtsLanguageChange}
+        ttsLanguageOptions={TTS_LANGUAGE_OPTIONS}
+      />
+    </>
   );
 };
 

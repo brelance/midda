@@ -9,6 +9,7 @@ export interface TtsStartRequestOptions {
   startIndex?: number;
   voice?: string;
   rate?: number;
+  language?: string;
 }
 
 export interface TtsStateUpdate {

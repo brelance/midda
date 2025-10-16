@@ -74,8 +74,12 @@ const normalizeStartPayload = (payload: unknown): TtsStartPayload => {
     typeof candidate.rate === "number" && Number.isFinite(candidate.rate)
       ? candidate.rate
       : undefined;
+  const language =
+    typeof candidate.language === "string" && candidate.language.trim().length > 0
+      ? candidate.language.trim()
+      : undefined;
 
-  return { sentences, startIndex, voice, rate };
+  return { sentences, startIndex, voice, rate, language };
 };
 
 const normalizeJumpPayload = (payload: unknown): number => {

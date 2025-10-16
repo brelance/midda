@@ -8,6 +8,33 @@ import type {
 } from "../../../../src/types/tts";
 
 const DEFAULT_RATE = 1;
+type PlatformKey = NodeJS.Platform | "default";
+
+const LANGUAGE_VOICE_MAP: Record<string, Partial<Record<PlatformKey, string>>> = {
+  "ja-JP": {
+    darwin: "Kyoko",
+    win32: "Microsoft Haruka Desktop",
+    linux: "ja",
+  },
+  "en-US": {
+    darwin: "Samantha",
+    win32: "Microsoft Zira Desktop",
+    linux: "en",
+  },
+};
+
+const resolveVoiceForLanguage = (language?: string): string | undefined => {
+  if (!language) {
+    return undefined;
+  }
+
+  const mapping = LANGUAGE_VOICE_MAP[language];
+  if (!mapping) {
+    return undefined;
+  }
+
+  return mapping[process.platform as PlatformKey] ?? mapping.default;
+};
 
 export class TtsController extends EventEmitter {
   private queue: TtsSentencePayload[] = [];
@@ -26,7 +53,9 @@ export class TtsController extends EventEmitter {
     this.stopSpeech();
 
     this.queue = Array.isArray(sentences) ? [...sentences] : [];
-    this.voice = options?.voice;
+    const resolvedVoice =
+      options?.voice ?? resolveVoiceForLanguage(options?.language);
+    this.voice = resolvedVoice;
     this.rate = options?.rate ?? DEFAULT_RATE;
 
     if (this.queue.length === 0) {
