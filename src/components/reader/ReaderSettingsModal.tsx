@@ -50,31 +50,31 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 py-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-3 py-4 sm:px-4 sm:py-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="reader-settings-title"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[500px] rounded-[20px] border-4 border-[#3d2b1f] bg-[#f5f5dc] shadow-[8px_8px_0px_0px_#3d2b1f]"
+        className="flex w-full max-w-[520px] max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-[20px] border-4 border-[#3d2b1f] bg-[#f5f5dc] shadow-[8px_8px_0px_0px_#3d2b1f] sm:max-h-[calc(100vh-4rem)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] px-6 py-4">
+        <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] px-4 py-3 sm:px-6 sm:py-4">
           <h2
             id="reader-settings-title"
-            className="text-2xl font-black text-[#3d2b1f]"
+            className="text-xl font-black text-[#3d2b1f] sm:text-2xl"
           >
             显示设置
           </h2>
           <button
             type="button"
-            className="flex h-12 w-12 items-center justify-center rounded-[20px] border-4 border-[#3d2b1f] bg-[#d4a017] text-white shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none"
+            className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-white shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none sm:h-12 sm:w-12"
             onClick={onClose}
             aria-label="关闭设置"
           >
             <svg
-              className="h-6 w-6"
+              className="h-6 w-6 sm:h-7 sm:w-7"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -88,23 +88,23 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           </button>
         </div>
 
-        <div className="px-6 py-6">
-          <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+          <div className="space-y-5 sm:space-y-6">
             <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-4">
               <span className="text-lg font-bold text-[#3d2b1f]">字体大小</span>
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  className="flex h-12 w-12 items-center justify-center rounded-[20px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f]"
+                  className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-12 sm:w-12"
                 >
                   –
                 </button>
-                <span className="w-14 text-center text-xl font-black text-[#3d2b1f]">
+                <span className="w-14 text-center text-lg font-black text-[#3d2b1f] sm:text-xl">
                   常规
                 </span>
                 <button
                   type="button"
-                  className="flex h-12 w-12 items-center justify-center rounded-[20px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f]"
+                  className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-12 sm:w-12"
                 >
                   ＋
                 </button>
@@ -116,16 +116,16 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  className="flex h-12 w-12 items-center justify-center rounded-[20px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f]"
+                  className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-12 sm:w-12"
                 >
                   –
                 </button>
-                <span className="w-14 text-center text-xl font-black text-[#3d2b1f]">
+                <span className="w-14 text-center text-lg font-black text-[#3d2b1f] sm:text-xl">
                   1.8
                 </span>
                 <button
                   type="button"
-                  className="flex h-12 w-12 items-center justify-center rounded-[20px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f]"
+                  className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-12 sm:w-12"
                 >
                   ＋
                 </button>
@@ -161,7 +161,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               </p>
               <select
                 id="tts-language-select"
-                className="w-full rounded-[20px] border-4 border-[#3d2b1f] bg-white px-4 py-3 text-base font-semibold text-[#3d2b1f] shadow-[6px_6px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[3px_3px_0px_0px_#3d2b1f] focus:translate-x-[3px] focus:translate-y-[3px] focus:shadow-[3px_3px_0px_0px_#3d2b1f] focus:outline-none"
+                className="w-full rounded-[18px] border-4 border-[#3d2b1f] bg-white px-3 py-3 text-base font-semibold text-[#3d2b1f] shadow-[6px_6px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[3px_3px_0px_0px_#3d2b1f] focus:translate-x-[3px] focus:translate-y-[3px] focus:shadow-[3px_3px_0px_0px_#3d2b1f] focus:outline-none sm:px-4"
                 value={ttsLanguage}
                 onChange={(event) => onTtsLanguageChange(event.target.value)}
               >
@@ -175,10 +175,10 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end border-t-4 border-[#3d2b1f] px-6 py-4">
+        <div className="flex justify-end border-t-4 border-[#3d2b1f] px-4 py-3 sm:px-6 sm:py-4">
           <button
             type="button"
-            className="rounded-[20px] border-4 border-[#3d2b1f] bg-white px-6 py-2 text-sm font-bold text-[#3d2b1f] shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none"
+            className="rounded-[18px] border-4 border-[#3d2b1f] bg-white px-5 py-2 text-sm font-bold text-[#3d2b1f] shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none sm:rounded-[20px] sm:px-6"
             onClick={onClose}
           >
             关闭
