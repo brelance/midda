@@ -419,6 +419,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     ReaderSentenceAnalysisItem[]
   >([]);
   const sentenceItemsRef = useRef<ReaderSentenceAnalysisItem[]>([]);
+  const sentenceItemsChapterRef = useRef<string | null>(null);
   const processingRef = useRef(false);
   const analysisRunningRef = useRef(isSentenceAnalysisRunning);
   const [analysisPlaybackState, setAnalysisPlaybackState] =
@@ -537,10 +538,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const resetSentenceAnalysisItems = useCallback(() => {
     setSentenceItems(() => {
       sentenceItemsRef.current = [];
+      sentenceItemsChapterRef.current = null;
       return [];
     });
     resetAnalysisPlaybackState();
-  }, [resetAnalysisPlaybackState, sentenceItemsRef]);
+  }, [resetAnalysisPlaybackState]);
 
   const handleOpenSettings = useCallback(() => {
     setIsSettingsModalOpen(true);
@@ -569,12 +571,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     stopAnalysisPlayback();
     setIsSentenceAnalysisRunning(false);
     clearExistingAnalysisOverlay();
-    resetSentenceAnalysisItems();
     setViewMode("reading");
     showToolbarsTemporarily(1800);
   }, [
     clearExistingAnalysisOverlay,
-    resetSentenceAnalysisItems,
     showToolbarsTemporarily,
     stopAnalysisPlayback,
   ]);
@@ -968,10 +968,17 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   );
 
   useEffect(() => {
+    const normalizedChapterId = activeChapterId ?? null;
     if (viewMode !== "analysis") {
-      if (sentenceItemsRef.current.length > 0) {
-        sentenceItemsRef.current = [];
-        setSentenceItems([]);
+      if (
+        sentenceItemsChapterRef.current &&
+        sentenceItemsChapterRef.current !== normalizedChapterId
+      ) {
+        sentenceItemsChapterRef.current = null;
+        if (sentenceItemsRef.current.length > 0) {
+          sentenceItemsRef.current = [];
+          setSentenceItems([]);
+        }
       }
       return;
     }
@@ -979,6 +986,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     if (!activeChapterId) {
       if (sentenceItemsRef.current.length > 0) {
         sentenceItemsRef.current = [];
+        sentenceItemsChapterRef.current = null;
         setSentenceItems([]);
       }
       return;
@@ -1025,6 +1033,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     }
 
     sentenceItemsRef.current = nextState;
+    sentenceItemsChapterRef.current = activeChapterId;
     setSentenceItems(nextState);
     if (analysisRunningRef.current) {
       void processPendingSentences();
