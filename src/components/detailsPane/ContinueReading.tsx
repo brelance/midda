@@ -6,9 +6,10 @@ import { Book } from '../../types/types';
 
 interface ContinueReadingProps {
   book: Book | null;
+  onEnterReader?: (book: Book, chapterId?: string) => void;
 }
 
-const ContinueReading: React.FC<ContinueReadingProps> = ({ book }) => {
+const ContinueReading: React.FC<ContinueReadingProps> = ({ book, onEnterReader }) => {
   // 如果有选中的书籍且正在阅读，显示该书籍
   // 否则显示默认的"继续阅读"卡片
   const displayBook = book && book.status === 'reading' ? book : {
@@ -51,15 +52,31 @@ const ContinueReading: React.FC<ContinueReadingProps> = ({ book }) => {
           <span className="font-bold">状态:</span> 已读 {book ? book.progress : displayBook.progress}%
         </div>
 
-        <BrutalistButton
-          variant="primary"
-          className="w-full mt-4 text-lg"
-          onClick={() => {
-            console.log('继续阅读:', book?.title || displayBook.title);
-          }}
-        >
-          继续阅读
-        </BrutalistButton>
+        {book ? (
+          <BrutalistButton
+            variant="primary"
+            className="w-full mt-4 text-lg"
+            onClick={() => {
+              const fallbackChapterId =
+                book.currentChapterId ??
+                book.lastReadChapterId ??
+                book.chapters?.[0]?.id;
+              onEnterReader?.(book, fallbackChapterId);
+            }}
+          >
+            继续阅读
+          </BrutalistButton>
+        ) : (
+          <BrutalistButton
+            variant="primary"
+            className="w-full mt-4 text-lg"
+            onClick={() => {
+              console.log('继续阅读:', displayBook.title);
+            }}
+          >
+            继续阅读
+          </BrutalistButton>
+        )}
       </BrutalistCard>
     </div>
   );

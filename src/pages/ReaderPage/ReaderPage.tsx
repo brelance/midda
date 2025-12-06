@@ -13,6 +13,7 @@ import ReaderSentenceAnalysisPanel, {
   ReaderSentenceAnalysisItem,
 } from "../../components/reader/ReaderSentenceAnalysisPanel";
 import ReaderSettingsModal from "../../components/reader/ReaderSettingsModal";
+import ReaderTocSidebar from "../../components/reader/ReaderTocSidebar";
 import { Book, Chapter, TokenData } from "../../types/types";
 import { ReadingMode, ReaderViewMode } from "../../types/reader";
 import type {
@@ -398,6 +399,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [chapterProgress, setChapterProgress] = useState(0);
   const [readingMode, setReadingMode] = useState<ReadingMode>("single");
   const [viewMode, setViewMode] = useState<ReaderViewMode>("reading");
+  const [isTocOpen, setIsTocOpen] = useState(false);
   const [isSentenceAnalysisRunning, setIsSentenceAnalysisRunning] =
     useState(false);
   const [sentenceItems, setSentenceItems] = useState<
@@ -956,6 +958,41 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     goToChapter(nextChapterId);
   }, [goToChapter, nextChapterId]);
 
+  const handleOpenToc = useCallback(() => {
+    setIsTocOpen((prev) => {
+      if (prev) {
+        return prev;
+      }
+      onOpenToc?.();
+      return true;
+    });
+    showToolbarsTemporarily(1800);
+  }, [onOpenToc, showToolbarsTemporarily]);
+
+  const handleCloseToc = useCallback(() => {
+    setIsTocOpen(false);
+    showToolbarsTemporarily(1800);
+  }, [showToolbarsTemporarily]);
+
+  const handleToggleToc = useCallback(() => {
+    setIsTocOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        onOpenToc?.();
+      }
+      return next;
+    });
+    showToolbarsTemporarily(1800);
+  }, [onOpenToc, showToolbarsTemporarily]);
+
+  const handleChapterSelectFromToc = useCallback(
+    (chapterId: string) => {
+      setIsTocOpen(false);
+      goToChapter(chapterId);
+    },
+    [goToChapter]
+  );
+
   const handleMouseMove = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       handlePointerMove(event.clientY);
@@ -977,7 +1014,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     onExit: onExitReader,
     onNextChapter: handleNextChapter,
     onPrevChapter: handlePrevChapter,
-    onToggleToc: onOpenToc,
+    onToggleToc: handleToggleToc,
     enabled: totalChapters > 0,
   });
 
@@ -990,7 +1027,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             chapterTitle={chapterTitle}
             isVisible={isHeaderVisible}
             onBack={onExitReader}
-            onOpenToc={onOpenToc ?? (() => undefined)}
+            onOpenToc={handleOpenToc}
             onOpenSearch={onOpenSearch}
             onOpenSettings={handleOpenSettings}
             onToggleReadingMode={toggleReadingMode}
@@ -1048,6 +1085,14 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         }
         onMouseMove={handleMouseMove}
         onTouchStart={handleTouchStart}
+      />
+
+      <ReaderTocSidebar
+        chapters={chapters}
+        currentChapterId={activeChapterId}
+        isOpen={isTocOpen}
+        onChapterSelect={handleChapterSelectFromToc}
+        onClose={handleCloseToc}
       />
 
       <ReaderSettingsModal

@@ -4,9 +4,10 @@ import { Book } from '../../types/types';
 
 interface BookDetailsProps {
   book: Book | null;
+  onChapterSelect?: (chapterId: string) => void;
 }
 
-const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
+const BookDetails: React.FC<BookDetailsProps> = ({ book, onChapterSelect }) => {
   return (
     <div
       id="book-details"
@@ -30,18 +31,34 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book }) => {
               <div>
                 <h3 className="font-black text-xl mb-2">目录</h3>
                 <div className="max-h-64 overflow-y-auto text-sm">
-                  {book.chapters.map((chapter, index) => (
-                    <div
-                      key={chapter.id}
-                      className={`
-                        py-2 px-3 border-b border-gray-200
-                        ${chapter.isRead ? 'text-gray-500' : 'text-black font-bold'}
+                  {book.chapters.map((chapter, index) => {
+                    const isRead = chapter.isRead;
+                    const isClickable = typeof onChapterSelect === "function";
+                    return (
+                      <button
+                        key={chapter.id}
+                        type="button"
+                        onClick={
+                          isClickable ? () => onChapterSelect(chapter.id) : undefined
+                        }
+                        className={`
+                        flex w-full flex-col items-start gap-1 border-b border-gray-200 py-2 px-3 text-left transition-colors
+                        ${isRead ? "text-gray-500" : "text-black font-bold"}
+                        ${
+                          isClickable
+                            ? "hover:bg-[#d4a017]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3d2b1f]"
+                            : ""
+                        }
                       `}
-                    >
-                      {index + 1}. {chapter.title}
-                      {chapter.isRead && ' ✓'}
-                    </div>
-                  ))}
+                        aria-label={`跳转到${chapter.title}`}
+                      >
+                        <span>
+                          {index + 1}. {chapter.title}
+                        </span>
+                        {isRead && <span className="text-sm font-normal">✓ 已阅读</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

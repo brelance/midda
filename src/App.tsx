@@ -75,6 +75,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortByIndex, setSortByIndex] = useState(0);
   const [readerBookId, setReaderBookId] = useState<string | null>(null);
+  const [readerInitialChapterId, setReaderInitialChapterId] = useState<
+    string | null
+  >(null);
 
   // 响应式状态管理
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -358,11 +361,18 @@ export default function App() {
     []
   );
 
-  const handleEnterReader = (book: Book) => {
+  const handleEnterReader = (book: Book, chapterId?: string) => {
     if (!book.chapters || book.chapters.length === 0) {
       void ensureBookChapters(book.id);
     }
     setReaderBookId(book.id);
+    const fallbackChapterId =
+      chapterId ??
+      book.currentChapterId ??
+      book.lastReadChapterId ??
+      book.chapters?.[0]?.id ??
+      null;
+    setReaderInitialChapterId(fallbackChapterId);
     setSelectedBook(book);
     setIsSidebarOpen(false);
     setIsDetailsPaneOpen(false);
@@ -376,6 +386,7 @@ export default function App() {
       }
     }
     setReaderBookId(null);
+    setReaderInitialChapterId(null);
   };
 
   const handleReaderChapterChange = useCallback(
@@ -410,6 +421,7 @@ export default function App() {
     return (
       <ReaderPage
         book={readerBook}
+        initialChapterId={readerInitialChapterId ?? undefined}
         onExitReader={handleExitReader}
         onOpenToc={() => console.log("打开目录")}
         onOpenSearch={() => console.log("打开搜索")}

@@ -22,7 +22,7 @@ interface LayoutProps {
   closeSidebar: () => void;
   closeDetailsPane: () => void;
   onBookAdded?: (bookData: EpubBookData) => void;
-  onEnterReader?: (book: Book) => void;
+  onEnterReader?: (book: Book, chapterId?: string) => void;
   onDeleteBook?: (book: Book) => void;
 }
 
@@ -78,6 +78,7 @@ const Layout: React.FC<LayoutProps> = ({
           isMobile={false}
           isOpen={true}
           onClose={() => {}}
+          onEnterReader={onEnterReader}
         />
       </div>
 
@@ -117,6 +118,7 @@ const Layout: React.FC<LayoutProps> = ({
               isOpen={isDetailsPaneOpen}
               onClose={closeDetailsPane}
               showCloseButton={true}
+              onEnterReader={onEnterReader}
             />
           </div>
         )}
@@ -178,6 +180,7 @@ const Layout: React.FC<LayoutProps> = ({
                 isMobile={true}
                 isOpen={isDetailsPaneOpen}
                 onClose={closeDetailsPane}
+                onEnterReader={onEnterReader}
               />
             </div>
           )}

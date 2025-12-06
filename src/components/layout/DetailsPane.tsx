@@ -9,6 +9,7 @@ interface DetailsPaneProps {
   isOpen: boolean;
   onClose: () => void;
   showCloseButton?: boolean;
+  onEnterReader?: (book: Book, chapterId?: string) => void;
 }
 
 const DetailsPane: React.FC<DetailsPaneProps> = ({
@@ -16,7 +17,18 @@ const DetailsPane: React.FC<DetailsPaneProps> = ({
   isMobile,
   onClose,
   showCloseButton = isMobile,
+  onEnterReader,
 }) => {
+  const handleChapterSelect = (chapterId: string) => {
+    if (!selectedBook) {
+      return;
+    }
+    onEnterReader?.(selectedBook, chapterId);
+    if (isMobile) {
+      onClose();
+    }
+  };
+
   return (
     <aside className={`
       ${isMobile ? 'w-full h-full' : 'w-80'}
@@ -51,8 +63,8 @@ const DetailsPane: React.FC<DetailsPaneProps> = ({
       <div className={`${isMobile ? 'p-4' : 'p-6'} flex-grow overflow-y-auto`}>
         {selectedBook ? (
           <>
-            <ContinueReading book={selectedBook} />
-            <BookDetails book={selectedBook} />
+            <ContinueReading book={selectedBook} onEnterReader={onEnterReader} />
+            <BookDetails book={selectedBook} onChapterSelect={handleChapterSelect} />
           </>
         ) : (
           <>

@@ -14,7 +14,7 @@ interface MainContentProps {
   onSearch: (query: string) => void;
   onSort: () => void;
   onBookAdded?: (bookData: EpubBookData) => void;
-  onEnterReader?: (book: Book) => void;
+  onEnterReader?: (book: Book, chapterId?: string) => void;
   onDeleteBook?: (book: Book) => void;
 }
 

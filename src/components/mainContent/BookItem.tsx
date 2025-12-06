@@ -6,7 +6,7 @@ interface BookItemProps {
   book: Book;
   isSelected: boolean;
   onClick: () => void;
-  onEnterReader?: (book: Book) => void;
+  onEnterReader?: (book: Book, chapterId?: string) => void;
   onDelete?: (book: Book) => void;
 }
 

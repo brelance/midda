@@ -7,7 +7,7 @@ interface BookGridProps {
   books: Book[];
   selectedBook: Book | null;
   onSelectBook: (book: Book) => void;
-  onEnterReader?: (book: Book) => void;
+  onEnterReader?: (book: Book, chapterId?: string) => void;
   onDeleteBook?: (book: Book) => void;
 }
 
