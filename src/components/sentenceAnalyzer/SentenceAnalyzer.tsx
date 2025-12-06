@@ -300,11 +300,10 @@ export default function AnalysisSentence({
                     <span className="ruby-text">{token.furigana}</span>
                   )}
               </span>
+              {token.romaji && token.pos !== "記号" && (
+                <span className="romaji-text">{token.romaji}</span>
+              )}
             </span>
-
-            {token.romaji && token.pos !== "記号" && (
-              <span className="romaji-text">{token.romaji}</span>
-            )}
 
             <span className="tooltiptext">
               {posChineseMap[token.pos.split("-")[0]] ||
