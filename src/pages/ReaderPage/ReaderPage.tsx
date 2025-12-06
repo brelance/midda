@@ -915,7 +915,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         setSentenceItems((prev) => {
           const next = prev.map((entry) =>
             entry.id === nextIdle.id
-              ? { ...entry, status: "loading", error: undefined }
+              ? {
+                  ...entry,
+                  status: "loading" as ReaderSentenceAnalysisItem["status"],
+                  error: undefined,
+                }
               : entry
           );
           sentenceItemsRef.current = next;
@@ -939,7 +943,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
                 entry.id === nextIdle.id
                   ? {
                       ...entry,
-                      status: "loaded",
+                      status: "loaded" as ReaderSentenceAnalysisItem["status"],
                       tokens: cached.tokens,
                       error: undefined,
                     }
@@ -961,7 +965,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
               entry.id === nextIdle.id
                 ? {
                     ...entry,
-                    status: "loaded",
+                    status: "loaded" as ReaderSentenceAnalysisItem["status"],
                     tokens,
                     error: undefined,
                   }
@@ -987,7 +991,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
               entry.id === nextIdle.id
                 ? {
                     ...entry,
-                    status: "error",
+                    status: "error" as ReaderSentenceAnalysisItem["status"],
                     error: message,
                     tokens: undefined,
                   }
@@ -1014,7 +1018,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       setSentenceItems((prev) => {
         const next = prev.map((item) =>
           item.id === sentenceId
-            ? { ...item, status: "idle", tokens: undefined, error: undefined }
+            ? {
+                ...item,
+                status: "idle" as ReaderSentenceAnalysisItem["status"],
+                tokens: undefined,
+                error: undefined,
+              }
             : item
         );
         sentenceItemsRef.current = next;
