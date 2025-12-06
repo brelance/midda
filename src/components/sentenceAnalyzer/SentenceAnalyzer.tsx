@@ -7,7 +7,7 @@ import {
 } from "../../utils/helper";
 import { TokenData, WordDetail } from "../../types/types";
 import { queuedSendGeminiRequest } from "../../services/apiQueue";
-import { getPrompt } from "../../services/analyzeSentence";
+import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
 import DraggablePopup from "../DraggablePopup";
 
 interface AnalysisSentenceProps {
@@ -55,11 +55,12 @@ export default function AnalysisSentence({
 
       setIsLoading(true);
       try {
-        const prompt = getPrompt(originalSentence);
-        console.log(originalSentence);
-        console.log(prompt);
+        const detected = detectLanguageForSamples([originalSentence]);
         // 使用新的、经过队列处理的请求函数，并等待其结果
-        const receivedTokens = await queuedSendGeminiRequest(prompt); // 确保 useStream 不是 undefined
+        const receivedTokens = await queuedSendGeminiRequest(
+          originalSentence,
+          { language: detected.languageCode }
+        ); // 确保 useStream 不是 undefined
         // 更新组件状态
         setTokens(receivedTokens);
 

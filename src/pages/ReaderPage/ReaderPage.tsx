@@ -35,7 +35,7 @@ import {
 import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
 import { useReaderShortcuts } from "../../hooks/useReaderShortcuts";
 import { queuedSendGeminiRequest } from "../../services/apiQueue";
-import { getPrompt } from "../../services/analyzeSentence";
+import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
 
 interface ReaderPageProps {
   book: Book;
@@ -414,6 +414,34 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     setIsShowingExistingAnalysis(false);
     setExistingAnalysisResults({ byId: {}, byText: {} });
   }, []);
+  const clearAnalysisLanguage = useCallback(() => {
+    analysisLanguageRef.current = undefined;
+  }, []);
+  const ensureAnalysisLanguageReady = useCallback(async () => {
+    if (analysisLanguageRef.current || sentenceItemsRef.current.length === 0) {
+      return analysisLanguageRef.current;
+    }
+    if (!analysisLanguageDetectionPromiseRef.current) {
+      const samples = sentenceItemsRef.current
+        .slice(0, 25)
+        .map((item) => item.text)
+        .filter((text) => typeof text === "string" && text.trim().length > 0);
+      if (samples.length === 0) {
+        return undefined;
+      }
+      const detectionPromise = Promise.resolve().then(() => {
+        const detection = detectLanguageForSamples(samples);
+        analysisLanguageRef.current = detection.languageCode;
+        return analysisLanguageRef.current;
+      });
+      analysisLanguageDetectionPromiseRef.current = detectionPromise.finally(
+        () => {
+          analysisLanguageDetectionPromiseRef.current = null;
+        }
+      );
+    }
+    return analysisLanguageDetectionPromiseRef.current;
+  }, []);
 
   const [sentenceItems, setSentenceItems] = useState<
     ReaderSentenceAnalysisItem[]
@@ -422,6 +450,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const sentenceItemsChapterRef = useRef<string | null>(null);
   const processingRef = useRef(false);
   const analysisRunningRef = useRef(isSentenceAnalysisRunning);
+  const analysisLanguageRef = useRef<string | undefined>(undefined);
+  const analysisLanguageDetectionPromiseRef =
+    useRef<Promise<string | undefined> | null>(null);
   const [analysisPlaybackState, setAnalysisPlaybackState] =
     useState<AnalysisPlaybackState>({
       status: "idle",
@@ -541,8 +572,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       sentenceItemsChapterRef.current = null;
       return [];
     });
+    clearAnalysisLanguage();
     resetAnalysisPlaybackState();
-  }, [resetAnalysisPlaybackState]);
+  }, [clearAnalysisLanguage, resetAnalysisPlaybackState]);
 
   const handleOpenSettings = useCallback(() => {
     setIsSettingsModalOpen(true);
@@ -653,11 +685,14 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       if (!next) {
         stopAnalysisPlayback();
         resetSentenceAnalysisItems();
+      } else {
+        void ensureAnalysisLanguageReady();
       }
       return next;
     });
     showToolbarsTemporarily(1800);
   }, [
+    ensureAnalysisLanguageReady,
     resetSentenceAnalysisItems,
     showToolbarsTemporarily,
     stopAnalysisPlayback,
@@ -773,12 +808,27 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   }, [sentenceItems]);
 
   useEffect(() => {
+    if (
+      viewMode === "analysis" &&
+      sentenceItems.length > 0 &&
+      !analysisLanguageRef.current &&
+      !analysisLanguageDetectionPromiseRef.current
+    ) {
+      void ensureAnalysisLanguageReady();
+    }
+  }, [ensureAnalysisLanguageReady, sentenceItems, viewMode]);
+
+  useEffect(() => {
     analysisRunningRef.current = isSentenceAnalysisRunning;
   }, [isSentenceAnalysisRunning]);
 
   useEffect(() => {
     clearExistingAnalysisOverlay();
   }, [activeChapterId, clearExistingAnalysisOverlay, viewMode]);
+
+  useEffect(() => {
+    clearAnalysisLanguage();
+  }, [activeChapterId, clearAnalysisLanguage]);
 
   useEffect(() => {
     return () => {
@@ -846,6 +896,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     processingRef.current = true;
 
     try {
+      await ensureAnalysisLanguageReady();
+      const languageHint = analysisLanguageRef.current;
       // eslint-disable-next-line no-constant-condition
       while (true) {
         if (!analysisRunningRef.current) {
@@ -899,8 +951,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             continue;
           }
 
-          const prompt = getPrompt(nextIdle.text);
-          const tokens: TokenData[] = await queuedSendGeminiRequest(prompt);
+          const tokens: TokenData[] = await queuedSendGeminiRequest(
+            nextIdle.text,
+            { language: languageHint }
+          );
 
           setSentenceItems((prev) => {
             const next = prev.map((entry) =>
@@ -947,7 +1001,13 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     } finally {
       processingRef.current = false;
     }
-  }, [viewMode, isSentenceAnalysisRunning, activeChapterId, book.id]);
+  }, [
+    viewMode,
+    isSentenceAnalysisRunning,
+    activeChapterId,
+    book.id,
+    ensureAnalysisLanguageReady,
+  ]);
 
   const handleRetrySentence = useCallback(
     (sentenceId: string) => {

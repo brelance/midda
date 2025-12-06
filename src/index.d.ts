@@ -91,7 +91,10 @@ export interface IElectronAPI {
   };
 
   ai: {
-    sendGeminiRequest: (prompt: string) => Promise<TokenData[]>;
+    sendGeminiRequest: (payload: {
+      sentence: string;
+      language?: string;
+    }) => Promise<TokenData[]>;
     onGeminiEnd: (callback: () => void) => void;
     onGeminiNonStreamTokensResponse: (
       callback: (tokens: TokenData[]) => void

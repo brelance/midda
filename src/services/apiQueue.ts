@@ -27,12 +27,18 @@ async function processQueue(): Promise<void> {
   }
 }
 
-export function queuedSendGeminiRequest(prompt: string): Promise<TokenData[]> {
+export function queuedSendGeminiRequest(
+  sentence: string,
+  options?: { language?: string }
+): Promise<TokenData[]> {
   return new Promise<TokenData[]>((resolve, reject) => {
     // 将实际的 API 调用包装成一个 task 函数
     const task = async () => {
       try {
-        const result = await window.api.ai.sendGeminiRequest(prompt);
+        const result = await window.api.ai.sendGeminiRequest({
+          sentence,
+          language: options?.language,
+        });
         resolve(result);
         return result; // 返回值给 processQueue，虽然那里没用
       } catch (error) {

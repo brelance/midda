@@ -18,8 +18,11 @@ import type {
 } from "../src/types/database";
 const api = {
   ai: {
-    sendGeminiRequest: (prompt: string): Promise<TokenData[]> =>
-      ipcRenderer.invoke("gemini-tokens-request", { prompt }),
+    sendGeminiRequest: (payload: {
+      sentence: string;
+      language?: string;
+    }): Promise<TokenData[]> =>
+      ipcRenderer.invoke("gemini-tokens-request", payload),
   },
 
   wordDetail: {
