@@ -483,7 +483,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       }
       return {
         ...item,
-        status: "loaded",
+        status: "loaded" as ReaderSentenceAnalysisItem["status"],
         tokens,
         error: undefined,
       };
