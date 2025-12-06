@@ -57,19 +57,19 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-[520px] max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-[20px] border-4 border-[#3d2b1f] bg-[#f5f5dc] shadow-[8px_8px_0px_0px_#3d2b1f] sm:max-h-[calc(100vh-4rem)]"
+        className="flex w-full max-w-[420px] max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-[20px] border-4 border-[#3d2b1f] bg-[#f5f5dc] shadow-[8px_8px_0px_0px_#3d2b1f] sm:max-h-[calc(100vh-4rem)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] px-3 py-2 sm:px-4 sm:py-3">
           <h2
             id="reader-settings-title"
-            className="text-xl font-black text-[#3d2b1f] sm:text-2xl"
+            className="text-lg font-black text-[#3d2b1f] sm:text-xl"
           >
             显示设置
           </h2>
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-white shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none sm:h-12 sm:w-12"
+            className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-white shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none sm:h-11 sm:w-11"
             onClick={onClose}
             aria-label="关闭设置"
           >
@@ -88,59 +88,65 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
-          <div className="space-y-5 sm:space-y-6">
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-4">
-              <span className="text-lg font-bold text-[#3d2b1f]">字体大小</span>
-              <div className="flex items-center gap-4">
+        <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5">
+          <div className="space-y-4 sm:space-y-5">
+            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
+              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
+                字体大小
+              </span>
+              <div className="flex items-center gap-3 sm:gap-4">
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-12 sm:w-12"
+                  className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-11 sm:w-11"
                 >
                   –
                 </button>
-                <span className="w-14 text-center text-lg font-black text-[#3d2b1f] sm:text-xl">
+                <span className="w-12 text-center text-base font-black text-[#3d2b1f] sm:w-14 sm:text-lg">
                   常规
                 </span>
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-12 sm:w-12"
+                  className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-11 sm:w-11"
                 >
                   ＋
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-4">
-              <span className="text-lg font-bold text-[#3d2b1f]">行高</span>
-              <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
+              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
+                行高
+              </span>
+              <div className="flex items-center gap-3 sm:gap-4">
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-12 sm:w-12"
+                  className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-11 sm:w-11"
                 >
                   –
                 </button>
-                <span className="w-14 text-center text-lg font-black text-[#3d2b1f] sm:text-xl">
+                <span className="w-12 text-center text-base font-black text-[#3d2b1f] sm:w-14 sm:text-lg">
                   1.8
                 </span>
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-2xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-12 sm:w-12"
+                  className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-11 sm:w-11"
                 >
                   ＋
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-4">
-              <span className="text-lg font-bold text-[#3d2b1f]">主题</span>
-              <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
+              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
+                主题
+              </span>
+              <div className="flex items-center gap-3 sm:gap-4">
                 {themeSwatches.map((theme) => (
                   <button
                     key={theme.color}
                     type="button"
                     style={{ backgroundColor: theme.color }}
-                    className={`h-10 w-10 rounded-full border-4 border-[#3d2b1f] transition ${
+                    className={`h-9 w-9 rounded-full border-4 border-[#3d2b1f] transition sm:h-10 sm:w-10 ${
                       theme.active
                         ? "outline outline-4 outline-offset-4 outline-[#3d2b1f]"
                         : ""
@@ -152,7 +158,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
 
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-lg font-bold text-[#3d2b1f]">
+                <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
                   TTS 朗读语言
                 </span>
               </div>
@@ -175,7 +181,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end border-t-4 border-[#3d2b1f] px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex justify-end border-t-4 border-[#3d2b1f] px-3 py-3 sm:px-4 sm:py-4">
           <button
             type="button"
             className="rounded-[18px] border-4 border-[#3d2b1f] bg-white px-5 py-2 text-sm font-bold text-[#3d2b1f] shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none sm:rounded-[20px] sm:px-6"
