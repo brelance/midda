@@ -65,10 +65,7 @@ const ReaderSentenceAnalysisPanel = forwardRef<
       ) : (
         <div className="space-y-4">
           {sentences.map((item) => (
-            <div
-              key={item.id}
-              className="border-b border-[#e5ded6] pb-4 last:border-b-0 last:pb-0"
-            >
+            <div key={item.id} className="sentence-block">
               <button
                 type="button"
                 disabled={!onSentenceSelect}
@@ -76,27 +73,27 @@ const ReaderSentenceAnalysisPanel = forwardRef<
                 onClick={
                   onSentenceSelect ? () => onSentenceSelect(item.id) : undefined
                 }
-                className={`w-full rounded-md border border-transparent px-2 py-1 text-left text-base leading-snug transition sm:text-lg ${
+                className={`w-full rounded-xl border border-transparent px-3 py-2 text-left text-base leading-snug transition sm:text-lg ${
                   item.id === activeSentenceId
-                    ? "border-[#007AFF] bg-[#e7f0ff] text-[#1f2a44]"
-                    : "text-[#3d2b1f]"
+                    ? "border-[#15803d] bg-[#d1fadf] text-[#14532d]"
+                    : "text-[#1f2a44]"
                 } ${
                   onSentenceSelect
-                    ? "hover:bg-[#f3ede3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3d2b1f]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fdf8f2]"
+                    ? "hover:bg-[#d1fadf]/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15803d]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f0fdf4]"
                     : ""
                 } ${!onSentenceSelect ? "cursor-default" : ""}`}
               >
                 {item.text}
               </button>
               {item.status === "loading" && (
-                <div className="mt-2 flex items-center gap-3 rounded-md border border-dashed border-[#d8cfc4] bg-[#fdf8f2] px-3 py-2 text-xs text-[#6b5b4b] sm:text-sm">
-                  <div className="loading-spinner h-5 w-5 border-[3px] border-[#d8cfc4] border-t-[#3d2b1f]" />
+                <div className="mt-2 flex items-center gap-3 rounded-md border border-dashed border-[#a7d3ae] bg-[#f0fdf4]/80 px-3 py-2 text-xs text-[#1f2a44] sm:text-sm">
+                  <div className="loading-spinner h-5 w-5 border-[3px] border-[#a7d3ae] border-t-[#15803d]" />
                   正在分析中...
                 </div>
               )}
 
               {item.status === "error" && (
-                <div className="mt-2 rounded-md border border-[#f4d4d1] bg-[#fdf0ef] p-3 text-xs text-[#b3312c] sm:text-sm">
+                <div className="mt-2 rounded-md border border-[#f4d4d1] bg-[#fdf0ef] p-3 text-xs text-[#b3312c] sm:text-sm shadow-inner">
                   <p className="mb-1 text-sm font-semibold text-[#3d2b1f] sm:text-base">
                     分析失败
                   </p>
@@ -126,7 +123,7 @@ const ReaderSentenceAnalysisPanel = forwardRef<
 
               {item.status === "loaded" &&
                 (!item.tokens || item.tokens.length === 0) && (
-                  <div className="mt-2 rounded-md border border-[#f3e2b6] bg-[#fff9e6] p-2 text-xs text-[#6b5b4b] sm:text-sm">
+                  <div className="mt-2 rounded-md border border-[#f3e2b6] bg-[#fff9e6] p-2 text-xs text-[#6b5b4b] sm:text-sm shadow-inner">
                     分析已完成，但未获取到有效的分词结果。
                   </div>
                 )}

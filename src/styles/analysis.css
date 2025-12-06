@@ -1,0 +1,8 @@
+.sentence-block {
+  margin-bottom: 30px;
+  padding: 25px;
+  background-color: rgba(156, 204, 101, 0.15);
+  border-radius: 16px;
+  border: 1px solid transparent;
+  transition: background-color 0.3s ease;
+}
