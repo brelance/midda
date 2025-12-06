@@ -16,6 +16,7 @@ interface ReaderHeaderProps {
   onEnterAnalysisMode: () => void;
   onExitAnalysisMode: () => void;
   onShowExistingAnalysis?: () => void;
+  isShowingExistingAnalysis?: boolean;
   onToggleSentenceAnalysisRunning?: () => void;
   isSentenceAnalysisRunning?: boolean;
   onToggleAnalysisPlayback?: () => void;
@@ -38,6 +39,7 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   onEnterAnalysisMode,
   onExitAnalysisMode,
   onShowExistingAnalysis,
+  isShowingExistingAnalysis = false,
   onToggleSentenceAnalysisRunning,
   isSentenceAnalysisRunning = false,
   onToggleAnalysisPlayback,
@@ -141,10 +143,19 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
 
       <BrutalistButton
         onClick={onShowExistingAnalysis}
-        className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2"
+        className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 ${
+          isShowingExistingAnalysis ? "border-4 border-[#007AFF]" : ""
+        }`}
         disabled={!onShowExistingAnalysis}
-        aria-label="显示已有分析"
-        title="仅展示已保存的分析结果"
+        aria-label={
+          isShowingExistingAnalysis ? "隐藏已显示的分析" : "显示已有分析"
+        }
+        aria-pressed={isShowingExistingAnalysis}
+        title={
+          isShowingExistingAnalysis
+            ? "隐藏已加载的分析结果"
+            : "仅展示已保存的分析结果"
+        }
       >
         <svg
           className="h-5 w-5 sm:h-6 sm:w-6"
@@ -159,7 +170,9 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
           <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
           <circle cx="12" cy="12" r="3" />
         </svg>
-        <span className="hidden sm:inline">显示分析</span>
+        <span className="hidden sm:inline">
+          {isShowingExistingAnalysis ? "隐藏分析" : "显示分析"}
+        </span>
       </BrutalistButton>
 
       <BrutalistButton

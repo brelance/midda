@@ -402,6 +402,19 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [isSentenceAnalysisRunning, setIsSentenceAnalysisRunning] =
     useState(false);
+  const [isShowingExistingAnalysis, setIsShowingExistingAnalysis] =
+    useState(false);
+  const [existingAnalysisResults, setExistingAnalysisResults] = useState<{
+    byId: Record<string, TokenData[]>;
+    byText: Record<string, TokenData[]>;
+  }>({ byId: {}, byText: {} });
+  const showExistingAnalysisRequestIdRef = useRef(0);
+  const clearExistingAnalysisOverlay = useCallback(() => {
+    showExistingAnalysisRequestIdRef.current += 1;
+    setIsShowingExistingAnalysis(false);
+    setExistingAnalysisResults({ byId: {}, byText: {} });
+  }, []);
+
   const [sentenceItems, setSentenceItems] = useState<
     ReaderSentenceAnalysisItem[]
   >([]);
@@ -422,6 +435,28 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       })),
     [sentenceItems]
   );
+  const displaySentenceItems = useMemo(() => {
+    if (!isShowingExistingAnalysis) {
+      return sentenceItems;
+    }
+    return sentenceItems.map((item) => {
+      const tokens =
+        existingAnalysisResults.byId[item.id] ??
+        existingAnalysisResults.byText[item.text];
+      if (!tokens) {
+        return item;
+      }
+      if (item.status === "loaded" && item.tokens && item.tokens.length > 0) {
+        return item;
+      }
+      return {
+        ...item,
+        status: "loaded",
+        tokens,
+        error: undefined,
+      };
+    });
+  }, [existingAnalysisResults, isShowingExistingAnalysis, sentenceItems]);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [analysisTtsLanguage, setAnalysisTtsLanguage] =
     useState<string>("ja-JP");
@@ -533,16 +568,24 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const handleExitAnalysisMode = useCallback(() => {
     stopAnalysisPlayback();
     setIsSentenceAnalysisRunning(false);
+    clearExistingAnalysisOverlay();
     resetSentenceAnalysisItems();
     setViewMode("reading");
     showToolbarsTemporarily(1800);
   }, [
+    clearExistingAnalysisOverlay,
     resetSentenceAnalysisItems,
     showToolbarsTemporarily,
     stopAnalysisPlayback,
   ]);
 
   const handleShowExistingSentenceAnalysis = useCallback(() => {
+    if (isShowingExistingAnalysis) {
+      clearExistingAnalysisOverlay();
+      showToolbarsTemporarily(1800);
+      return;
+    }
+
     if (
       viewMode !== "analysis" ||
       !activeChapterId ||
@@ -550,6 +593,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     ) {
       return;
     }
+
+    const requestId = ++showExistingAnalysisRequestIdRef.current;
 
     void (async () => {
       try {
@@ -562,52 +607,45 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           return;
         }
 
-        const tokensBySentenceId = new Map<string, TokenData[]>();
-        const tokensByText = new Map<string, TokenData[]>();
+        const byId: Record<string, TokenData[]> = {};
+        const byText: Record<string, TokenData[]> = {};
 
         records.forEach((record) => {
           if (record.tokens && record.tokens.length > 0) {
             if (record.sentenceId) {
-              tokensBySentenceId.set(record.sentenceId, record.tokens);
+              byId[record.sentenceId] = record.tokens;
             }
-            tokensByText.set(record.text, record.tokens);
+            byText[record.text] = record.tokens;
           }
         });
 
-        if (tokensBySentenceId.size === 0 && tokensByText.size === 0) {
+        if (
+          Object.keys(byId).length === 0 &&
+          Object.keys(byText).length === 0
+        ) {
           return;
         }
 
-        setSentenceItems((prev) => {
-          let hasChanges = false;
-          const updated = prev.map((item) => {
-            const tokens =
-              tokensBySentenceId.get(item.id) ?? tokensByText.get(item.text);
-            if (!tokens) {
-              return item;
-            }
-            hasChanges = true;
-            return {
-              ...item,
-              status: "loaded",
-              tokens,
-              error: undefined,
-            };
-          });
+        if (showExistingAnalysisRequestIdRef.current !== requestId) {
+          return;
+        }
 
-          if (!hasChanges) {
-            return prev;
-          }
-          sentenceItemsRef.current = updated;
-          return updated;
-        });
+        setExistingAnalysisResults({ byId, byText });
+        setIsShowingExistingAnalysis(true);
       } catch (error) {
         console.error("加载已存储的句子分析失败:", error);
       }
     })();
 
     showToolbarsTemporarily(1800);
-  }, [activeChapterId, book.id, showToolbarsTemporarily, viewMode]);
+  }, [
+    activeChapterId,
+    book.id,
+    clearExistingAnalysisOverlay,
+    isShowingExistingAnalysis,
+    showToolbarsTemporarily,
+    viewMode,
+  ]);
 
   const handleToggleSentenceAnalysisRunning = useCallback(() => {
     setIsSentenceAnalysisRunning((prev) => {
@@ -737,6 +775,16 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   useEffect(() => {
     analysisRunningRef.current = isSentenceAnalysisRunning;
   }, [isSentenceAnalysisRunning]);
+
+  useEffect(() => {
+    clearExistingAnalysisOverlay();
+  }, [activeChapterId, clearExistingAnalysisOverlay, viewMode]);
+
+  useEffect(() => {
+    return () => {
+      showExistingAnalysisRequestIdRef.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     if (viewMode !== "analysis") {
@@ -1101,6 +1149,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             onEnterAnalysisMode={handleEnterAnalysisMode}
             onExitAnalysisMode={handleExitAnalysisMode}
             onShowExistingAnalysis={handleShowExistingSentenceAnalysis}
+            isShowingExistingAnalysis={isShowingExistingAnalysis}
             onToggleSentenceAnalysisRunning={handleToggleSentenceAnalysisRunning}
             isSentenceAnalysisRunning={isSentenceAnalysisRunning}
             onToggleAnalysisPlayback={handleAnalysisPlaybackToggle}
@@ -1112,7 +1161,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           viewMode === "analysis" ? (
             <ReaderSentenceAnalysisPanel
               ref={contentRef}
-              sentences={sentenceItems}
+              sentences={displaySentenceItems}
               bookId={book.id}
               chapterId={activeChapterId}
               chapterTitle={chapterTitle}
