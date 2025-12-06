@@ -50,8 +50,6 @@ const Header: React.FC<HeaderProps> = ({
         {/* 桌面端标题 */}
         <h1 className="hidden md:block text-4xl font-black">我的书架</h1>
 
-        {/* 移动端小标题 */}
-        <h1 className="md:hidden text-2xl font-black">书架</h1>
       </div>
 
       {/* 右侧：搜索和操作按钮 */}
