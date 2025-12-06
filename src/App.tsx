@@ -66,6 +66,16 @@ const mapDbChapterToChapter = (record: LibraryChapterRecord): Chapter => ({
   order: record.orderIndex,
 });
 
+const stripChapterContent = (chapters?: Chapter[]) => {
+  if (!chapters || chapters.length === 0) {
+    return chapters;
+  }
+  return chapters.map((chapter) => ({
+    ...chapter,
+    content: "",
+  }));
+};
+
 const sortOptions = ["title", "author", "progress", "addedDate"] as const;
 
 export default function App() {
@@ -84,14 +94,26 @@ export default function App() {
   const [isDetailsPaneOpen, setIsDetailsPaneOpen] = useState(false);
 
   const ensureBookChapters = useCallback(
-    async (bookId: string) => {
+    async (bookId: string): Promise<Chapter[] | undefined> => {
       const target = books.find((item) => item.id === bookId);
-      if (!target || (target.chapters && target.chapters.length > 0)) {
-        return;
+      const hasLoadedContent =
+        target?.chapters?.some(
+          (chapter) =>
+            typeof chapter.content === "string" && chapter.content.length > 0
+        ) ?? false;
+
+      if (!target) {
+        return undefined;
       }
+
+      if (hasLoadedContent) {
+        return target.chapters;
+      }
+
       if (typeof window === "undefined" || !window.api?.db?.chapters?.getByBook) {
-        return;
+        return undefined;
       }
+
       try {
         const chapterRecords = await window.api.db.chapters.getByBook(bookId);
         const chapters = chapterRecords.map(mapDbChapterToChapter);
@@ -103,8 +125,10 @@ export default function App() {
         setSelectedBook((prev) =>
           prev && prev.id === bookId ? { ...prev, chapters } : prev
         );
+        return chapters;
       } catch (error) {
         console.error(`加载章节失败 (${bookId}):`, error);
+        return undefined;
       }
     },
     [books]
@@ -160,9 +184,6 @@ export default function App() {
 
   const handleSelectBook = (book: Book) => {
     setSelectedBook(book);
-    if (!book.chapters || book.chapters.length === 0) {
-      void ensureBookChapters(book.id);
-    }
     // 在移动端和平板端选择书籍时自动打开详情面板
     if (window.innerWidth < 1024) {
       setIsDetailsPaneOpen(true);
@@ -206,6 +227,16 @@ export default function App() {
   const handleBookAdded = useCallback(
     async (epubData: EpubBookData) => {
       // 将EpubBookData转换为Book对象并添加到书籍列表
+      const chapterSummaries = epubData.chapters.map((chapter) => ({
+        id: chapter.id,
+        title: chapter.title,
+        pageNumber: 0, // EPUB没有页码概念
+        isRead: false,
+        content: "", // drop heavy HTML content in memory; stored in DB instead
+        href: chapter.href,
+        order: chapter.order,
+      }));
+
       const newBook: Book = {
         id: epubData.id,
         title: epubData.title,
@@ -214,15 +245,7 @@ export default function App() {
         progress: epubData.progress,
         status: epubData.status,
         description: epubData.metadata.description,
-        chapters: epubData.chapters.map((chapter) => ({
-          id: chapter.id,
-          title: chapter.title,
-          pageNumber: 0, // EPUB没有页码概念
-          isRead: false,
-          content: chapter.content,
-          href: chapter.href,
-          order: chapter.order,
-        })),
+        chapters: chapterSummaries,
         addedDate: epubData.addedDate,
         lastReadDate: undefined,
         filePath: epubData.filePath,
@@ -362,28 +385,39 @@ export default function App() {
   );
 
   const handleEnterReader = (book: Book, chapterId?: string) => {
-    if (!book.chapters || book.chapters.length === 0) {
-      void ensureBookChapters(book.id);
-    }
-    setReaderBookId(book.id);
-    const fallbackChapterId =
-      chapterId ??
-      book.currentChapterId ??
-      book.lastReadChapterId ??
-      book.chapters?.[0]?.id ??
-      null;
-    setReaderInitialChapterId(fallbackChapterId);
-    setSelectedBook(book);
-    setIsSidebarOpen(false);
-    setIsDetailsPaneOpen(false);
+    void (async () => {
+      const loadedChapters =
+        (await ensureBookChapters(book.id)) ??
+        book.chapters ??
+        [];
+      const fallbackChapterId =
+        chapterId ??
+        book.currentChapterId ??
+        book.lastReadChapterId ??
+        loadedChapters[0]?.id ??
+        null;
+      setReaderBookId(book.id);
+      setReaderInitialChapterId(fallbackChapterId);
+      setSelectedBook(book);
+      setIsSidebarOpen(false);
+      setIsDetailsPaneOpen(false);
+    })();
   };
 
   const handleExitReader = () => {
     if (readerBookId) {
-      const latest = books.find((book) => book.id === readerBookId) ?? null;
-      if (latest) {
-        setSelectedBook(latest);
-      }
+      setBooks((prev) =>
+        prev.map((book) =>
+          book.id === readerBookId
+            ? { ...book, chapters: stripChapterContent(book.chapters) }
+            : book
+        )
+      );
+      setSelectedBook((prev) =>
+        prev && prev.id === readerBookId
+          ? { ...prev, chapters: stripChapterContent(prev.chapters) }
+          : prev
+      );
     }
     setReaderBookId(null);
     setReaderInitialChapterId(null);
