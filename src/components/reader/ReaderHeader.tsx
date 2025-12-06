@@ -15,6 +15,7 @@ interface ReaderHeaderProps {
   viewMode: ReaderViewMode;
   onEnterAnalysisMode: () => void;
   onExitAnalysisMode: () => void;
+  onShowExistingAnalysis?: () => void;
   onToggleSentenceAnalysisRunning?: () => void;
   isSentenceAnalysisRunning?: boolean;
   onToggleAnalysisPlayback?: () => void;
@@ -36,6 +37,7 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   viewMode,
   onEnterAnalysisMode,
   onExitAnalysisMode,
+  onShowExistingAnalysis,
   onToggleSentenceAnalysisRunning,
   isSentenceAnalysisRunning = false,
   onToggleAnalysisPlayback,
@@ -51,19 +53,34 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
       className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2"
       aria-label={isAnalysisMode ? "切换到阅读模式" : "切换到分析模式"}
     >
-      <svg
-        className="h-5 w-5 sm:h-6 sm:w-6"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <rect x="4" y="5" width="16" height="14" rx="2" />
-        <path d="M12 5v14" />
-      </svg>
+      {isAnalysisMode ? (
+        <svg
+          className="h-5 w-5 sm:h-6 sm:w-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      ) : (
+        <svg
+          className="h-5 w-5 sm:h-6 sm:w-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="4" y="5" width="16" height="14" rx="2" />
+          <path d="M12 5v14" />
+        </svg>
+      )}
       <span className="hidden sm:inline">
         {isAnalysisMode ? "阅读模式" : "分析模式"}
       </span>
@@ -121,6 +138,29 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   const renderAnalysisControls = () => (
     <>
       {renderModeToggleButton()}
+
+      <BrutalistButton
+        onClick={onShowExistingAnalysis}
+        className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2"
+        disabled={!onShowExistingAnalysis}
+        aria-label="显示已有分析"
+        title="仅展示已保存的分析结果"
+      >
+        <svg
+          className="h-5 w-5 sm:h-6 sm:w-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        <span className="hidden sm:inline">显示分析</span>
+      </BrutalistButton>
 
       <BrutalistButton
         onClick={onToggleSentenceAnalysisRunning}

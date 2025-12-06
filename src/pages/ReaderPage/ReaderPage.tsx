@@ -542,6 +542,73 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     stopAnalysisPlayback,
   ]);
 
+  const handleShowExistingSentenceAnalysis = useCallback(() => {
+    if (
+      viewMode !== "analysis" ||
+      !activeChapterId ||
+      !window?.api?.db?.sentenceAnalysis?.listByContext
+    ) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const records =
+          (await window.api.db.sentenceAnalysis.listByContext(book.id, {
+            chapterId: activeChapterId,
+          })) ?? [];
+
+        if (records.length === 0) {
+          return;
+        }
+
+        const tokensBySentenceId = new Map<string, TokenData[]>();
+        const tokensByText = new Map<string, TokenData[]>();
+
+        records.forEach((record) => {
+          if (record.tokens && record.tokens.length > 0) {
+            if (record.sentenceId) {
+              tokensBySentenceId.set(record.sentenceId, record.tokens);
+            }
+            tokensByText.set(record.text, record.tokens);
+          }
+        });
+
+        if (tokensBySentenceId.size === 0 && tokensByText.size === 0) {
+          return;
+        }
+
+        setSentenceItems((prev) => {
+          let hasChanges = false;
+          const updated = prev.map((item) => {
+            const tokens =
+              tokensBySentenceId.get(item.id) ?? tokensByText.get(item.text);
+            if (!tokens) {
+              return item;
+            }
+            hasChanges = true;
+            return {
+              ...item,
+              status: "loaded",
+              tokens,
+              error: undefined,
+            };
+          });
+
+          if (!hasChanges) {
+            return prev;
+          }
+          sentenceItemsRef.current = updated;
+          return updated;
+        });
+      } catch (error) {
+        console.error("加载已存储的句子分析失败:", error);
+      }
+    })();
+
+    showToolbarsTemporarily(1800);
+  }, [activeChapterId, book.id, showToolbarsTemporarily, viewMode]);
+
   const handleToggleSentenceAnalysisRunning = useCallback(() => {
     setIsSentenceAnalysisRunning((prev) => {
       const next = !prev;
@@ -1033,6 +1100,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             viewMode={viewMode}
             onEnterAnalysisMode={handleEnterAnalysisMode}
             onExitAnalysisMode={handleExitAnalysisMode}
+            onShowExistingAnalysis={handleShowExistingSentenceAnalysis}
             onToggleSentenceAnalysisRunning={handleToggleSentenceAnalysisRunning}
             isSentenceAnalysisRunning={isSentenceAnalysisRunning}
             onToggleAnalysisPlayback={handleAnalysisPlaybackToggle}
