@@ -122,9 +122,9 @@ const ReaderChatSidebar: React.FC<ReaderChatSidebarProps> = ({
       >
         <div className="flex items-start justify-between border-b-4 border-[#3d2b1f] bg-[#f5f5dc] px-5 py-4">
           <div className="flex flex-col gap-1">
-            <h2 className="text-2xl font-black text-[#3d2b1f]">交互式聊天</h2>
+            <h2 className="text-2xl font-black text-[#3d2b1f]">Nichijo</h2>
             <p className="max-h-12 overflow-hidden text-sm font-semibold text-[#3d2b1f]/80">
-              当前章节：{chapterTitle || "未命名章节"}
+              {chapterTitle || "未命名章节"}
             </p>
           </div>
           <BrutalistButton
@@ -189,7 +189,7 @@ const ReaderChatSidebar: React.FC<ReaderChatSidebarProps> = ({
             <div className="space-y-4">
               <div className="rounded-2xl border-4 border-[#3d2b1f] bg-white/80 p-4 shadow-[6px_6px_0px_0px_rgba(61,43,31,0.85)]">
                 <label className="text-base font-black text-[#3d2b1f]">
-                  选择对话角色
+                  角色
                 </label>
                 <div className="mt-2">
                   <select
