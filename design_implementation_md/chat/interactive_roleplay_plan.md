@@ -7,33 +7,22 @@
 3) 将用户在前端侧边栏的消息与角色扮演对话上下文交给 LLM，实时返回消息供前端显示。
 
 ## 现状概览
-- 前端：已有聊天侧栏 UI（ReaderChatSidebar），点击聊天按钮可触发初始化调用并展示角色列表（基于前端 mock/空实现）。
-- 类型和服务：`src/types/roleplay.ts` 定义了角色分析结果结构；`src/services/interactiveRoleplay.ts` 负责调用 `window.api.interactiveRoleplay.analyzeChapter` 并解析角色列表。
-- Electron preload：已暴露 `interactiveRoleplay.analyzeChapter` IPC 调用，但主进程未实现具体 handler。
+- 前端：已有聊天侧栏 UI（ReaderChatSidebar），点击聊天按钮可触发初始化调用并展示角色列表。
+- 类型和服务：`src/types/roleplay.ts` 定义角色分析结果结构；`src/services/interactiveRoleplay.ts` 调用真实 `interactiveRoleplay.analyzeChapter` 并解析角色列表。
+- Electron preload：已暴露 `interactiveRoleplay.analyzeChapter` IPC。
+- 主进程：已实现 `interactive-roleplay:analyze`，支持章节内容可选截断、读取 analyze prompt，并返回标准化角色列表。
 - LLM 提示：分析 prompt 与聊天 prompt 已存在对应 md 文件。
 
 ## 待解决的核心问题
-1) 主进程缺少 IPC handler：需要实现 `interactive-roleplay:analyze`，调用 LLM 执行章节分析，返回 JSON（characters 数组）。
-2) 聊天消息链路未接：角色扮演聊天的 prompt 注入与消息传递尚未实现（包括角色选择、章节上下文与用户输入）。
-3) 状态持久化与缓存策略：按章节缓存角色分析结果，避免重复调用；聊天历史的存储/回放策略待定。
-4) 错误处理与 UI 回退：LLM 超时/解析失败时的用户提示、重试与降级方案未完备。
+1) 聊天消息链路未接：角色扮演聊天的 prompt 注入与消息传递尚未实现（包括角色选择、章节上下文与用户输入）。
+2) 状态持久化与缓存策略：按章节缓存角色分析结果，避免重复调用；聊天历史的存储/回放策略待定。
+3) 错误处理与 UI 回退：LLM 超时/解析失败时的用户提示、重试与降级方案未完备。
 
 ## 详细计划
-### A. 章节角色分析 IPC（Backend）
-1. 新增 main 侧 handler：
-   - 路由：`interactive-roleplay:analyze`。
-   - 入参：`{ bookId, bookTitle, chapterId, chapterTitle, bookContent }`。
-   - 验证：空字符串/超长文本截断（防止 token 过长）。
-2. Prompt 构造：
-   - 使用 `interactive_roleplay/analyze.md` 填入 `{book_content}`。
-   - 指定模型、温度、最大输出（确保 JSON 可控）。
-3. 调用 LLM（复用现有 fetch/模型配置或封装一个 shared llm client）。
-4. 解析响应：
-   - 去除 markdown 包裹。
-   - `JSON.parse` characters 数组；必要时容错（字符串化 catchphrases 等）。
-   - 若无有效角色，抛出可读错误。
-5. 缓存/节流（可选的 MVP）：内存按 `bookId+chapterId` 缓存最近一次结果，前端已有缓存但后端可再加一层以减压。
-6. 错误路径：记录日志，返回结构化错误信息给 renderer。
+### A. 章节角色分析 IPC（Backend） — 已完成
+1. `interactive-roleplay:analyze` 已实现：验证入参、对超长章节按阈值截断、读取 analyze prompt、调用 LLM。
+2. 解析响应：去掉 markdown 包裹，标准化 characters 列表，若为空抛出错误。
+3. 前端已接 IPC；可后续再补内存缓存/节流。
 
 ### B. 角色扮演聊天消息链路
 1. 定义 IPC：
