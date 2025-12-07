@@ -206,45 +206,6 @@ const ReaderChatSidebar: React.FC<ReaderChatSidebarProps> = ({
                 </div>
               </div>
 
-              {/* {selectedProfile && (
-                <div className="space-y-3 rounded-2xl border-4 border-[#3d2b1f] bg-white/80 p-4 shadow-[6px_6px_0px_0px_rgba(61,43,31,0.85)] text-[#3d2b1f]">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xl font-black">{selectedProfile.name}</div>
-                    <span className="rounded-full bg-[#d4a017] px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
-                      角色
-                    </span>
-                  </div>
-                  {selectedProfile.personality && (
-                    <p className="text-sm font-semibold text-[#3d2b1f]/85">
-                      性格：{selectedProfile.personality}
-                    </p>
-                  )}
-                  {selectedProfile.speakingStyle && (
-                    <p className="text-sm font-semibold text-[#3d2b1f]/85">
-                      说话风格：{selectedProfile.speakingStyle}
-                    </p>
-                  )}
-                  {selectedProfile.userRelationship && (
-                    <p className="text-sm font-semibold text-[#3d2b1f]/85">
-                      与读者：{selectedProfile.userRelationship}
-                    </p>
-                  )}
-                  {selectedProfile.catchphrases &&
-                    selectedProfile.catchphrases.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {selectedProfile.catchphrases.map((phrase) => (
-                          <span
-                            key={phrase}
-                            className="rounded-full border-2 border-[#3d2b1f] bg-[#f5f5dc] px-3 py-1 text-xs font-black text-[#3d2b1f]"
-                          >
-                            {phrase}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                </div>
-              )} */}
-
               <div className="space-y-3 rounded-2xl border-4 border-[#3d2b1f] bg-white/80 p-4 shadow-[6px_6px_0px_0px_rgba(61,43,31,0.85)]">
                 <div className="text-base font-black text-[#3d2b1f]">
                   对话
