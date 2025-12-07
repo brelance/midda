@@ -22,7 +22,10 @@ import type {
   TtsSentencePayload,
   TtsStateUpdate,
 } from "../../types/tts";
-import type { RoleplayAnalysisState } from "../../types/roleplay";
+import type {
+  RoleplayAnalysisState,
+  RoleplayChatHistoryMessage,
+} from "../../types/roleplay";
 import {
   findChapterIndex,
   getNextChapterId,
@@ -37,7 +40,10 @@ import {
 import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
 import { useReaderShortcuts } from "../../hooks/useReaderShortcuts";
 import { queuedSendGeminiRequest } from "../../services/apiQueue";
-import { analyzeChapterForRoleplay } from "../../services/interactiveRoleplay";
+import {
+  analyzeChapterForRoleplay,
+  sendRoleplayMessage,
+} from "../../services/interactiveRoleplay";
 import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
 
 interface ReaderPageProps {
@@ -423,6 +429,13 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     selectedRoleplayCharacterByChapter,
     setSelectedRoleplayCharacterByChapter,
   ] = useState<Record<string, string | null>>({});
+  const [chatMessagesBySession, setChatMessagesBySession] = useState<
+    Record<string, RoleplayChatHistoryMessage[]>
+  >({});
+  const [chatErrorBySession, setChatErrorBySession] = useState<
+    Record<string, string | undefined>
+  >({});
+  const [isChatSending, setIsChatSending] = useState(false);
   const [isSentenceAnalysisRunning, setIsSentenceAnalysisRunning] =
     useState(false);
   const [isShowingExistingAnalysis, setIsShowingExistingAnalysis] =
@@ -543,6 +556,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     setSelectedRoleplayCharacterByChapter({});
     roleplayAnalysisRequestIdRef.current = 0;
     setIsChatSidebarOpen(false);
+    setChatMessagesBySession({});
+    setChatErrorBySession({});
+    setIsChatSending(false);
   }, [book.id]);
 
   const contentRef = useRef<HTMLDivElement>(null);
@@ -572,6 +588,20 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     };
   const selectedRoleplayCharacter =
     selectedRoleplayCharacterByChapter[activeChapterId] ?? null;
+  const chatSessionKey =
+    activeChapterId && selectedRoleplayCharacter
+      ? `${activeChapterId}::${selectedRoleplayCharacter}`
+      : null;
+  const chatMessages: RoleplayChatHistoryMessage[] = useMemo(() => {
+    if (!chatSessionKey) {
+      return [];
+    }
+    return chatMessagesBySession[chatSessionKey] ?? [];
+  }, [chatMessagesBySession, chatSessionKey]);
+  const chatError = chatSessionKey ? chatErrorBySession[chatSessionKey] : undefined;
+  useEffect(() => {
+    setIsChatSending(false);
+  }, [chatSessionKey]);
   useEffect(() => {
     setChapterProgress(0);
     const node = contentRef.current;
@@ -756,6 +786,89 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const handleRetryRoleplayAnalysis = useCallback(() => {
     void ensureRoleplayAnalysis({ force: true });
   }, [ensureRoleplayAnalysis]);
+
+  const handleSendChatMessage = useCallback(
+    async (text: string) => {
+      if (
+        !selectedRoleplayCharacter ||
+        !chatSessionKey ||
+        roleplayAnalysisState.status !== "ready"
+      ) {
+        return;
+      }
+
+      const character = roleplayAnalysisState.characters.find(
+        (item) => item.name === selectedRoleplayCharacter
+      );
+
+      if (!character) {
+        setChatErrorBySession((prev) => ({
+          ...prev,
+          [chatSessionKey]: "未找到角色，请重新选择。",
+        }));
+        return;
+      }
+
+      const userMessage: RoleplayChatHistoryMessage = {
+        role: "user",
+        content: text,
+      };
+      const existingMessages = chatMessages;
+      const nextHistory = [...existingMessages, userMessage];
+
+      setChatMessagesBySession((prev) => ({
+        ...prev,
+        [chatSessionKey]: nextHistory,
+      }));
+      setChatErrorBySession((prev) => ({
+        ...prev,
+        [chatSessionKey]: undefined,
+      }));
+      setIsChatSending(true);
+
+      try {
+        const response = await sendRoleplayMessage({
+          character,
+          bookTitle: book.title,
+          chapterTitle,
+          chapterContentOrSummary: chapterPlainText,
+          targetLanguage: "ja-JP",
+          userProficiencyLevel: "B1 - Intermediate",
+          message: text,
+          history: existingMessages,
+        });
+
+        const assistantMessage: RoleplayChatHistoryMessage = {
+          role: "assistant",
+          content: response.reply,
+        };
+
+        setChatMessagesBySession((prev) => ({
+          ...prev,
+          [chatSessionKey]: [...nextHistory, assistantMessage],
+        }));
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "发送消息失败，请稍后重试";
+        setChatErrorBySession((prev) => ({
+          ...prev,
+          [chatSessionKey]: message,
+        }));
+      } finally {
+        setIsChatSending(false);
+      }
+    },
+    [
+      book.title,
+      chapterPlainText,
+      chapterTitle,
+      chatMessages,
+      chatSessionKey,
+      roleplayAnalysisState,
+      selectedRoleplayCharacter,
+      sendRoleplayMessage,
+    ]
+  );
 
   const resetSentenceAnalysisItems = useCallback(() => {
     setSentenceItems(() => {
@@ -1479,6 +1592,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         onSelectCharacter={handleSelectRoleplayCharacter}
         onRetryAnalysis={handleRetryRoleplayAnalysis}
         onClose={handleCloseChatSidebar}
+        messages={chatMessages}
+        onSendMessage={handleSendChatMessage}
+        isSending={isChatSending}
+        chatError={chatError}
       />
 
       <ReaderTocSidebar

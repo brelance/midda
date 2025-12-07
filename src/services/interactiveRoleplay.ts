@@ -1,6 +1,8 @@
 import type {
   RoleplayAnalysisPayload,
   RoleplayCharacterProfile,
+  RoleplayChatRequest,
+  RoleplayChatResponse,
 } from "../types/roleplay";
 
 const toTrimmedString = (value: unknown): string => {
@@ -95,4 +97,13 @@ export async function analyzeChapterForRoleplay(
   }
 
   return characters;
+}
+
+export async function sendRoleplayMessage(
+  payload: RoleplayChatRequest
+): Promise<RoleplayChatResponse> {
+  if (!window?.api?.interactiveRoleplay?.sendMessage) {
+    throw new Error("角色扮演聊天接口尚未就绪");
+  }
+  return window.api.interactiveRoleplay.sendMessage(payload);
 }

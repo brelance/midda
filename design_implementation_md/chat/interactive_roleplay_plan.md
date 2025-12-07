@@ -7,16 +7,16 @@
 3) 将用户在前端侧边栏的消息与角色扮演对话上下文交给 LLM，实时返回消息供前端显示。
 
 ## 现状概览
-- 前端：已有聊天侧栏 UI（ReaderChatSidebar），点击聊天按钮可触发初始化调用并展示角色列表。
-- 类型和服务：`src/types/roleplay.ts` 定义角色分析结果结构；`src/services/interactiveRoleplay.ts` 调用真实 `interactiveRoleplay.analyzeChapter` 并解析角色列表。
-- Electron preload：已暴露 `interactiveRoleplay.analyzeChapter` IPC。
-- 主进程：已实现 `interactive-roleplay:analyze`，支持章节内容可选截断、读取 analyze prompt，并返回标准化角色列表。
+- 前端：聊天侧栏 UI 已接入角色列表与消息输入/展示，使用 `sendMessage` IPC 发送并显示回复，按章节+角色维护对话历史。
+- 类型和服务：`src/types/roleplay.ts` 定义分析/聊天结构；`src/services/interactiveRoleplay.ts` 调用 `interactiveRoleplay.analyzeChapter`、`interactiveRoleplay.sendMessage`。
+- Electron preload：暴露 `interactiveRoleplay.analyzeChapter`、`interactiveRoleplay.sendMessage` IPC。
+- 主进程：实现 `interactive-roleplay:analyze`（章节截断+模板加载+角色解析）与 `interactive-roleplay:sendMessage`（基于 chat prompt 的非流式回复，截取最近历史）。
 - LLM 提示：分析 prompt 与聊天 prompt 已存在对应 md 文件。
 
 ## 待解决的核心问题
-1) 聊天消息链路未接：角色扮演聊天的 prompt 注入与消息传递尚未实现（包括角色选择、章节上下文与用户输入）。
-2) 状态持久化与缓存策略：按章节缓存角色分析结果，避免重复调用；聊天历史的存储/回放策略待定。
-3) 错误处理与 UI 回退：LLM 超时/解析失败时的用户提示、重试与降级方案未完备。
+1) 状态持久化与缓存策略：按章节缓存角色分析结果（后端可选）、聊天历史的存储/回放/持久化策略待定。
+2) 错误处理与 UI 回退：LLM 超时/解析失败的友好提示、重试与降级方案可再完善（当前仅简单提示）。
+3) 流式/性能优化：需要时可加流式输出、章节摘要、节流与限流。
 
 ## 详细计划
 ### A. 章节角色分析 IPC（Backend） — 已完成
@@ -24,27 +24,19 @@
 2. 解析响应：去掉 markdown 包裹，标准化 characters 列表，若为空抛出错误。
 3. 前端已接 IPC；可后续再补内存缓存/节流。
 
-### B. 角色扮演聊天消息链路
-1. 定义 IPC：
-   - `interactive-roleplay:startSession`（可选，用于预热与上下文构造）。
-   - `interactive-roleplay:sendMessage`：入参包含 `characterProfile`（从分析结果选择）、`chapterContentOrSummary`、`bookTitle`、`currentChapterTitle`、`targetLanguage`、`userProficiencyLevel`、历史对话（如需要）。
-2. Prompt 组装：
-   - 使用 `interactive_roleplay/chat.md`，填充角色信息与上下文。
-   - 保持“只知道当前章节”约束，必要时对章节内容做摘要以节约 token。
-3. 流式/非流式返回：
-   - 若已有流式基础设施（类似 Gemini tokens），复用 on*/subscribe 模式；否则先实现非流式响应，后续再加流式。
-4. 会话管理：
-   - 生成 sessionId，缓存最近 N 条对话，支持角色切换重新开局。
-   - 清理：窗口关闭或章节变更时清除 session。
+### B. 角色扮演聊天消息链路 — 已完成（基础版）
+1. IPC：`interactive-roleplay:sendMessage` 已实现（使用 chat prompt，支持历史消息入参，返回非流式回复）；`startSession` 仍可选。
+2. Prompt 组装：使用 `interactive_roleplay/chat.md`，填充角色信息、章节上下文、语言/水平。
+3. 前端：ReaderChatSidebar 已支持消息列表、输入框、按章节/角色的会话历史、发送加载态和错误提示，并调用 sendMessage。
+4. 后续优化：
+   - 如果需要流式输出，复用现有 on*/subscribe 模式。
+   - 可选会话缓存（内存/DB）、章节摘要与限流。
 
-### C. 前端集成补全
-1. 调用 analyze IPC：`interactiveRoleplay.analyzeChapter` 已就绪；确保失败时 UI 展示错误并可重试（已有）。
-2. 聊天消息 UI：
-   - 为 ReaderChatSidebar 增加消息列表与输入框；在角色选择下方显示对话；发送时禁用按钮并显示 loading。
-3. 会话管理：
-   - 按章节+角色创建 session，切换角色新建会话；章节切换清理现有会话。
-4. 状态同步：
-   - 展示当前角色名、提示 loading/错误；若分析未完成禁用输入。
+### C. 前端集成补全 — 已完成（基础版）
+1. 调用 analyze IPC：`interactiveRoleplay.analyzeChapter` 已接入，失败时可重试。
+2. 聊天消息 UI：ReaderChatSidebar 具备消息列表、输入框、加载/禁用状态。
+3. 会话管理：按章节+角色维度维护历史，切换角色/章节会重置。
+4. 状态同步：角色选择、初始化/错误提示、输入可用性已覆盖。
 
 ### D. 测试与验证
 1. 单元/集成：
@@ -59,5 +51,5 @@
 - UI 流式回调：若无现成流式封装，先实现非流式 MVP。
 
 ## 里程碑
-1) MVP：完成 analyze IPC + 非流式聊天发送/接收 + 基础 UI（输入框/消息列表/角色切换）。
+1) MVP：完成 analyze IPC + 非流式聊天发送/接收 + 基础 UI（输入框/消息列表/角色切换）。✅
 2) 增强：流式输出、缓存、摘要、会话持久化（可写入本地 DB）。

@@ -6,6 +6,7 @@ interface BrutalistButtonProps {
   variant?: 'default' | 'primary';
   className?: string;
   disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const BrutalistButton: React.FC<BrutalistButtonProps> = ({
@@ -14,6 +15,7 @@ const BrutalistButton: React.FC<BrutalistButtonProps> = ({
   variant = 'default',
   className = '',
   disabled = false,
+  type = 'button',
 }) => {
   const baseClasses = `
     border-4 border-black rounded-[20px]
@@ -35,6 +37,7 @@ const BrutalistButton: React.FC<BrutalistButtonProps> = ({
 
   return (
     <button
+      type={type}
       className={`${baseClasses} ${variantClasses} ${disabledClasses} ${className}`}
       onClick={onClick}
       disabled={disabled}

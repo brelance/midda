@@ -21,3 +21,25 @@ export interface RoleplayAnalysisState {
   characters: RoleplayCharacterProfile[];
   error?: string;
 }
+
+export type RoleplayChatHistoryRole = "user" | "assistant";
+
+export interface RoleplayChatHistoryMessage {
+  role: RoleplayChatHistoryRole;
+  content: string;
+}
+
+export interface RoleplayChatRequest {
+  character: RoleplayCharacterProfile;
+  bookTitle: string;
+  chapterTitle: string;
+  chapterContentOrSummary: string;
+  targetLanguage: string;
+  userProficiencyLevel: string;
+  message: string;
+  history?: RoleplayChatHistoryMessage[];
+}
+
+export interface RoleplayChatResponse {
+  reply: string;
+}

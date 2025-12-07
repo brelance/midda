@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import BrutalistButton from "../ui/BrutalistButton";
 import type {
   RoleplayAnalysisState,
   RoleplayCharacterProfile,
+  RoleplayChatHistoryMessage,
 } from "../../types/roleplay";
 
 interface ReaderChatSidebarProps {
@@ -13,6 +14,10 @@ interface ReaderChatSidebarProps {
   onSelectCharacter: (name: string) => void;
   onRetryAnalysis?: () => void;
   onClose: () => void;
+  messages: RoleplayChatHistoryMessage[];
+  onSendMessage: (text: string) => void;
+  isSending?: boolean;
+  chatError?: string;
 }
 
 const findSelectedProfile = (
@@ -36,6 +41,10 @@ const ReaderChatSidebar: React.FC<ReaderChatSidebarProps> = ({
   onSelectCharacter,
   onRetryAnalysis,
   onClose,
+  messages,
+  onSendMessage,
+  isSending = false,
+  chatError,
 }) => {
   const { status, characters, error } = analysisState;
   const overlayClasses = isOpen
@@ -44,6 +53,60 @@ const ReaderChatSidebar: React.FC<ReaderChatSidebarProps> = ({
   const sidebarClasses = isOpen ? "translate-x-0" : "translate-x-full";
   const ariaHidden = isOpen ? undefined : true;
   const selectedProfile = findSelectedProfile(characters, selectedCharacter);
+  const [inputValue, setInputValue] = useState("");
+
+  const canSend =
+    status === "ready" &&
+    Boolean(selectedProfile) &&
+    !isSending &&
+    inputValue.trim().length > 0;
+
+  const renderMessages = useMemo(() => {
+    if (!messages || messages.length === 0) {
+      return (
+        <div className="rounded-2xl border-4 border-dashed border-[#3d2b1f] bg-white/70 p-4 text-sm font-semibold text-[#3d2b1f]/80">
+          选择角色后即可开始对话。你的消息和回复会显示在这里。
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {messages.map((msg, index) => {
+          const isUser = msg.role === "user";
+          return (
+            <div
+              key={`${msg.role}-${index}-${msg.content.slice(0, 8)}`}
+              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-2xl border-4 px-3 py-2 text-sm font-semibold leading-relaxed shadow-[4px_4px_0px_0px_rgba(61,43,31,0.85)] ${
+                  isUser
+                    ? "border-[#3d2b1f] bg-[#d4a017] text-white"
+                    : "border-[#3d2b1f] bg-white text-[#3d2b1f]"
+                }`}
+              >
+                {msg.content}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }, [messages]);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canSend) {
+      return;
+    }
+    const text = inputValue.trim();
+    if (!text) {
+      return;
+    }
+    onSendMessage(text);
+    setInputValue("");
+  };
 
   return (
     <>
@@ -143,7 +206,7 @@ const ReaderChatSidebar: React.FC<ReaderChatSidebarProps> = ({
                 </div>
               </div>
 
-              {selectedProfile && (
+              {/* {selectedProfile && (
                 <div className="space-y-3 rounded-2xl border-4 border-[#3d2b1f] bg-white/80 p-4 shadow-[6px_6px_0px_0px_rgba(61,43,31,0.85)] text-[#3d2b1f]">
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xl font-black">{selectedProfile.name}</div>
@@ -180,10 +243,38 @@ const ReaderChatSidebar: React.FC<ReaderChatSidebarProps> = ({
                       </div>
                     )}
                 </div>
-              )}
+              )} */}
 
-              <div className="rounded-2xl border-4 border-dashed border-[#3d2b1f] bg-white/70 p-4 text-sm font-semibold text-[#3d2b1f]/80">
-                选择角色后即可在此处开始对话。后续会连接角色扮演消息流，并沿用当前的复古配色与布局。
+              <div className="space-y-3 rounded-2xl border-4 border-[#3d2b1f] bg-white/80 p-4 shadow-[6px_6px_0px_0px_rgba(61,43,31,0.85)]">
+                <div className="text-base font-black text-[#3d2b1f]">
+                  对话
+                </div>
+                <div className="flex max-h-80 min-h-[160px] flex-col gap-3 overflow-y-auto">
+                  {renderMessages}
+                </div>
+                {chatError ? (
+                  <div className="rounded-xl border-4 border-[#3d2b1f] bg-[#b3312c] px-3 py-2 text-xs font-black text-white">
+                    {chatError}
+                  </div>
+                ) : null}
+                <form className="space-y-2" onSubmit={handleSubmit}>
+                  <textarea
+                    className="h-20 w-full rounded-xl border-4 border-[#3d2b1f] bg-white px-3 py-2 text-sm font-semibold text-[#3d2b1f] outline-none ring-offset-2 focus:ring-2 focus:ring-[#b3312c]"
+                    placeholder="输入想对角色说的话..."
+                    value={inputValue}
+                    onChange={(event) => setInputValue(event.target.value)}
+                    disabled={status !== "ready" || isSending || !selectedProfile}
+                  />
+                  <div className="flex justify-end">
+                    <BrutalistButton
+                      type="submit"
+                      disabled={!canSend}
+                      className={isSending ? "opacity-70 cursor-wait" : ""}
+                    >
+                      {isSending ? "发送中..." : "发送"}
+                    </BrutalistButton>
+                  </div>
+                </form>
               </div>
             </div>
           )}

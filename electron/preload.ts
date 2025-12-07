@@ -29,6 +29,8 @@ const api = {
   interactiveRoleplay: {
     analyzeChapter: (payload: RoleplayAnalysisPayload) =>
       ipcRenderer.invoke("interactive-roleplay:analyze", payload),
+    sendMessage: (payload: import("../src/types/roleplay").RoleplayChatRequest) =>
+      ipcRenderer.invoke("interactive-roleplay:sendMessage", payload),
   },
 
   wordDetail: {
