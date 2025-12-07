@@ -14,6 +14,7 @@ import ReaderSentenceAnalysisPanel, {
 } from "../../components/reader/ReaderSentenceAnalysisPanel";
 import ReaderSettingsModal from "../../components/reader/ReaderSettingsModal";
 import ReaderTocSidebar from "../../components/reader/ReaderTocSidebar";
+import ReaderChatSidebar from "../../components/reader/ReaderChatSidebar";
 import { Book, Chapter, TokenData } from "../../types/types";
 import { ReadingMode, ReaderViewMode } from "../../types/reader";
 import type {
@@ -21,6 +22,7 @@ import type {
   TtsSentencePayload,
   TtsStateUpdate,
 } from "../../types/tts";
+import type { RoleplayAnalysisState } from "../../types/roleplay";
 import {
   findChapterIndex,
   getNextChapterId,
@@ -35,6 +37,7 @@ import {
 import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
 import { useReaderShortcuts } from "../../hooks/useReaderShortcuts";
 import { queuedSendGeminiRequest } from "../../services/apiQueue";
+import { analyzeChapterForRoleplay } from "../../services/interactiveRoleplay";
 import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
 
 interface ReaderPageProps {
@@ -42,7 +45,7 @@ interface ReaderPageProps {
   initialChapterId?: string;
   onExitReader: () => void;
   onOpenToc?: () => void;
-  onOpenSearch?: () => void;
+  onOpenChat?: () => void;
   onOpenSettings?: () => void;
   onChapterChange?: (chapterId: string) => void;
   onProgressChange?: (progress: number) => void;
@@ -56,6 +59,18 @@ const buildFallbackContent = (): string => {
   ];
 
   return paragraphs.map((text) => `<p>${text}</p>`).join("");
+};
+
+const htmlToPlainText = (html: string): string => {
+  if (!html) {
+    return "";
+  }
+  const withoutTags = html
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
+
+  return withoutTags.replace(/\s+/g, " ").trim();
 };
 
 interface SentenceSeed {
@@ -361,7 +376,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   initialChapterId,
   onExitReader,
   onOpenToc,
-  onOpenSearch,
+  onOpenChat,
   onOpenSettings: onOpenSettingsProp,
   onChapterChange,
   onProgressChange,
@@ -400,6 +415,14 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [readingMode, setReadingMode] = useState<ReadingMode>("single");
   const [viewMode, setViewMode] = useState<ReaderViewMode>("reading");
   const [isTocOpen, setIsTocOpen] = useState(false);
+  const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
+  const [roleplayAnalysisByChapter, setRoleplayAnalysisByChapter] = useState<
+    Record<string, RoleplayAnalysisState>
+  >({});
+  const [
+    selectedRoleplayCharacterByChapter,
+    setSelectedRoleplayCharacterByChapter,
+  ] = useState<Record<string, string | null>>({});
   const [isSentenceAnalysisRunning, setIsSentenceAnalysisRunning] =
     useState(false);
   const [isShowingExistingAnalysis, setIsShowingExistingAnalysis] =
@@ -453,6 +476,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const analysisLanguageRef = useRef<string | undefined>(undefined);
   const analysisLanguageDetectionPromiseRef =
     useRef<Promise<string | undefined> | null>(null);
+  const roleplayAnalysisRequestIdRef = useRef(0);
   const [analysisPlaybackState, setAnalysisPlaybackState] =
     useState<AnalysisPlaybackState>({
       status: "idle",
@@ -514,6 +538,13 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     setCurrentChapterId(defaultChapterId);
   }, [defaultChapterId]);
 
+  useEffect(() => {
+    setRoleplayAnalysisByChapter({});
+    setSelectedRoleplayCharacterByChapter({});
+    roleplayAnalysisRequestIdRef.current = 0;
+    setIsChatSidebarOpen(false);
+  }, [book.id]);
+
   const contentRef = useRef<HTMLDivElement>(null);
 
   const currentIndex = useMemo(
@@ -528,7 +559,19 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     () => currentChapter?.content ?? buildFallbackContent(),
     [currentChapter]
   );
+  const chapterPlainText = useMemo(
+    () => htmlToPlainText(chapterContentHtml),
+    [chapterContentHtml]
+  );
   const activeChapterId = currentChapter?.id ?? "";
+  const roleplayAnalysisState: RoleplayAnalysisState =
+    roleplayAnalysisByChapter[activeChapterId] ?? {
+      status: "idle",
+      characters: [],
+      error: undefined,
+    };
+  const selectedRoleplayCharacter =
+    selectedRoleplayCharacterByChapter[activeChapterId] ?? null;
   useEffect(() => {
     setChapterProgress(0);
     const node = contentRef.current;
@@ -554,6 +597,33 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     onProgressChange?.(bookProgress);
   }, [bookProgress, onProgressChange]);
 
+  useEffect(() => {
+    if (
+      roleplayAnalysisState.status !== "ready" ||
+      !activeChapterId ||
+      roleplayAnalysisState.characters.length === 0
+    ) {
+      return;
+    }
+    if (
+      !selectedRoleplayCharacter ||
+      !roleplayAnalysisState.characters.some(
+        (item) => item.name === selectedRoleplayCharacter
+      )
+    ) {
+      setSelectedRoleplayCharacterByChapter((prev) => ({
+        ...prev,
+        [activeChapterId]:
+          roleplayAnalysisState.characters[0]?.name ?? selectedRoleplayCharacter,
+      }));
+    }
+  }, [
+    activeChapterId,
+    roleplayAnalysisState,
+    selectedRoleplayCharacter,
+    setSelectedRoleplayCharacterByChapter,
+  ]);
+
   const {
     isHeaderVisible,
     isFooterVisible,
@@ -565,6 +635,127 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     setReadingMode((prev) => (prev === "single" ? "double" : "single"));
     showToolbarsTemporarily(1800);
   }, [showToolbarsTemporarily]);
+
+  const ensureRoleplayAnalysis = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!activeChapterId) {
+        return;
+      }
+
+      const existing = roleplayAnalysisByChapter[activeChapterId];
+      if (
+        !options?.force &&
+        existing &&
+        (existing.status === "loading" || existing.status === "ready")
+      ) {
+        return;
+      }
+
+      const requestId = ++roleplayAnalysisRequestIdRef.current;
+
+      setRoleplayAnalysisByChapter((prev) => ({
+        ...prev,
+        [activeChapterId]: {
+          status: "loading",
+          characters: existing?.characters ?? [],
+          error: undefined,
+        },
+      }));
+
+      try {
+        const characters = await analyzeChapterForRoleplay({
+          bookId: book.id,
+          bookTitle: book.title,
+          chapterId: activeChapterId,
+          chapterTitle,
+          bookContent: chapterPlainText,
+        });
+
+        if (roleplayAnalysisRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setRoleplayAnalysisByChapter((prev) => ({
+          ...prev,
+          [activeChapterId]: {
+            status: "ready",
+            characters,
+            error: undefined,
+          },
+        }));
+
+        setSelectedRoleplayCharacterByChapter((prev) => {
+          const current = prev[activeChapterId];
+          if (current && characters.some((item) => item.name === current)) {
+            return prev;
+          }
+          return { ...prev, [activeChapterId]: characters[0]?.name ?? null };
+        });
+      } catch (error) {
+        if (roleplayAnalysisRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "交互式聊天初始化失败，请稍后重试";
+
+        setRoleplayAnalysisByChapter((prev) => ({
+          ...prev,
+          [activeChapterId]: {
+            status: "error",
+            characters: [],
+            error: message,
+          },
+        }));
+      }
+    },
+    [
+      activeChapterId,
+      book.id,
+      book.title,
+      chapterPlainText,
+      chapterTitle,
+      roleplayAnalysisByChapter,
+    ]
+  );
+
+  useEffect(() => {
+    if (!isChatSidebarOpen) {
+      return;
+    }
+    void ensureRoleplayAnalysis();
+  }, [activeChapterId, ensureRoleplayAnalysis, isChatSidebarOpen]);
+
+  const handleOpenChatSidebar = useCallback(() => {
+    setIsChatSidebarOpen(true);
+    setIsTocOpen(false);
+    showToolbarsTemporarily(1800);
+    onOpenChat?.();
+    void ensureRoleplayAnalysis();
+  }, [ensureRoleplayAnalysis, onOpenChat, showToolbarsTemporarily]);
+
+  const handleCloseChatSidebar = useCallback(() => {
+    setIsChatSidebarOpen(false);
+  }, []);
+
+  const handleSelectRoleplayCharacter = useCallback(
+    (name: string) => {
+      if (!activeChapterId) {
+        return;
+      }
+      setSelectedRoleplayCharacterByChapter((prev) => ({
+        ...prev,
+        [activeChapterId]: name,
+      }));
+    },
+    [activeChapterId]
+  );
+
+  const handleRetryRoleplayAnalysis = useCallback(() => {
+    void ensureRoleplayAnalysis({ force: true });
+  }, [ensureRoleplayAnalysis]);
 
   const resetSentenceAnalysisItems = useCallback(() => {
     setSentenceItems(() => {
@@ -1221,7 +1412,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             isVisible={isHeaderVisible}
             onBack={onExitReader}
             onOpenToc={handleOpenToc}
-            onOpenSearch={onOpenSearch}
+            onOpenChat={handleOpenChatSidebar}
             onOpenSettings={handleOpenSettings}
             viewMode={viewMode}
             onEnterAnalysisMode={handleEnterAnalysisMode}
@@ -1278,6 +1469,16 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         }
         onMouseMove={handleMouseMove}
         onTouchStart={handleTouchStart}
+      />
+
+      <ReaderChatSidebar
+        isOpen={isChatSidebarOpen}
+        chapterTitle={chapterTitle}
+        analysisState={roleplayAnalysisState}
+        selectedCharacter={selectedRoleplayCharacter}
+        onSelectCharacter={handleSelectRoleplayCharacter}
+        onRetryAnalysis={handleRetryRoleplayAnalysis}
+        onClose={handleCloseChatSidebar}
       />
 
       <ReaderTocSidebar

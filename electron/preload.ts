@@ -16,6 +16,7 @@ import type {
   SentenceAnalysisJobUpsertPayload,
   SentenceAnalysisJobStatus,
 } from "../src/types/database";
+import type { RoleplayAnalysisPayload } from "../src/types/roleplay";
 const api = {
   ai: {
     sendGeminiRequest: (payload: {
@@ -23,6 +24,11 @@ const api = {
       language?: string;
     }): Promise<TokenData[]> =>
       ipcRenderer.invoke("gemini-tokens-request", payload),
+  },
+
+  interactiveRoleplay: {
+    analyzeChapter: (payload: RoleplayAnalysisPayload) =>
+      ipcRenderer.invoke("interactive-roleplay:analyze", payload),
   },
 
   wordDetail: {

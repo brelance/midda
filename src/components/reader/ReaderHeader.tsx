@@ -10,7 +10,7 @@ interface ReaderHeaderProps {
   isVisible: boolean;
   onBack: () => void;
   onOpenToc?: () => void;
-  onOpenSearch?: () => void;
+  onOpenChat?: () => void;
   onOpenSettings?: () => void;
   viewMode: ReaderViewMode;
   onEnterAnalysisMode: () => void;
@@ -33,7 +33,7 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   isVisible,
   onBack,
   onOpenToc,
-  onOpenSearch,
+  onOpenChat,
   onOpenSettings,
   viewMode,
   onEnterAnalysisMode,
@@ -89,30 +89,36 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
     </BrutalistButton>
   );
 
+  const renderChatButton = () => (
+    <BrutalistButton
+      onClick={onOpenChat}
+      className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2"
+      disabled={!onOpenChat}
+      aria-label="章节角色聊天"
+    >
+      <svg
+        className="h-5 w-5 sm:h-6 sm:w-6"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <line x1="8" y1="9" x2="16" y2="9" />
+        <line x1="8" y1="13" x2="12" y2="13" />
+      </svg>
+      <span className="hidden sm:inline">聊天</span>
+    </BrutalistButton>
+  );
+
   const renderReadingControls = () => (
     <>
       {renderModeToggleButton()}
 
-      <BrutalistButton
-        onClick={onOpenSearch}
-        className="flex items-center px-3 py-2 sm:px-4 sm:py-2"
-        disabled={!onOpenSearch}
-        aria-label="搜索"
-      >
-        <svg
-          className="h-5 w-5 sm:h-6 sm:w-6"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M21 21l-5.6-5.6" />
-          <circle cx="10.5" cy="10.5" r="6.5" />
-        </svg>
-      </BrutalistButton>
+      {renderChatButton()}
 
       <BrutalistButton
         onClick={onOpenSettings}
@@ -254,26 +260,7 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
         </span>
       </BrutalistButton>
 
-      <BrutalistButton
-        onClick={onOpenSearch}
-        className="flex items-center px-3 py-2 sm:px-4 sm:py-2"
-        disabled={!onOpenSearch}
-        aria-label="搜索"
-      >
-        <svg
-          className="h-5 w-5 sm:h-6 sm:w-6"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M21 21l-5.6-5.6" />
-          <circle cx="10.5" cy="10.5" r="6.5" />
-        </svg>
-      </BrutalistButton>
+      {renderChatButton()}
 
       <BrutalistButton
         onClick={onOpenSettings}

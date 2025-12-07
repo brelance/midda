@@ -20,6 +20,7 @@ import type {
   SentenceAnalysisListFilters,
   SentenceAnalysisContext,
 } from "./types/database";
+import type { RoleplayAnalysisPayload } from "./types/roleplay";
 
 declare global {
   interface Window {
@@ -101,6 +102,10 @@ export interface IElectronAPI {
     ) => void;
     onGeminiError: (callback: (message: string) => void) => void;
     cleanupListeners: () => void;
+  };
+
+  interactiveRoleplay?: {
+    analyzeChapter: (payload: RoleplayAnalysisPayload) => Promise<unknown>;
   };
 
   wordDetail: {

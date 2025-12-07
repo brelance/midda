@@ -458,7 +458,7 @@ export default function App() {
         initialChapterId={readerInitialChapterId ?? undefined}
         onExitReader={handleExitReader}
         onOpenToc={() => console.log("打开目录")}
-        onOpenSearch={() => console.log("打开搜索")}
+        onOpenChat={() => console.log("打开角色聊天")}
         onOpenSettings={() => console.log("打开设置")}
         onChapterChange={handleReaderChapterChange}
         onProgressChange={handleReaderProgressChange}
