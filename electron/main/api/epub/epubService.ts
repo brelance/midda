@@ -316,8 +316,9 @@ export class EPUBService {
     const hrefToId = new Map<string, string>();
     const navEntries: Array<{ id: string; href: string }> = [];
 
-    Object.entries(manifest).forEach(([id, rawItem]) => {
-      const item = rawItem ?? {};
+    Object.entries(manifest as Record<string, unknown>).forEach(
+      ([id, rawItem]) => {
+        const item = (rawItem ?? {}) as { href?: unknown; properties?: unknown };
       byId.set(id, item);
 
       if (typeof item.href === "string") {
@@ -336,7 +337,8 @@ export class EPUBService {
           typeof item.href === "string" ? this.normalizeZipPath(item.href) : "";
         navEntries.push({ id, href: normalizedHref });
       }
-    });
+      }
+    );
 
     return { byId, hrefToId, navEntries };
   }
@@ -347,8 +349,8 @@ export class EPUBService {
   ): Promise<ResolvedTocEntry[]> {
     const baseToc = Array.isArray(epub?.toc) ? epub.toc : [];
     if (baseToc.length > 0) {
-      return baseToc
-        .map((tocItem: any) => {
+        return baseToc
+          .map((tocItem: any) => {
           const hrefValue = typeof tocItem?.href === "string" ? tocItem.href : "";
           const normalizedHref = this.normalizeZipPath(
             hrefValue.split("#")[0] ?? hrefValue
@@ -364,7 +366,10 @@ export class EPUBService {
             title: tocItem?.title ?? tocItem?.navLabel ?? "",
           } as ResolvedTocEntry;
         })
-        .filter((entry): entry is ResolvedTocEntry => entry !== null);
+        .filter(
+          (entry: ResolvedTocEntry | null): entry is ResolvedTocEntry =>
+            entry !== null
+        );
     }
 
     const navEntry = manifestIndex.navEntries.find(

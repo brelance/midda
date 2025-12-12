@@ -155,7 +155,8 @@ export class TtsController extends EventEmitter {
         }
 
         if (error) {
-          this.handlePlaybackError(error);
+          const err = error as unknown;
+          this.handlePlaybackError(err instanceof Error ? err : new Error(String(err)));
           return;
         }
 

@@ -1,21 +1,17 @@
-import React from 'react';
+import React from "react";
 
-interface BrutalistButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
-  variant?: 'default' | 'primary';
-  className?: string;
-  disabled?: boolean;
-  type?: 'button' | 'submit' | 'reset';
+export interface BrutalistButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "default" | "primary";
 }
 
 const BrutalistButton: React.FC<BrutalistButtonProps> = ({
   children,
-  onClick,
-  variant = 'default',
-  className = '',
+  variant = "default",
+  className = "",
   disabled = false,
-  type = 'button',
+  type = "button",
+  ...rest
 }) => {
   const baseClasses = `
     border-4 border-black rounded-[20px]
@@ -29,18 +25,19 @@ const BrutalistButton: React.FC<BrutalistButtonProps> = ({
     active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)]
   `;
 
-  const variantClasses = variant === 'primary'
-    ? 'bg-[#b3312c] text-white'
-    : 'bg-[#d4a017] text-white';
+  const variantClasses =
+    variant === "primary"
+      ? "bg-[#b3312c] text-white"
+      : "bg-[#d4a017] text-white";
 
-  const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
+  const disabledClasses = disabled ? "opacity-50 cursor-not-allowed" : "";
 
   return (
     <button
       type={type}
       className={`${baseClasses} ${variantClasses} ${disabledClasses} ${className}`}
-      onClick={onClick}
       disabled={disabled}
+      {...rest}
     >
       {children}
     </button>

@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from "electron";
+import { BrowserWindow, dialog, ipcMain, type OpenDialogOptions } from "electron";
 import path from "node:path";
 import { EPUBService, type ParseProgress } from "./epubService";
 import { assertValidEpub } from "./validators";
@@ -37,15 +37,19 @@ export function setupEpubApiHandler(): void {
   const epubService = new EPUBService();
 
   ipcMain.handle("epub:select-file", async (event) => {
-    const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const parentWindow = BrowserWindow.fromWebContents(event.sender);
 
-    const result = await dialog.showOpenDialog(parentWindow, {
+    const options: OpenDialogOptions = {
       properties: ["openFile"],
       filters: [
         { name: "EPUB Files", extensions: ["epub"] },
         { name: "All Files", extensions: ["*"] },
       ],
-    });
+    };
+
+    const result = parentWindow
+      ? await dialog.showOpenDialog(parentWindow, options)
+      : await dialog.showOpenDialog(options);
 
     return result.canceled ? null : result.filePaths[0] ?? null;
   });

@@ -418,7 +418,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
   const [currentChapterId, setCurrentChapterId] = useState(defaultChapterId);
   const [chapterProgress, setChapterProgress] = useState(0);
-  const [readingMode, setReadingMode] = useState<ReadingMode>("single");
+  const [readingMode] = useState<ReadingMode>("single");
   const [viewMode, setViewMode] = useState<ReaderViewMode>("reading");
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
@@ -660,11 +660,6 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     handlePointerMove,
     showToolbarsTemporarily,
   } = useReaderToolbarVisibility();
-
-  const toggleReadingMode = useCallback(() => {
-    setReadingMode((prev) => (prev === "single" ? "double" : "single"));
-    showToolbarsTemporarily(1800);
-  }, [showToolbarsTemporarily]);
 
   const ensureRoleplayAnalysis = useCallback(
     async (options?: { force?: boolean }) => {
