@@ -12,6 +12,7 @@ export interface RoleplayAnalysisPayload {
   chapterId: string;
   chapterTitle: string;
   bookContent: string;
+  model?: string;
 }
 
 export type RoleplayAnalysisStatus = "idle" | "loading" | "ready" | "error";
@@ -38,6 +39,7 @@ export interface RoleplayChatRequest {
   userProficiencyLevel: string;
   message: string;
   history?: RoleplayChatHistoryMessage[];
+  model?: string;
 }
 
 export interface RoleplayChatResponse {

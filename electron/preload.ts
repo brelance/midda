@@ -22,8 +22,15 @@ const api = {
     sendGeminiRequest: (payload: {
       sentence: string;
       language?: string;
+      model?: string;
     }): Promise<TokenData[]> =>
       ipcRenderer.invoke("gemini-tokens-request", payload),
+    // Preferred generic name (kept in parallel with the legacy Gemini naming).
+    sendTokensRequest: (payload: {
+      sentence: string;
+      language?: string;
+      model?: string;
+    }): Promise<TokenData[]> => ipcRenderer.invoke("llm:tokens", payload),
   },
 
   interactiveRoleplay: {
@@ -39,7 +46,8 @@ const api = {
       pos: string,
       sentence: string,
       furigana: string,
-      romaji: string
+      romaji: string,
+      model?: string
     ) =>
       ipcRenderer.send("word-detail-request", {
         word,
@@ -47,6 +55,7 @@ const api = {
         sentence,
         furigana,
         romaji,
+        model,
       }),
 
     onWordDetailResponse: (callback: (value: WordDetail) => void) =>

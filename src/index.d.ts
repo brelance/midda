@@ -99,6 +99,12 @@ export interface IElectronAPI {
     sendGeminiRequest: (payload: {
       sentence: string;
       language?: string;
+      model?: string;
+    }) => Promise<TokenData[]>;
+    sendTokensRequest: (payload: {
+      sentence: string;
+      language?: string;
+      model?: string;
     }) => Promise<TokenData[]>;
     onGeminiEnd: (callback: () => void) => void;
     onGeminiNonStreamTokensResponse: (
@@ -119,7 +125,8 @@ export interface IElectronAPI {
       pos: string,
       sentence: string,
       furigana: string,
-      romaji: string
+      romaji: string,
+      model?: string
     ) => void;
     onWordDetailResponse: (callback: (value: WordDetail) => void) => void;
     onWordDetailError: (callback: (message: string) => void) => void;
