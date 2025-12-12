@@ -36,12 +36,12 @@ export interface WordDetail {
   explanation: string;
 }
 
-export interface GeminiNonStreamResponse {
+export interface ChatCompletionsResponse {
   id: string;
   object: string;
   created: number;
   model: string;
-  choices: GeminiChoice[];
+  choices: ChatCompletionsChoice[];
   usage: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -49,13 +49,13 @@ export interface GeminiNonStreamResponse {
   };
 }
 
-export interface GeminiChoice {
+export interface ChatCompletionsChoice {
   index: number;
-  message: GeminiMessage;
+  message: ChatCompletionsMessage;
   finish_reason: string;
 }
 
-export interface GeminiMessage {
+export interface ChatCompletionsMessage {
   content: string;
   role: string;
 }

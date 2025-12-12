@@ -19,13 +19,6 @@ import type {
 import type { RoleplayAnalysisPayload } from "../src/types/roleplay";
 const api = {
   ai: {
-    sendGeminiRequest: (payload: {
-      sentence: string;
-      language?: string;
-      model?: string;
-    }): Promise<TokenData[]> =>
-      ipcRenderer.invoke("gemini-tokens-request", payload),
-    // Preferred generic name (kept in parallel with the legacy Gemini naming).
     sendTokensRequest: (payload: {
       sentence: string;
       language?: string;

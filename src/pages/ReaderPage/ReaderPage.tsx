@@ -39,7 +39,7 @@ import {
 } from "../../utils/reader/progressUtils";
 import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
 import { useReaderShortcuts } from "../../hooks/useReaderShortcuts";
-import { queuedSendGeminiRequest } from "../../services/apiQueue";
+import { queuedSendTokensRequest } from "../../services/apiQueue";
 import {
   analyzeChapterForRoleplay,
   sendRoleplayMessage,
@@ -1192,7 +1192,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       !activeChapterId ||
       processingRef.current ||
       !window?.api?.db?.sentenceAnalysis ||
-      !window?.api?.ai?.sendGeminiRequest
+      !window?.api?.ai?.sendTokensRequest
     ) {
       return;
     }
@@ -1259,7 +1259,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             continue;
           }
 
-          const tokens: TokenData[] = await queuedSendGeminiRequest(
+          const tokens: TokenData[] = await queuedSendTokensRequest(
             nextIdle.text,
             { language: languageHint }
           );

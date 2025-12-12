@@ -48,10 +48,11 @@ export const getLLMEnvConfig = (): LLMEnvConfig => {
       `LLM_CHAT_COMPLETIONS_URL/API_URL is not a valid URL: ${chatCompletionsUrl}`
     );
   }
-  const defaultModel =
+  const defaultModel = requireEnv(
     normalizeEnvString(process.env.LLM_MODEL) ??
-    normalizeEnvString(process.env.MODEL_NAME) ??
-    "gemini-2.5-flash-lite-preview-06-17";
+      normalizeEnvString(process.env.MODEL_NAME),
+    "LLM_MODEL/MODEL_NAME"
+  );
 
   const supportsResponseFormat =
     (process.env.LLM_SUPPORTS_RESPONSE_FORMAT ?? "true").toLowerCase() !==

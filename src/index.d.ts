@@ -96,22 +96,11 @@ export interface IElectronAPI {
   };
 
   ai: {
-    sendGeminiRequest: (payload: {
-      sentence: string;
-      language?: string;
-      model?: string;
-    }) => Promise<TokenData[]>;
     sendTokensRequest: (payload: {
       sentence: string;
       language?: string;
       model?: string;
     }) => Promise<TokenData[]>;
-    onGeminiEnd: (callback: () => void) => void;
-    onGeminiNonStreamTokensResponse: (
-      callback: (tokens: TokenData[]) => void
-    ) => void;
-    onGeminiError: (callback: (message: string) => void) => void;
-    cleanupListeners: () => void;
   };
 
   interactiveRoleplay?: {

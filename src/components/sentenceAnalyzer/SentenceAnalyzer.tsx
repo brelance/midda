@@ -6,7 +6,7 @@ import {
   speakJapanese,
 } from "../../utils/helper";
 import { TokenData, WordDetail } from "../../types/types";
-import { queuedSendGeminiRequest } from "../../services/apiQueue";
+import { queuedSendTokensRequest } from "../../services/apiQueue";
 import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
 import DraggablePopup from "../DraggablePopup";
 
@@ -53,11 +53,11 @@ export default function AnalysisSentence({
         return;
       }
 
-      setIsLoading(true);
+        setIsLoading(true);
       try {
         const detected = detectLanguageForSamples([originalSentence]);
         // 使用新的、经过队列处理的请求函数，并等待其结果
-        const receivedTokens = await queuedSendGeminiRequest(
+        const receivedTokens = await queuedSendTokensRequest(
           originalSentence,
           { language: detected.languageCode }
         ); // 确保 useStream 不是 undefined
@@ -67,7 +67,7 @@ export default function AnalysisSentence({
         console.log("[SentenceAnalyzer]: " + receivedTokens);
       } catch (error) {
         console.error(
-          `Gemini API Error for sentence "${originalSentence}":`,
+          `LLM API Error for sentence "${originalSentence}":`,
           error
         );
         // 可以在这里设置一个错误状态，以便在 UI 上向用户显示错误信息

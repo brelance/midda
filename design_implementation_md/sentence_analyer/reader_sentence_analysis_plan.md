@@ -25,7 +25,7 @@
 
 - 对每个句子优先调用 `window.api.db.sentenceAnalysis.getBySentence`，命中后直接使用缓存 tokens。
 - 未命中的句子：
-  - 调用 `window.api.ai.sendGeminiRequest` 进行解析，并将结果通过 `sentenceAnalysis.upsert` 写入数据库。
+  - 调用 `window.api.ai.sendTokensRequest` 进行解析，并将结果通过 `sentenceAnalysis.upsert` 写入数据库。
   - 或在未来交由 `sentenceAnalysisJobs.enqueue` 异步处理（此阶段可先同步实现）。
 - 注意批量调用节奏，避免在长章节中阻塞 UI，可考虑逐句 await 或并发限制。
 
@@ -44,7 +44,7 @@
 
 ### 6. 错误与性能处理
 
-- 加入节流 / 并发控制，避免对 Gemini API 造成瞬时过载。
+- 加入节流 / 并发控制，避免对 LLM API 造成瞬时过载。
 - 捕获 API 错误后日志输出，并提供 UI 反馈（例如 toast / 行内提示）。
 - 大章节时考虑分页加载句子或懒加载（可在后续迭代）。
 

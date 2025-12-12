@@ -3,7 +3,7 @@ import path from "node:path";
 import { registerDbHandlers } from "./api/db/db.api/db.api";
 import { setupWordDetailApiHandler } from "./api/llm/word_detail/detail.api";
 import { setupWordDictApiHandler } from "./api/llm/word_detail/wordict.api";
-import { setupGeminiApiHandler } from "./api/llm/gemini.api";
+import { setupTokensApiHandler } from "./api/llm/tokens.api";
 import { setupInteractiveRoleplayApiHandler } from "./api/llm/interactive_roleplay/interactiveRoleplay.api";
 import { setupEpubApiHandler } from "./api/epub/epub.api";
 import { setupTtsApiHandler } from "./api/tts/tts.api";
@@ -101,7 +101,7 @@ app.whenReady().then(() => {
   // ipcMain.on("ping", () => console.log("pong"));
 
   // --- API Listener ---
-  setupGeminiApiHandler();
+  setupTokensApiHandler();
   setupWordDetailApiHandler();
   setupWordDictApiHandler();
   setupInteractiveRoleplayApiHandler();

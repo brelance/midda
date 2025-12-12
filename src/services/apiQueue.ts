@@ -27,7 +27,7 @@ async function processQueue(): Promise<void> {
   }
 }
 
-export function queuedSendGeminiRequest(
+export function queuedSendTokensRequest(
   sentence: string,
   options?: { language?: string }
 ): Promise<TokenData[]> {
@@ -35,7 +35,7 @@ export function queuedSendGeminiRequest(
     // 将实际的 API 调用包装成一个 task 函数
     const task = async () => {
       try {
-        const result = await window.api.ai.sendGeminiRequest({
+        const result = await window.api.ai.sendTokensRequest({
           sentence,
           language: options?.language,
         });

@@ -96,7 +96,7 @@ app.whenReady().then(() => {
   // 现有代码保持不变...
 
   registerDbHandlers();
-  setupGeminiApiHandler();
+  setupTokensApiHandler();
   setupWordDetailApiHandler();
   setupWordDictApiHandler();
 

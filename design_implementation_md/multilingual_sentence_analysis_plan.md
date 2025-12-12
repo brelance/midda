@@ -28,8 +28,8 @@
    - 在 UI 中可选地显示“检测到的语言：xx”，并允许用户手动覆盖（可放入 Settings Modal 的 TTS 语言旁边，属于额外加分项）。
 
 4. **定义 Renderer → Electron 的语言参数协议**
-   - 更新 `IElectronAPI` 类型（`src/index.d.ts`）中与句子分析相关的方法（例如 `window.api.ai.sendGeminiRequest` 或专门的分析 API）以接受 `language?: string`.
-   - 若分析请求目前通过自建队列（如 `queuedSendGeminiRequest`），需要扩展 `TtsSentencePayload` 或专门的 `SentenceAnalysisJob` payload，确保语言信息贯穿任务生命周期。
+   - 更新 `IElectronAPI` 类型（`src/index.d.ts`）中与句子分析相关的方法（例如 `window.api.ai.sendTokensRequest`）以接受 `language?: string`.
+   - 若分析请求目前通过自建队列（如 `queuedSendTokensRequest`），需要扩展 `TtsSentencePayload` 或专门的 `SentenceAnalysisJob` payload，确保语言信息贯穿任务生命周期。
    - 审查任何缓存键（例如 `sentenceAnalysis` 数据库中 `sentenceHash`）是否需要包含语言维度，避免跨语言复用不兼容的 tokens。若需要，调整 `SentenceAnalysisContext` 结构。
 
 5. **在 Electron 主进程配置 Prompt 映射**
@@ -54,4 +54,3 @@
 - **性能影响**：语言检测可能对长章节造成延迟。通过抽样（仅取前 N 句）与缓存减轻。
 
 以上计划完成后，即可实现从自动语言检测到 Electron Prompt 切换的多语言句子分析支持。
-
