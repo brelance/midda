@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import db from "./databse";
+import db from "./database";
 import { TokenData } from "../../../../src/types/types";
 
 export type ReadingStatus = "not-started" | "reading" | "completed";
