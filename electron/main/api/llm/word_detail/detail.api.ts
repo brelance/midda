@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from "electron";
+import { ipcMain } from "electron";
 
 import { getLLMClient } from "../core/llmFactory";
 import { runPrompt } from "../core/promptRunner";
@@ -8,10 +8,10 @@ import {
 } from "../prompts/word_detail/detail.prompt";
 
 export function setupWordDetailApiHandler(): void {
-  ipcMain.on(
+  ipcMain.handle(
     "word-detail-request",
     async (
-      event,
+      _event,
       {
         word,
         pos,
@@ -28,43 +28,24 @@ export function setupWordDetailApiHandler(): void {
         model?: string;
       }
     ) => {
-      const window = BrowserWindow.fromWebContents(
-        event.sender
-      ) as BrowserWindow;
-      if (!window) return;
+      if (!word || !pos || !sentence) {
+        throw new Error("缺少必要的参数");
+      }
 
-      const sendError = (message: string) => {
-        event.sender.send("word-detail-error", message);
+      const input: WordDetailPromptInput = {
+        word,
+        pos,
+        sentence,
+        furigana,
+        romaji,
       };
 
-      try {
-        if (!word || !pos || !sentence) {
-          sendError("缺少必要的参数");
-          return;
-        }
-
-        const input: WordDetailPromptInput = {
-          word,
-          pos,
-          sentence,
-          furigana,
-          romaji,
-        };
-
-        const wordDetail = await runPrompt(
-          getLLMClient(),
-          wordDetailPrompt,
-          input,
-          { model }
-        );
-
-        window.webContents.send("word-detail-response", wordDetail);
-      } catch (error: unknown) {
-        console.error("[LLM/word_detail] Server error:", error);
-        const errorMessage =
-          error instanceof Error ? error.message : "Internal Server Error";
-        sendError(errorMessage);
-      }
+      return runPrompt(
+        getLLMClient(),
+        wordDetailPrompt,
+        input,
+        { model }
+      );
     }
   );
 }

@@ -166,16 +166,18 @@ export default function AnalysisSentence({
     ) => {
       setIsLoading(true);
 
-      // 清理旧的监听器，确保不会重复触发
-      window.api.wordDetail.cleanupListeners();
-
-      // 设置新的监听器
-      window.api.wordDetail.onWordDetailResponse((details) => {
+      try {
+        const details = await window.api.wordDetail.sendWordDetailRequest(
+          word,
+          pos,
+          sentence,
+          furigana || "",
+          romaji || ""
+        );
         setWordDetail(details);
-        setIsLoading(false);
-      });
-
-      window.api.wordDetail.onWordDetailError((message) => {
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error);
         console.error("Error fetching word details:", message);
         setWordDetail({
           originalWord: word,
@@ -189,17 +191,9 @@ export default function AnalysisSentence({
           chineseTranslation: "错误",
           explanation: `查询释义时发生错误: ${message}。`,
         });
+      } finally {
         setIsLoading(false);
-      });
-
-      // 发送请求
-      window.api.wordDetail.sendWordDetailRequest(
-        word,
-        pos,
-        sentence,
-        furigana || "",
-        romaji || ""
-      );
+      }
     },
     []
   );

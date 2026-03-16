@@ -41,8 +41,8 @@ const api = {
       furigana: string,
       romaji: string,
       model?: string
-    ) =>
-      ipcRenderer.send("word-detail-request", {
+    ): Promise<WordDetail> =>
+      ipcRenderer.invoke("word-detail-request", {
         word,
         pos,
         sentence,
@@ -50,21 +50,6 @@ const api = {
         romaji,
         model,
       }),
-
-    onWordDetailResponse: (callback: (value: WordDetail) => void) =>
-      ipcRenderer.on("word-detail-response", (_event, value) =>
-        callback(value)
-      ),
-
-    onWordDetailError: (callback: (message: string) => void) =>
-      ipcRenderer.on("word-detail-error", (_event, message) =>
-        callback(message)
-      ),
-
-    cleanupListeners: () => {
-      ipcRenderer.removeAllListeners("word-detail-response");
-      ipcRenderer.removeAllListeners("word-detail-error");
-    },
   },
 
   db: {

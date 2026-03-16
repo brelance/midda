@@ -116,10 +116,7 @@ export interface IElectronAPI {
       furigana: string,
       romaji: string,
       model?: string
-    ) => void;
-    onWordDetailResponse: (callback: (value: WordDetail) => void) => void;
-    onWordDetailError: (callback: (message: string) => void) => void;
-    cleanupListeners: () => void;
+    ) => Promise<WordDetail>;
   };
 
   epub: {
