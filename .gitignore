@@ -9,6 +9,8 @@ lerna-debug.log*
 
 node_modules
 dist
+.env
+.env.*
 dist-ssr
 *.local
 
@@ -31,5 +33,5 @@ proto
 docs_deprected
 backup
 .pytest_cache
-proto
+page_proto
 tmp

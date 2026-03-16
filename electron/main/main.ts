@@ -25,19 +25,6 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   : RENDERER_DIST;
 
 console.log("DIRNAME", __dirname);
-
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── main.js
-// │ │ └── preload.mjs
-// │
-process.env.APP_ROOT = path.join(__dirname, "..");
-
-console.log("DIRNAME", __dirname);
 console.log("VITE_DEV_SERVER_URL:", VITE_DEV_SERVER_URL);
 console.log("MAIN_DIST:", MAIN_DIST);
 console.log("RENDERER_DIST:", RENDERER_DIST);
@@ -66,24 +53,6 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 }
-
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
-});
-
-app.on("activate", () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
 
 app.whenReady().then(() => {
   // Set app user model id for windows
@@ -120,9 +89,7 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
-  console.log(
-    "Application is about to quit. Pausing all downloading torrents."
-  );
+  console.log("Application is about to quit.");
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
