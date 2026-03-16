@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   containsKanji,
   getPosClass,
@@ -15,12 +15,16 @@ interface AnalysisSentenceProps {
   bookId: string;
   analyzedTokens: TokenData[];
   useStream?: boolean;
+  enableTokenHoverTts?: boolean;
+  ttsLanguage?: string;
 }
 export default function AnalysisSentence({
   text,
   bookId,
   analyzedTokens = [],
   useStream = false,
+  enableTokenHoverTts = false,
+  ttsLanguage,
 }: AnalysisSentenceProps) {
   // const [currentSentence, setCurrentSentence] = useState('')
   const [tokens, setTokens] = useState<TokenData[]>(analyzedTokens);
@@ -34,10 +38,31 @@ export default function AnalysisSentence({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isWordDetailOpen, setIsWordDetailOpen] = useState(false);
+  const [hoveredTokenIndices, setHoveredTokenIndices] = useState<number[]>([]);
+  const [currentHoveredIndex, setCurrentHoveredIndex] = useState<number | null>(
+    null
+  );
+  const hoverSpeakTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setTokens(analyzedTokens);
   }, [analyzedTokens]);
+
+  useEffect(() => {
+    if (enableTokenHoverTts) {
+      return;
+    }
+    setHoveredTokenIndices([]);
+    setCurrentHoveredIndex(null);
+  }, [enableTokenHoverTts]);
+
+  useEffect(() => {
+    return () => {
+      if (hoverSpeakTimerRef.current !== null) {
+        window.clearTimeout(hoverSpeakTimerRef.current);
+      }
+    };
+  }, []);
 
   const originalSentence = text;
 
@@ -188,6 +213,74 @@ export default function AnalysisSentence({
     setIsWordDetailOpen(false);
   }, [activeWordToken]);
 
+  const speakTokenText = useCallback(
+    (tokenText: string) => {
+      const textToSpeak = tokenText.trim();
+      if (!textToSpeak) {
+        return;
+      }
+
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      if (ttsLanguage && ttsLanguage !== "system") {
+        utterance.lang = ttsLanguage;
+      }
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    },
+    [ttsLanguage]
+  );
+
+  const handleTokenMouseEnter = useCallback(
+    (index: number, token: TokenData) => {
+      if (!enableTokenHoverTts) {
+        return;
+      }
+
+      setHoveredTokenIndices((previous) => {
+        if (previous.length === 0) {
+          return [index];
+        }
+        const lastIndex = previous[previous.length - 1];
+        if (index === lastIndex) {
+          return previous;
+        }
+        if (index === lastIndex + 1) {
+          return [...previous, index];
+        }
+        return [index];
+      });
+      setCurrentHoveredIndex(index);
+
+      if (hoverSpeakTimerRef.current !== null) {
+        window.clearTimeout(hoverSpeakTimerRef.current);
+      }
+      hoverSpeakTimerRef.current = window.setTimeout(() => {
+        speakTokenText(token.word);
+      }, 60);
+    },
+    [enableTokenHoverTts, speakTokenText]
+  );
+
+  const handleSentenceMouseLeave = useCallback(() => {
+    if (hoverSpeakTimerRef.current !== null) {
+      window.clearTimeout(hoverSpeakTimerRef.current);
+      hoverSpeakTimerRef.current = null;
+    }
+    setHoveredTokenIndices([]);
+    setCurrentHoveredIndex(null);
+  }, []);
+
+  const hoveredIndexSet = useMemo(
+    () => new Set(hoveredTokenIndices),
+    [hoveredTokenIndices]
+  );
+
   // 朗读单词的函数
   const handleWordSpeak = async (word: string) => {
     try {
@@ -277,14 +370,23 @@ export default function AnalysisSentence({
       <div
         id="analyzedSentenceOutput"
         className="text-gray-800 mb-2 p-3 min-h-[70px]"
+        onMouseLeave={handleSentenceMouseLeave}
       >
-        {tokens.map((token, index) => (
+        {tokens.map((token, index) => {
+          const isHoveredSpoken = hoveredIndexSet.has(index);
+          const isCurrent = currentHoveredIndex === index;
+          return (
           <span
             key={index}
             className="word-unit-wrapper tooltip"
             onClick={(e) => handleWordClick(e, token)}
+            onMouseEnter={() => handleTokenMouseEnter(index, token)}
           >
-            <span className={`word-token ${getPosClass(token.pos)}`}>
+            <span
+              className={`word-token ${getPosClass(token.pos)}${
+                isHoveredSpoken ? " hover-tts-spoken" : ""
+              }${isCurrent ? " hover-tts-current" : ""}`}
+            >
               <span className="ruby-container">
                 <span
                   className="ruby-base"
@@ -310,7 +412,8 @@ export default function AnalysisSentence({
                 posChineseMap["default"]}
             </span>
           </span>
-        ))}
+          );
+        })}
       </div>
 
       {isWordDetailOpen && (

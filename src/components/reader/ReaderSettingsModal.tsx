@@ -11,6 +11,8 @@ interface ReaderSettingsModalProps {
   ttsLanguage: string;
   onTtsLanguageChange: (language: string) => void;
   ttsLanguageOptions: TtsLanguageOption[];
+  enableTokenHoverTts: boolean;
+  onEnableTokenHoverTtsChange: (enabled: boolean) => void;
 }
 
 const themeSwatches = [
@@ -26,6 +28,8 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   ttsLanguage,
   onTtsLanguageChange,
   ttsLanguageOptions,
+  enableTokenHoverTts,
+  onEnableTokenHoverTtsChange,
 }) => {
   React.useEffect(() => {
     if (!isOpen) {
@@ -154,6 +158,32 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
                   />
                 ))}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
+                  划过分词朗读
+                </span>
+                <span className="text-sm text-[#6b5b4b]">
+                  鼠标划过分词时自动朗读并高亮路径。
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={enableTokenHoverTts}
+                onClick={() => onEnableTokenHoverTtsChange(!enableTokenHoverTts)}
+                className={`relative h-10 w-[74px] rounded-full border-4 border-[#3d2b1f] shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none ${
+                  enableTokenHoverTts ? "bg-[#15803d]" : "bg-[#d8cfc4]"
+                }`}
+              >
+                <span
+                  className={`absolute top-1/2 h-7 w-7 -translate-y-1/2 rounded-full border-4 border-[#3d2b1f] bg-white transition ${
+                    enableTokenHoverTts ? "left-[40px]" : "left-[6px]"
+                  }`}
+                />
+              </button>
             </div>
 
             <div className="flex flex-col gap-3">

@@ -529,6 +529,27 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [analysisTtsLanguage, setAnalysisTtsLanguage] =
     useState<string>("ja-JP");
+  const [enableTokenHoverTts, setEnableTokenHoverTts] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    try {
+      return window.localStorage.getItem("reader.enableTokenHoverTts") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        "reader.enableTokenHoverTts",
+        String(enableTokenHoverTts)
+      );
+    } catch {
+      // ignore persistence errors
+    }
+  }, [enableTokenHoverTts]);
 
   const resetAnalysisPlaybackState = useCallback(() => {
     setAnalysisPlaybackState({
@@ -1546,6 +1567,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
               onScroll={handleScroll}
               activeSentenceId={analysisPlaybackState.currentSentenceId}
               onSentenceSelect={sentenceSelectionHandler}
+              enableTokenHoverTts={enableTokenHoverTts}
+              ttsLanguage={analysisTtsLanguage}
             />
           ) : (
             <ReaderContent
@@ -1607,6 +1630,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         ttsLanguage={analysisTtsLanguage}
         onTtsLanguageChange={handleTtsLanguageChange}
         ttsLanguageOptions={TTS_LANGUAGE_OPTIONS}
+        enableTokenHoverTts={enableTokenHoverTts}
+        onEnableTokenHoverTtsChange={setEnableTokenHoverTts}
       />
     </>
   );

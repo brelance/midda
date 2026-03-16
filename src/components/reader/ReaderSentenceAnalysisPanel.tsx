@@ -28,6 +28,8 @@ interface ReaderSentenceAnalysisPanelProps {
   onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
   activeSentenceId?: string | null;
   onSentenceSelect?: (sentenceId: string) => void;
+  enableTokenHoverTts?: boolean;
+  ttsLanguage?: string;
 }
 
 const ReaderSentenceAnalysisPanel = forwardRef<
@@ -44,6 +46,8 @@ const ReaderSentenceAnalysisPanel = forwardRef<
       onScroll,
       activeSentenceId,
       onSentenceSelect,
+      enableTokenHoverTts,
+      ttsLanguage,
     },
     ref
   ) => {
@@ -117,6 +121,8 @@ const ReaderSentenceAnalysisPanel = forwardRef<
                       text={item.text}
                       bookId={bookId}
                       analyzedTokens={item.tokens}
+                      enableTokenHoverTts={enableTokenHoverTts}
+                      ttsLanguage={ttsLanguage}
                     />
                   </div>
                 )}
