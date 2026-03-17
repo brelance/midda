@@ -267,7 +267,12 @@ const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
       <div
         ref={ref as React.Ref<HTMLDivElement>}
         onScroll={onScroll}
-        className={`reading-content no-scrollbar mx-auto h-full ${containerMaxWidth} overflow-y-auto px-2 text-lg leading-8 text-[#3d2b1f] md:px-4 md:text-xl`}
+        className={`reading-content no-scrollbar mx-auto h-full ${containerMaxWidth} overflow-y-auto px-2 md:px-4`}
+        style={{
+          fontSize: "var(--reader-font-size, 18px)",
+          lineHeight: "var(--reader-line-height, 1.8)",
+          color: "var(--reader-text, #1d1d1f)",
+        }}
       >
         {scopedCss && (
           // eslint-disable-next-line react/no-danger

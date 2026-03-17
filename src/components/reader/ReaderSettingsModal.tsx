@@ -1,5 +1,5 @@
 import React from "react";
-import { ReadingMode, ScrollMode } from "../../types/reader";
+import { ReadingMode, ScrollMode, ReaderTheme } from "../../types/reader";
 
 interface TtsLanguageOption {
   value: string;
@@ -14,12 +14,28 @@ interface ReaderSettingsModalProps {
   ttsLanguageOptions: TtsLanguageOption[];
   enableTokenHoverTts: boolean;
   onEnableTokenHoverTtsChange: (enabled: boolean) => void;
-  // Layout & scroll mode
   scrollMode: ScrollMode;
   onScrollModeChange: (mode: ScrollMode) => void;
   readingMode: ReadingMode;
   onReadingModeChange: (mode: ReadingMode) => void;
+  // Typography & theme
+  fontSize: number;
+  onFontSizeChange: (size: number) => void;
+  lineHeight: number;
+  onLineHeightChange: (lh: number) => void;
+  readerTheme: ReaderTheme;
+  onThemeChange: (theme: ReaderTheme) => void;
 }
+
+const FONT_SIZE_STEPS = [14, 16, 18, 20, 22, 24];
+const LINE_HEIGHT_STEPS = [1.4, 1.6, 1.8, 2.0, 2.2];
+
+const THEME_OPTIONS: { id: ReaderTheme; color: string; label: string }[] = [
+  { id: "light", color: "#ffffff", label: "白色" },
+  { id: "warm",  color: "#faf5e4", label: "暖白" },
+  { id: "green", color: "#d4edda", label: "绿色" },
+  { id: "dark",  color: "#1c1c1e", label: "深色" },
+];
 
 /** iOS-style segmented control */
 const SegmentedControl = <T extends string>({
@@ -27,14 +43,16 @@ const SegmentedControl = <T extends string>({
   value,
   onChange,
   id,
+  disabled = false,
 }: {
   options: { label: string; value: T }[];
   value: T;
   onChange: (v: T) => void;
   id: string;
+  disabled?: boolean;
 }) => (
   <div
-    className="flex overflow-hidden rounded-lg bg-black/[0.06] p-0.5"
+    className={`flex overflow-hidden rounded-lg bg-black/[0.06] p-0.5 ${disabled ? "opacity-40 pointer-events-none" : ""}`}
     role="group"
     id={id}
   >
@@ -89,18 +107,20 @@ const ToggleSwitch: React.FC<{
   </button>
 );
 
-/** Stepper (+ / –) for font size, line height, etc. */
+/** Stepper (+ / –) */
 const Stepper: React.FC<{
   label: string;
   value: string;
   onDecrement?: () => void;
   onIncrement?: () => void;
-}> = ({ label: _label, value, onDecrement, onIncrement }) => (
+  disableDecrement?: boolean;
+  disableIncrement?: boolean;
+}> = ({ label: _label, value, onDecrement, onIncrement, disableDecrement, disableIncrement }) => (
   <div className="flex items-center gap-0 overflow-hidden rounded-lg border border-gray-200/80 bg-white">
     <button
       type="button"
       onClick={onDecrement}
-      disabled={!onDecrement}
+      disabled={disableDecrement || !onDecrement}
       className="flex h-8 w-9 items-center justify-center text-[#007aff] text-lg font-medium transition-colors hover:bg-black/[0.04] active:bg-black/[0.08] disabled:text-gray-300"
       aria-label={`减小${_label}`}
     >
@@ -112,7 +132,7 @@ const Stepper: React.FC<{
     <button
       type="button"
       onClick={onIncrement}
-      disabled={!onIncrement}
+      disabled={disableIncrement || !onIncrement}
       className="flex h-8 w-9 items-center justify-center text-[#007aff] text-lg font-medium transition-colors hover:bg-black/[0.04] active:bg-black/[0.08] disabled:text-gray-300"
       aria-label={`增大${_label}`}
     >
@@ -120,13 +140,6 @@ const Stepper: React.FC<{
     </button>
   </div>
 );
-
-const themeSwatches = [
-  { color: "#ffffff", label: "白色", active: true },
-  { color: "#faf5e4", label: "暖白", active: false },
-  { color: "#d4edda", label: "绿色", active: false },
-  { color: "#1c1c1e", label: "深色", active: false },
-];
 
 const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   isOpen,
@@ -140,27 +153,46 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   onScrollModeChange,
   readingMode,
   onReadingModeChange,
+  fontSize,
+  onFontSizeChange,
+  lineHeight,
+  onLineHeightChange,
+  readerTheme,
+  onThemeChange,
 }) => {
   React.useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
+    if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") onClose();
     };
-
     window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
+
+  const fontSizeIndex = FONT_SIZE_STEPS.indexOf(fontSize);
+  const lineHeightIndex = LINE_HEIGHT_STEPS.indexOf(lineHeight);
+
+  const fontSizeLabel = fontSize === 18 ? "常规" : `${fontSize}`;
+  const lineHeightLabel = String(lineHeight);
+
+  const handleFontSizeDecrement = () => {
+    const idx = fontSizeIndex > 0 ? fontSizeIndex - 1 : 0;
+    onFontSizeChange(FONT_SIZE_STEPS[idx]);
+  };
+  const handleFontSizeIncrement = () => {
+    const idx = fontSizeIndex < FONT_SIZE_STEPS.length - 1 ? fontSizeIndex + 1 : fontSizeIndex;
+    onFontSizeChange(FONT_SIZE_STEPS[idx]);
+  };
+  const handleLineHeightDecrement = () => {
+    const idx = lineHeightIndex > 0 ? lineHeightIndex - 1 : 0;
+    onLineHeightChange(LINE_HEIGHT_STEPS[idx]);
+  };
+  const handleLineHeightIncrement = () => {
+    const idx = lineHeightIndex < LINE_HEIGHT_STEPS.length - 1 ? lineHeightIndex + 1 : lineHeightIndex;
+    onLineHeightChange(LINE_HEIGHT_STEPS[idx]);
+  };
 
   return (
     <div
@@ -196,16 +228,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
             onClick={onClose}
             aria-label="关闭设置"
           >
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -218,9 +241,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
             {/* ── 阅读方式 ── */}
             <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
               <div className="flex items-center justify-between">
-                <span className="text-[15px] font-medium text-[#1d1d1f]">
-                  阅读方式
-                </span>
+                <span className="text-[15px] font-medium text-[#1d1d1f]">阅读方式</span>
                 <SegmentedControl
                   id="scroll-mode-control"
                   value={scrollMode}
@@ -231,17 +252,14 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
                   ]}
                 />
               </div>
-
               <div className="my-3 h-px bg-gray-100" />
-
               <div className="flex items-center justify-between">
-                <span className="text-[15px] font-medium text-[#1d1d1f]">
-                  版面
-                </span>
+                <span className={`text-[15px] font-medium ${scrollMode === "scroll" ? "text-gray-400" : "text-[#1d1d1f]"}`}>版面</span>
                 <SegmentedControl
                   id="reading-mode-control"
                   value={readingMode}
                   onChange={onReadingModeChange}
+                  disabled={scrollMode === "scroll"}
                   options={[
                     { label: "单页", value: "single" },
                     { label: "双页", value: "double" },
@@ -253,42 +271,49 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
             {/* ── 字体与排版 ── */}
             <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
               <div className="flex items-center justify-between">
-                <span className="text-[15px] font-medium text-[#1d1d1f]">
-                  字体大小
-                </span>
-                <Stepper label="字体大小" value="常规" />
+                <span className="text-[15px] font-medium text-[#1d1d1f]">字体大小</span>
+                <Stepper
+                  label="字体大小"
+                  value={fontSizeLabel}
+                  onDecrement={handleFontSizeDecrement}
+                  onIncrement={handleFontSizeIncrement}
+                  disableDecrement={fontSizeIndex <= 0}
+                  disableIncrement={fontSizeIndex >= FONT_SIZE_STEPS.length - 1}
+                />
               </div>
-
               <div className="my-3 h-px bg-gray-100" />
-
               <div className="flex items-center justify-between">
-                <span className="text-[15px] font-medium text-[#1d1d1f]">
-                  行高
-                </span>
-                <Stepper label="行高" value="1.8" />
+                <span className="text-[15px] font-medium text-[#1d1d1f]">行高</span>
+                <Stepper
+                  label="行高"
+                  value={lineHeightLabel}
+                  onDecrement={handleLineHeightDecrement}
+                  onIncrement={handleLineHeightIncrement}
+                  disableDecrement={lineHeightIndex <= 0}
+                  disableIncrement={lineHeightIndex >= LINE_HEIGHT_STEPS.length - 1}
+                />
               </div>
             </div>
 
             {/* ── 主题 ── */}
             <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
-              <span className="mb-3 block text-[15px] font-medium text-[#1d1d1f]">
-                主题
-              </span>
+              <span className="mb-3 block text-[15px] font-medium text-[#1d1d1f]">主题</span>
               <div className="flex items-center gap-4">
-                {themeSwatches.map((theme) => (
+                {THEME_OPTIONS.map((theme) => (
                   <button
-                    key={theme.color}
+                    key={theme.id}
                     type="button"
                     aria-label={theme.label}
+                    onClick={() => onThemeChange(theme.id)}
                     style={{ backgroundColor: theme.color }}
                     className={`
                       h-9 w-9 rounded-full border
                       transition-all duration-150
-                      ${theme.active
+                      ${readerTheme === theme.id
                         ? "border-[#007aff] ring-2 ring-[#007aff]/30 ring-offset-2"
                         : "border-gray-200 hover:border-gray-400"
                       }
-                      ${theme.color === "#1c1c1e" ? "border-gray-600" : ""}
+                      ${theme.id === "dark" ? "border-gray-600" : ""}
                     `}
                   />
                 ))}
@@ -299,12 +324,8 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
             <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
               <div className="flex items-center justify-between">
                 <div className="flex-1 pr-3">
-                  <span className="text-[15px] font-medium text-[#1d1d1f]">
-                    划过分词朗读
-                  </span>
-                  <p className="mt-0.5 text-[13px] leading-snug text-gray-400">
-                    鼠标划过分词时自动朗读
-                  </p>
+                  <span className="text-[15px] font-medium text-[#1d1d1f]">划过分词朗读</span>
+                  <p className="mt-0.5 text-[13px] leading-snug text-gray-400">鼠标划过分词时自动朗读</p>
                 </div>
                 <ToggleSwitch
                   checked={enableTokenHoverTts}
@@ -312,32 +333,18 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
                   label="划过分词朗读"
                 />
               </div>
-
               <div className="my-3 h-px bg-gray-100" />
-
               <div>
-                <span className="text-[15px] font-medium text-[#1d1d1f]">
-                  TTS 朗读语言
-                </span>
-                <p className="mt-0.5 mb-2.5 text-[13px] leading-snug text-gray-400">
-                  选择朗读时优先使用的语音语言
-                </p>
+                <span className="text-[15px] font-medium text-[#1d1d1f]">TTS 朗读语言</span>
+                <p className="mt-0.5 mb-2.5 text-[13px] leading-snug text-gray-400">选择朗读时优先使用的语音语言</p>
                 <select
                   id="tts-language-select"
-                  className="
-                    w-full appearance-none rounded-lg
-                    border border-gray-200/80 bg-[#f9f9f9]
-                    px-3 py-2.5 text-[15px] text-[#1d1d1f]
-                    transition-colors
-                    focus:border-[#007aff] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20
-                  "
+                  className="w-full appearance-none rounded-lg border border-gray-200/80 bg-[#f9f9f9] px-3 py-2.5 text-[15px] text-[#1d1d1f] transition-colors focus:border-[#007aff] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20"
                   value={ttsLanguage}
                   onChange={(event) => onTtsLanguageChange(event.target.value)}
                 >
                   {ttsLanguageOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </div>

@@ -16,7 +16,7 @@ import ReaderSettingsModal from "../../components/reader/ReaderSettingsModal";
 import ReaderTocSidebar from "../../components/reader/ReaderTocSidebar";
 import ReaderChatSidebar from "../../components/reader/ReaderChatSidebar";
 import { Book, Chapter, TokenData } from "../../types/types";
-import { ReadingMode, ScrollMode, ReaderViewMode } from "../../types/reader";
+import { ReadingMode, ScrollMode, ReaderViewMode, ReaderTheme } from "../../types/reader";
 import type { ReaderContentHandle } from "../../components/reader/ReaderContent";
 import type {
   TtsPlaybackStatus,
@@ -433,6 +433,27 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     } catch { /* ignore */ }
     return "scroll";
   });
+  const [fontSize, setFontSize] = useState<number>(() => {
+    try {
+      const saved = window.localStorage.getItem("reader.fontSize");
+      if (saved) { const n = Number(saved); if (!Number.isNaN(n)) return n; }
+    } catch { /* ignore */ }
+    return 18;
+  });
+  const [lineHeight, setLineHeight] = useState<number>(() => {
+    try {
+      const saved = window.localStorage.getItem("reader.lineHeight");
+      if (saved) { const n = Number(saved); if (!Number.isNaN(n)) return n; }
+    } catch { /* ignore */ }
+    return 1.8;
+  });
+  const [readerTheme, setReaderTheme] = useState<ReaderTheme>(() => {
+    try {
+      const saved = window.localStorage.getItem("reader.theme") as ReaderTheme | null;
+      if (saved && ["light", "warm", "green", "dark"].includes(saved)) return saved;
+    } catch { /* ignore */ }
+    return "light";
+  });
   // Page tracking state for footer display
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -577,6 +598,21 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     try { window.localStorage.setItem("reader.readingMode", readingMode); }
     catch { /* ignore */ }
   }, [readingMode]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("reader.fontSize", String(fontSize)); }
+    catch { /* ignore */ }
+  }, [fontSize]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("reader.lineHeight", String(lineHeight)); }
+    catch { /* ignore */ }
+  }, [lineHeight]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("reader.theme", readerTheme); }
+    catch { /* ignore */ }
+  }, [readerTheme]);
 
   const resetAnalysisPlaybackState = useCallback(() => {
     setAnalysisPlaybackState({
@@ -1703,6 +1739,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             totalPages={totalPages}
           />
         }
+        fontSize={fontSize}
+        lineHeight={lineHeight}
+        readerTheme={readerTheme}
         onMouseMove={handleMouseMove}
         onTouchStart={handleTouchStart}
       />
@@ -1741,6 +1780,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         onScrollModeChange={setScrollMode}
         readingMode={readingMode}
         onReadingModeChange={setReadingMode}
+        fontSize={fontSize}
+        onFontSizeChange={setFontSize}
+        lineHeight={lineHeight}
+        onLineHeightChange={setLineHeight}
+        readerTheme={readerTheme}
+        onThemeChange={setReaderTheme}
       />
     </>
   );

@@ -129,6 +129,9 @@ const ReaderContentPaged = forwardRef<
     // columnFill, columnGap, column-width are handled by CSS class.
     const innerStyle = useMemo((): React.CSSProperties => ({
       height: "100%",
+      fontSize: "var(--reader-font-size, 18px)",
+      lineHeight: "var(--reader-line-height, 1.8)",
+      color: "var(--reader-text, #1d1d1f)",
     }), []);
 
     const innerClassName =
