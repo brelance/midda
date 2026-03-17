@@ -16,7 +16,8 @@ import ReaderSettingsModal from "../../components/reader/ReaderSettingsModal";
 import ReaderTocSidebar from "../../components/reader/ReaderTocSidebar";
 import ReaderChatSidebar from "../../components/reader/ReaderChatSidebar";
 import { Book, Chapter, TokenData } from "../../types/types";
-import { ReadingMode, ReaderViewMode } from "../../types/reader";
+import { ReadingMode, ScrollMode, ReaderViewMode } from "../../types/reader";
+import type { ReaderContentHandle } from "../../components/reader/ReaderContent";
 import type {
   TtsPlaybackStatus,
   TtsSentencePayload,
@@ -418,7 +419,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
   const [currentChapterId, setCurrentChapterId] = useState(defaultChapterId);
   const [chapterProgress, setChapterProgress] = useState(0);
-  const [readingMode] = useState<ReadingMode>("single");
+  const [readingMode, setReadingMode] = useState<ReadingMode>("single");
+  const [scrollMode, setScrollMode] = useState<ScrollMode>("scroll");
+  // Page tracking state for footer display
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState<ReaderViewMode>("reading");
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
@@ -582,7 +587,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     setIsChatSending(false);
   }, [book.id]);
 
-  const contentRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<ReaderContentHandle>(null);
+  // Separate ref for the analysis panel which always renders as an HTMLDivElement
+  const analysisContentRef = useRef<HTMLDivElement>(null);
 
   const currentIndex = useMemo(
     () => findChapterIndex(chapters, currentChapterId),
@@ -630,13 +637,13 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     const chapterId = currentChapterId;
 
     if (!bookId || !chapterId) {
-      if (node) node.scrollTop = 0;
+      if (node instanceof HTMLDivElement) node.scrollTop = 0;
       setChapterProgress(0);
       return;
     }
 
     // Reset scroll immediately for fast visual feedback
-    if (node) node.scrollTop = 0;
+    if (node instanceof HTMLDivElement) node.scrollTop = 0;
     setChapterProgress(0);
 
     // Then asynchronously restore saved position (if any)
@@ -651,8 +658,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       // Wait for DOM to finish rendering the new chapter before restoring
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (!cancelled && contentRef.current) {
-            contentRef.current.scrollTop = savedOffset;
+          const cur = contentRef.current;
+          if (!cancelled && cur instanceof HTMLDivElement) {
+            cur.scrollTop = savedOffset;
           }
         });
       });
@@ -1611,7 +1619,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         content={
           viewMode === "analysis" ? (
             <ReaderSentenceAnalysisPanel
-              ref={contentRef}
+              ref={analysisContentRef}
               sentences={displaySentenceItems}
               bookId={book.id}
               chapterId={activeChapterId}
@@ -1631,6 +1639,13 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
               cssContent={chapterCssContent}
               onScroll={handleScroll}
               readingMode={readingMode}
+              scrollMode={scrollMode}
+              onNextChapter={handleNextChapter}
+              onPrevChapter={handlePrevChapter}
+              onPageChange={(page, total) => {
+                setCurrentPage(page);
+                setTotalPages(total);
+              }}
             />
           )
         }
@@ -1650,6 +1665,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
               isLastChapter(chapters, currentIndex)
             }
             progress={bookProgress}
+            scrollMode={scrollMode}
+            currentPage={currentPage}
+            totalPages={totalPages}
           />
         }
         onMouseMove={handleMouseMove}
@@ -1686,6 +1704,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         ttsLanguageOptions={TTS_LANGUAGE_OPTIONS}
         enableTokenHoverTts={enableTokenHoverTts}
         onEnableTokenHoverTtsChange={setEnableTokenHoverTts}
+        scrollMode={scrollMode}
+        onScrollModeChange={setScrollMode}
+        readingMode={readingMode}
+        onReadingModeChange={setReadingMode}
       />
     </>
   );

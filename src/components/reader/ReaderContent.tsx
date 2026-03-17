@@ -1,6 +1,9 @@
 import React, { forwardRef, useMemo } from "react";
 import DOMPurify from "dompurify";
-import { ReadingMode } from "../../types/reader";
+import { ReadingMode, ScrollMode } from "../../types/reader";
+import ReaderContentPaged, {
+  type ReaderContentPagedHandle,
+} from "./ReaderContentPaged";
 
 interface ReaderContentProps {
   chapterTitle: string;
@@ -8,6 +11,10 @@ interface ReaderContentProps {
   cssContent?: string;
   onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
   readingMode: ReadingMode;
+  scrollMode?: ScrollMode;
+  onNextChapter?: () => void;
+  onPrevChapter?: () => void;
+  onPageChange?: (page: number, total: number, progress: number) => void;
 }
 
 /**
@@ -208,8 +215,47 @@ function scopeEpubCss(css: string, scope: string): string {
 
 const EPUB_CSS_SCOPE = "epub-content";
 
-const ReaderContent = forwardRef<HTMLDivElement, ReaderContentProps>(
-  ({ chapterTitle, contentHtml, cssContent, onScroll, readingMode }, ref) => {
+// The ref can be either a plain div (scroll mode) or the paged handle
+export type ReaderContentHandle = HTMLDivElement | ReaderContentPagedHandle;
+
+const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
+  (
+    {
+      chapterTitle,
+      contentHtml,
+      cssContent,
+      onScroll,
+      readingMode,
+      scrollMode = "scroll",
+      onNextChapter,
+      onPrevChapter,
+      onPageChange,
+    },
+    ref
+  ) => {
+    const safeHtml = useMemo(() => sanitizeEpubHtml(contentHtml), [contentHtml]);
+    const scopedCss = useMemo(
+      () => (cssContent ? scopeEpubCss(cssContent, EPUB_CSS_SCOPE) : ""),
+      [cssContent]
+    );
+
+    // ── Page mode ──────────────────────────────────────────────────────
+    if (scrollMode === "page") {
+      return (
+        <ReaderContentPaged
+          ref={ref as React.Ref<ReaderContentPagedHandle>}
+          chapterTitle={chapterTitle}
+          contentHtml={safeHtml}
+          cssContent={scopedCss || undefined}
+          readingMode={readingMode}
+          onNextChapter={onNextChapter ?? (() => {})}
+          onPrevChapter={onPrevChapter ?? (() => {})}
+          onPageChange={onPageChange}
+        />
+      );
+    }
+
+    // ── Scroll mode (default) ──────────────────────────────────────────
     const containerMaxWidth =
       readingMode === "double" ? "max-w-[1100px]" : "max-w-[780px]";
     const modeClass =
@@ -217,15 +263,9 @@ const ReaderContent = forwardRef<HTMLDivElement, ReaderContentProps>(
         ? "double-page-mode md:columns-2 md:gap-12"
         : "";
 
-    const safeHtml = useMemo(() => sanitizeEpubHtml(contentHtml), [contentHtml]);
-    const scopedCss = useMemo(
-      () => (cssContent ? scopeEpubCss(cssContent, EPUB_CSS_SCOPE) : ""),
-      [cssContent]
-    );
-
     return (
       <div
-        ref={ref}
+        ref={ref as React.Ref<HTMLDivElement>}
         onScroll={onScroll}
         className={`reading-content no-scrollbar mx-auto h-full ${containerMaxWidth} overflow-y-auto px-2 text-lg leading-8 text-[#3d2b1f] md:px-4 md:text-xl`}
       >

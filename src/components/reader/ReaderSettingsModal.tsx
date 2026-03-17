@@ -1,4 +1,5 @@
 import React from "react";
+import { ReadingMode, ScrollMode } from "../../types/reader";
 
 interface TtsLanguageOption {
   value: string;
@@ -13,6 +14,11 @@ interface ReaderSettingsModalProps {
   ttsLanguageOptions: TtsLanguageOption[];
   enableTokenHoverTts: boolean;
   onEnableTokenHoverTtsChange: (enabled: boolean) => void;
+  // Layout & scroll mode
+  scrollMode: ScrollMode;
+  onScrollModeChange: (mode: ScrollMode) => void;
+  readingMode: ReadingMode;
+  onReadingModeChange: (mode: ReadingMode) => void;
 }
 
 const themeSwatches = [
@@ -22,6 +28,44 @@ const themeSwatches = [
   { color: "#1e1e1e", active: false },
 ];
 
+/** Segmented control — two option toggle button group */
+const SegmentedControl = <T extends string>({
+  options,
+  value,
+  onChange,
+  id,
+}: {
+  options: { label: string; value: T }[];
+  value: T;
+  onChange: (v: T) => void;
+  id: string;
+}) => (
+  <div
+    className="flex overflow-hidden rounded-[14px] border-4 border-[#3d2b1f]"
+    role="group"
+    id={id}
+  >
+    {options.map((opt, i) => (
+      <button
+        key={opt.value}
+        type="button"
+        role="radio"
+        aria-checked={value === opt.value}
+        onClick={() => onChange(opt.value)}
+        className={`flex-1 px-3 py-2 text-sm font-bold transition-colors ${
+          i > 0 ? "border-l-4 border-[#3d2b1f]" : ""
+        } ${
+          value === opt.value
+            ? "bg-[#3d2b1f] text-white"
+            : "bg-white text-[#3d2b1f] hover:bg-[#f0ede8]"
+        }`}
+      >
+        {opt.label}
+      </button>
+    ))}
+  </div>
+);
+
 const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   isOpen,
   onClose,
@@ -30,6 +74,10 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   ttsLanguageOptions,
   enableTokenHoverTts,
   onEnableTokenHoverTtsChange,
+  scrollMode,
+  onScrollModeChange,
+  readingMode,
+  onReadingModeChange,
 }) => {
   React.useEffect(() => {
     if (!isOpen) {
@@ -94,6 +142,40 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
 
         <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5">
           <div className="space-y-4 sm:space-y-5">
+
+            {/* ── 阅读方式 ── */}
+            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
+              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
+                阅读方式
+              </span>
+              <SegmentedControl
+                id="scroll-mode-control"
+                value={scrollMode}
+                onChange={onScrollModeChange}
+                options={[
+                  { label: "滚动", value: "scroll" },
+                  { label: "翻页", value: "page" },
+                ]}
+              />
+            </div>
+
+            {/* ── 版面 ── */}
+            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
+              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
+                版面
+              </span>
+              <SegmentedControl
+                id="reading-mode-control"
+                value={readingMode}
+                onChange={onReadingModeChange}
+                options={[
+                  { label: "单页", value: "single" },
+                  { label: "双页", value: "double" },
+                ]}
+              />
+            </div>
+
+            {/* ── 字体大小 ── */}
             <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
               <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
                 字体大小
@@ -117,6 +199,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               </div>
             </div>
 
+            {/* ── 行高 ── */}
             <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
               <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
                 行高
@@ -140,6 +223,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               </div>
             </div>
 
+            {/* ── 主题 ── */}
             <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
               <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
                 主题
@@ -160,6 +244,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               </div>
             </div>
 
+            {/* ── 划过分词朗读 ── */}
             <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
               <div className="flex flex-col gap-1">
                 <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
@@ -186,6 +271,7 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               </button>
             </div>
 
+            {/* ── TTS 朗读语言 ── */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">

@@ -1,5 +1,6 @@
 import React from "react";
 import ReaderProgress from "./ReaderProgress";
+import { ScrollMode } from "../../types/reader";
 
 interface ReaderFooterProps {
   isVisible: boolean;
@@ -8,6 +9,10 @@ interface ReaderFooterProps {
   disablePrev: boolean;
   disableNext: boolean;
   progress: number;
+  // Page mode extras
+  scrollMode?: ScrollMode;
+  currentPage?: number;
+  totalPages?: number;
 }
 
 const ReaderFooter: React.FC<ReaderFooterProps> = ({
@@ -17,7 +22,16 @@ const ReaderFooter: React.FC<ReaderFooterProps> = ({
   disablePrev,
   disableNext,
   progress,
+  scrollMode = "scroll",
+  currentPage,
+  totalPages,
 }) => {
+  const showPageInfo =
+    scrollMode === "page" &&
+    typeof currentPage === "number" &&
+    typeof totalPages === "number" &&
+    totalPages > 0;
+
   return (
     <footer
       className={`
@@ -40,7 +54,14 @@ const ReaderFooter: React.FC<ReaderFooterProps> = ({
           <span className="hidden sm:inline">上一章</span>
         </button>
 
-        <ReaderProgress progress={progress} className="flex-grow" />
+        <div className="flex flex-1 flex-col items-center gap-1">
+          {showPageInfo ? (
+            <span className="text-[12px] text-gray-400 select-none tabular-nums">
+              第 {(currentPage ?? 0) + 1} 页 / 共 {totalPages} 页
+            </span>
+          ) : null}
+          <ReaderProgress progress={progress} className={showPageInfo ? "w-full" : "flex-grow"} />
+        </div>
 
         <button
           onClick={onNextChapter}
