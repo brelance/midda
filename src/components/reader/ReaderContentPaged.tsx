@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
 } from "react";
 import { ReadingMode } from "../../types/reader";
 import { usePagination } from "../../hooks/usePagination";
@@ -61,6 +62,7 @@ const ReaderContentPaged = forwardRef<
     ref
   ) => {
     const columnsPerPage = readingMode === "double" ? 2 : 1;
+    const onPageChangeRef = useRef(onPageChange);
 
     const {
       currentPage,
@@ -79,6 +81,10 @@ const ReaderContentPaged = forwardRef<
       onPrevChapter,
       columnsPerPage,
     });
+
+    useEffect(() => {
+      onPageChangeRef.current = onPageChange;
+    }, [onPageChange]);
 
     // Expose imperative handle for ReaderPage to call (TTS, chapter nav)
     useImperativeHandle(
@@ -105,8 +111,8 @@ const ReaderContentPaged = forwardRef<
 
     // Notify parent when page changes
     useEffect(() => {
-      onPageChange?.(currentPage, totalPages, pageProgress);
-    }, [currentPage, totalPages, pageProgress, onPageChange]);
+      onPageChangeRef.current?.(currentPage, totalPages, pageProgress);
+    }, [currentPage, totalPages, pageProgress]);
 
     // Recalculate pages after content changes (new chapter loaded)
     useEffect(() => {
@@ -123,8 +129,6 @@ const ReaderContentPaged = forwardRef<
     // columnFill, columnGap, column-width are handled by CSS class.
     const innerStyle = useMemo((): React.CSSProperties => ({
       height: "100%",
-      willChange: "transform",
-      transition: "transform 350ms cubic-bezier(0.4, 0, 0.2, 1)",
     }), []);
 
     const innerClassName =

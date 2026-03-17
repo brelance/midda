@@ -31,6 +31,19 @@ export interface UsePaginationReturn {
   pageProgress: number;
 }
 
+/**
+ * Column-based pagination hook.
+ *
+ * Strategy: Instead of relying on CSS `column-width` (which is only a hint),
+ * we explicitly set `column-width` to the viewport width and then measure
+ * `scrollWidth` to derive the total number of "pages". Each page is exactly
+ * one viewport-width of columns. The inner container is translated left by
+ * `currentPage * viewportWidth` to show the correct page.
+ *
+ * The column gap is set to a comfortable reading padding (e.g. 48px) and the
+ * column-width is adjusted to account for this gap so that content plus gap
+ * perfectly tiles the viewport.
+ */
 export function usePagination(
   options: UsePaginationOptions = {}
 ): UsePaginationReturn {
@@ -43,8 +56,6 @@ export function usePagination(
   const [totalPages, setTotalPages] = useState(1);
 
   // ── Stable refs so callbacks never go stale ─────────────────────────────
-  // currentPage and totalPages kept in refs so ResizeObserver callback and
-  // navigation functions always read the latest value without re-subscribing.
   const currentPageRef = useRef(0);
   const totalPagesRef = useRef(1);
   const onNextChapterRef = useRef(onNextChapter);
@@ -72,17 +83,27 @@ export function usePagination(
     const pageWidth = getPageWidth();
     if (pageWidth === 0) return;
 
-    // Set CSS variable so column-width rule tracks the live viewport size
+    // Set the CSS variable that column-width reads from
     viewport.style.setProperty("--page-col-width", `${pageWidth}px`);
 
-    // Wait one frame for layout to settle after content render
-    requestAnimationFrame(() => {
-      if (!inner) return;
-      const scrollWidth = inner.scrollWidth;
-      const computed = Math.max(1, Math.round(scrollWidth / pageWidth));
-      totalPagesRef.current = computed;
-      setTotalPages(computed);
-    });
+    // Force a synchronous layout so scrollWidth is up-to-date
+    // Access offsetHeight to flush pending layout
+    void inner.offsetHeight;
+
+    const scrollWidth = inner.scrollWidth;
+    const computed = Math.max(1, Math.round(scrollWidth / pageWidth));
+
+    totalPagesRef.current = computed;
+    setTotalPages(computed);
+
+    // Clamp current page if content shrank (e.g. window resize)
+    const cur = currentPageRef.current;
+    if (cur >= computed) {
+      const clamped = Math.max(0, computed - 1);
+      currentPageRef.current = clamped;
+      setCurrentPage(clamped);
+      inner.style.transform = `translateX(-${clamped * pageWidth}px)`;
+    }
   }, [getPageWidth]);
 
   // ── Apply translation ───────────────────────────────────────────────────
@@ -160,8 +181,6 @@ export function usePagination(
   );
 
   // ── ResizeObserver — registered ONCE, uses refs for current page ────────
-  // No dependency on currentPage state — avoids disconnect/reconnect on every
-  // page turn. The ref always provides the latest page number.
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -176,14 +195,18 @@ export function usePagination(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Intentionally empty — uses refs; recalculate/applyTranslation are stable
 
-  // ── Reset on columnsPerPage or chapter change ───────────────────────────
+  // ── Reset on columnsPerPage change ──────────────────────────────────────
   useEffect(() => {
     currentPageRef.current = 0;
     setCurrentPage(0);
     applyTranslation(0);
     // Delay recalculate so CSS columns can settle
-    const id = setTimeout(() => recalculate(), 100);
-    return () => clearTimeout(id);
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        recalculate();
+      });
+    });
+    return () => cancelAnimationFrame(id);
   }, [columnsPerPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pageProgress =

@@ -29,7 +29,6 @@ const PageTurnButton: React.FC<PageTurnButtonProps> = ({
       <button
         type="button"
         disabled={disabled}
-        onClick={onClick}
         tabIndex={0}
         aria-label={isPrev ? "上一页" : "下一页"}
         className={`

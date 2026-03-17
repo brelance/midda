@@ -625,40 +625,52 @@ body {
 }
 
 /* ── Inner column container ─────────────────────────────────────────── */
-
-/* Single-page: one column == viewport width */
-.page-inner.page-columns-single {
-  /* column-width is set dynamically via a CSS variable so it tracks the
-     live viewport width (set by JS in usePagination via ResizeObserver). */
-  column-width: var(--page-col-width, 100vw);
-  column-gap: 0;
-  column-fill: auto;
+/* Shared rules for single- and double-page modes */
+.page-inner {
+  box-sizing: border-box;
   height: 100%;
-  /* Expand horizontally as content flows into columns */
-  width: max-content;
-  /* Smooth page-turn slide */
+  width: max-content;            /* expand horizontally so scrollWidth reflects all columns */
+  overflow: hidden;              /* prevent content from escaping columns */
+  column-fill: auto;
+  column-gap: 0;                 /* MUST be 0 so each column is exactly viewport-width wide */
   will-change: transform;
   transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Single-page: one column == viewport width */
+.page-inner.page-columns-single {
+  column-width: var(--page-col-width, 100vw);
+}
+
 /* Double-page: two columns per viewport width */
 .page-inner.page-columns-double {
-  column-width: calc(var(--page-col-width, 50vw) / 2);
-  column-gap: 0;
-  column-fill: auto;
-  height: 100%;
-  width: max-content;
-  will-change: transform;
-  transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  column-width: calc(var(--page-col-width, 100vw) / 2);
+}
+
+/* Reading padding lives on the content wrapper, NOT the column container,
+   so that scrollWidth stays a clean multiple of viewport width. */
+.page-inner > .epub-content {
+  padding: 0 32px;
 }
 
 /* Prevent elements from breaking across column boundaries */
 .page-inner img,
 .page-inner figure,
 .page-inner table,
-.page-inner pre {
+.page-inner pre,
+.page-inner h1,
+.page-inner h2,
+.page-inner h3 {
   break-inside: avoid;
   column-span: none;
+}
+
+/* Constrain media / blocks so they never exceed column width */
+.page-inner img,
+.page-inner svg,
+.page-inner video {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Page-turn hover zone — transparent overlays on left/right edges */
