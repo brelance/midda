@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
+    "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.4.1",
     "dompurify": "^3.3.3",
     "dotenv": "^17.2.3",
