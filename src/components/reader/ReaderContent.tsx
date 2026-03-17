@@ -256,12 +256,9 @@ const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
     }
 
     // ── Scroll mode (default) ──────────────────────────────────────────
-    const containerMaxWidth =
-      readingMode === "double" ? "max-w-[1100px]" : "max-w-[780px]";
-    const modeClass =
-      readingMode === "double"
-        ? "double-page-mode md:columns-2 md:gap-12"
-        : "";
+    // In scroll mode, always use single-column layout.
+    // Double-page (columns-2) only applies in page-turn mode.
+    const containerMaxWidth = "max-w-[780px]";
 
     return (
       <div
@@ -281,7 +278,7 @@ const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
         <div className={`${EPUB_CSS_SCOPE}`}>
           <h1 className="mb-6 text-4xl font-black">{chapterTitle}</h1>
           <div
-            className={`space-y-6 font-normal ${modeClass}`}
+            className="space-y-6 font-normal"
             dangerouslySetInnerHTML={{ __html: safeHtml }}
           />
         </div>
