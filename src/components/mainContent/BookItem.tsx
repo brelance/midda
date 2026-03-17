@@ -1,6 +1,5 @@
 import React from "react";
 import { Book } from "../../types/types";
-import BrutalistButton from "../ui/BrutalistButton";
 
 interface BookItemProps {
   book: Book;
@@ -32,59 +31,75 @@ const BookItem: React.FC<BookItemProps> = ({
       className={`
         group relative book-item text-center cursor-pointer
         transition-all duration-200
-        ${isSelected ? "book-item-active" : ""}
+        ${isSelected ? "opacity-100" : ""}
       `}
       onClick={onClick}
     >
+      {/* Delete button */}
       {onDelete && (
         <button
           type="button"
           onClick={handleDeleteBook}
           aria-label={`删除${book.title}`}
-          className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 border-black bg-white text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] opacity-0 transition-all duration-200 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-black group-hover:opacity-100 group-focus-within:opacity-100"
+          className="
+            absolute right-1 top-1 z-10
+            flex h-6 w-6 items-center justify-center
+            rounded-full bg-black/60 text-white
+            opacity-0 transition-all duration-200
+            hover:bg-black/80
+            group-hover:opacity-100 focus:opacity-100
+            focus:outline-none
+          "
         >
-          <svg
-            className="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 7h12" />
-            <path d="M10 11v6" />
-            <path d="M14 11v6" />
-            <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-            <path d="M19 7v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7" />
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       )}
-      <div className="relative mb-2 flex h-48 w-full items-center justify-center rounded-2xl border-4 border-dashed border-black bg-white text-center text-black">
+
+      {/* Book cover */}
+      <div
+        className="
+          relative mb-2 w-full overflow-hidden
+          transition-all duration-300
+          group-hover:-translate-y-1 group-hover:shadow-xl
+        "
+        style={{
+          height: "168px",
+          borderRadius: "2px 4px 4px 2px",
+          boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06), 2px 0 8px rgba(0,0,0,0.08)",
+          borderLeft: "1px solid rgba(255,255,255,0.4)",
+        }}
+      >
         {book.cover ? (
           <img
             src={book.cover}
             alt={book.title}
-            className="h-full w-full rounded-2xl object-cover"
+            className="h-full w-full object-cover"
           />
         ) : (
-          <span className="text-lg font-black">书籍封面</span>
+          /* Placeholder cover with title */
+          <div className="h-full w-full bg-gradient-to-br from-gray-200 to-gray-300 flex flex-col items-center justify-center p-2">
+            <span className="text-gray-600 text-xs font-medium text-center leading-tight line-clamp-3">{book.title}</span>
+          </div>
         )}
 
+        {/* Hover overlay with read button */}
         {onEnterReader && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <BrutalistButton
-              variant="primary"
-              className="pointer-events-auto px-6 py-2 text-base"
+          <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-3 bg-gradient-to-t from-black/50 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <button
+              className="pointer-events-auto bg-white/90 text-[12px] font-medium text-[#007aff] px-3 py-1 rounded-full backdrop-blur-sm hover:bg-white transition-colors"
               onClick={handleEnterReader}
             >
-              开始阅读
-            </BrutalistButton>
+              阅读
+            </button>
           </div>
         )}
       </div>
-      <p className="truncate text-lg font-black">{book.title}</p>
-      <p className="text-base">{book.author}</p>
+
+      {/* Title & author */}
+      <p className="truncate text-[13px] font-semibold text-[#1d1d1f] text-left">{book.title}</p>
+      <p className="text-[12px] text-gray-500 text-left truncate">{book.author}</p>
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import React from "react";
 import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
-import DetailsPane from "./DetailsPane";
 import { Book, User, NavigationItem, EpubBookData } from "../../types/types";
 
 interface LayoutProps {
@@ -34,7 +33,6 @@ const Layout: React.FC<LayoutProps> = ({
   searchQuery,
   sortBy,
   isSidebarOpen,
-  isDetailsPaneOpen,
   onSelectBook,
   onNavChange,
   onSearch,
@@ -42,15 +40,14 @@ const Layout: React.FC<LayoutProps> = ({
   toggleSidebar,
   toggleDetailsPane,
   closeSidebar,
-  closeDetailsPane,
   onBookAdded,
   onEnterReader,
   onDeleteBook,
 }) => {
   return (
-    <div className="h-screen bg-[#f5f5dc]">
-      {/* 桌面端：三栏布局 */}
-      <div className="hidden lg:flex h-full w-full desktop-layout">
+    <div className="h-screen bg-white text-[#333333] overflow-hidden">
+      {/* Desktop + Tablet: two-column layout */}
+      <div className="hidden md:flex h-full w-full">
         <Sidebar
           activeNav={activeNav}
           onNavChange={onNavChange}
@@ -58,6 +55,8 @@ const Layout: React.FC<LayoutProps> = ({
           isMobile={false}
           isOpen={true}
           onClose={() => {}}
+          searchQuery={searchQuery}
+          onSearch={onSearch}
         />
         <MainContent
           books={books}
@@ -72,26 +71,11 @@ const Layout: React.FC<LayoutProps> = ({
           onBookAdded={onBookAdded}
           onEnterReader={onEnterReader}
           onDeleteBook={onDeleteBook}
-        />
-        <DetailsPane
-          selectedBook={selectedBook}
-          isMobile={false}
-          isOpen={true}
-          onClose={() => {}}
-          onEnterReader={onEnterReader}
         />
       </div>
 
-      {/* 平板端：两栏布局 */}
-      <div className="hidden md:flex lg:hidden h-full w-full tablet-layout">
-        <Sidebar
-          activeNav={activeNav}
-          onNavChange={onNavChange}
-          user={user}
-          isMobile={false}
-          isOpen={true}
-          onClose={() => {}}
-        />
+      {/* Mobile: single column */}
+      <div className="flex md:hidden h-full w-full">
         <MainContent
           books={books}
           selectedBook={selectedBook}
@@ -106,84 +90,32 @@ const Layout: React.FC<LayoutProps> = ({
           onEnterReader={onEnterReader}
           onDeleteBook={onDeleteBook}
         />
+      </div>
 
-        {isDetailsPaneOpen && (
+      {/* Mobile sidebar drawer overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          onClick={closeSidebar}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
+          {/* Drawer */}
           <div
-            className="mobile-details-pane open"
+            className="absolute top-0 left-0 bottom-0 w-[280px] z-50"
             onClick={(e) => e.stopPropagation()}
           >
-            <DetailsPane
-              selectedBook={selectedBook}
+            <Sidebar
+              activeNav={activeNav}
+              onNavChange={onNavChange}
+              user={user}
               isMobile={true}
-              isOpen={isDetailsPaneOpen}
-              onClose={closeDetailsPane}
-              showCloseButton={true}
-              onEnterReader={onEnterReader}
+              isOpen={isSidebarOpen}
+              onClose={closeSidebar}
+              searchQuery={searchQuery}
+              onSearch={onSearch}
             />
           </div>
-        )}
-      </div>
-
-      {/* 移动端：单栏布局 */}
-      <div className="flex md:hidden h-full w-full mobile-layout">
-        <div className="flex-1">
-          <MainContent
-            books={books}
-            selectedBook={selectedBook}
-            searchQuery={searchQuery}
-            sortBy={sortBy}
-            onSelectBook={onSelectBook}
-            onSearch={onSearch}
-            onSort={onSort}
-            toggleSidebar={toggleSidebar}
-            toggleDetailsPane={toggleDetailsPane}
-            onEnterReader={onEnterReader}
-            onDeleteBook={onDeleteBook}
-          />
-        </div>
-      </div>
-
-      {/* 移动端侧边栏覆盖层 */}
-      {(isSidebarOpen || isDetailsPaneOpen) && (
-        <div
-          className="mobile-overlay md:hidden"
-          onClick={() => {
-            if (isSidebarOpen) closeSidebar();
-            if (isDetailsPaneOpen) closeDetailsPane();
-          }}
-        >
-          {/* 移动端侧边栏 */}
-          {isSidebarOpen && (
-            <div
-              className="mobile-sidebar open"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Sidebar
-                activeNav={activeNav}
-                onNavChange={onNavChange}
-                user={user}
-                isMobile={true}
-                isOpen={isSidebarOpen}
-                onClose={closeSidebar}
-              />
-            </div>
-          )}
-
-          {/* 移动端详情面板 */}
-          {isDetailsPaneOpen && (
-            <div
-              className="mobile-details-pane open"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <DetailsPane
-                selectedBook={selectedBook}
-                isMobile={true}
-                isOpen={isDetailsPaneOpen}
-                onClose={closeDetailsPane}
-                onEnterReader={onEnterReader}
-              />
-            </div>
-          )}
         </div>
       )}
     </div>

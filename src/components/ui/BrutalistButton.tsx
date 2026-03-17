@@ -14,23 +14,20 @@ const BrutalistButton: React.FC<BrutalistButtonProps> = ({
   ...rest
 }) => {
   const baseClasses = `
-    border-4 border-black rounded-[20px]
-    shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
-    transition-all duration-100 ease-in-out
-    cursor-pointer text-center font-black
-    p-3 px-6 text-lg
-    hover:translate-x-[3px] hover:translate-y-[3px]
-    hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]
-    active:translate-x-[6px] active:translate-y-[6px]
-    active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)]
+    inline-flex items-center justify-center
+    rounded-lg text-[13px] font-medium
+    px-4 py-1.5
+    transition-all duration-150 ease-in-out
+    cursor-pointer select-none
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#007aff] focus-visible:ring-offset-1
   `;
 
   const variantClasses =
     variant === "primary"
-      ? "bg-[#b3312c] text-white"
-      : "bg-[#d4a017] text-white";
+      ? "bg-[#007aff] text-white hover:bg-[#0071f3] active:bg-[#006ee0]"
+      : "bg-black/[0.06] text-[#333] hover:bg-black/[0.1] active:bg-black/[0.14]";
 
-  const disabledClasses = disabled ? "opacity-50 cursor-not-allowed" : "";
+  const disabledClasses = disabled ? "opacity-40 cursor-not-allowed pointer-events-none" : "";
 
   return (
     <button

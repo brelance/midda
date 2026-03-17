@@ -1,5 +1,4 @@
 import React from "react";
-import BrutalistButton from "../ui/BrutalistButton";
 import ReaderProgress from "./ReaderProgress";
 
 interface ReaderFooterProps {
@@ -11,9 +10,6 @@ interface ReaderFooterProps {
   progress: number;
 }
 
-const baseClasses =
-  "fixed bottom-0 left-0 right-0 z-50 border-t-4 border-[#3d2b1f] bg-[#f5f5dc]/75 backdrop-blur-md";
-
 const ReaderFooter: React.FC<ReaderFooterProps> = ({
   isVisible,
   onPrevChapter,
@@ -24,53 +20,38 @@ const ReaderFooter: React.FC<ReaderFooterProps> = ({
 }) => {
   return (
     <footer
-      className={`${baseClasses} transition-transform duration-300 ease-in-out ${
-        isVisible ? "translate-y-0" : "translate-y-full"
-      }`}
-      style={{ boxShadow: "0 -6px 0 0 #3d2b1f" }}
+      className={`
+        fixed bottom-0 left-0 right-0 z-50
+        border-t border-gray-200/80
+        bg-[#fdfdfd]/90 backdrop-blur-md
+        transition-transform duration-300 ease-in-out
+        ${isVisible ? "translate-y-0" : "translate-y-full"}
+      `}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-        <BrutalistButton
+      <div className="flex items-center justify-between gap-4 px-6 py-3 max-w-6xl mx-auto">
+        <button
           onClick={onPrevChapter}
           disabled={disablePrev}
-          className="flex items-center gap-2 px-4 py-2 text-base sm:text-lg"
+          className="flex items-center gap-1 text-[13px] text-gray-500 hover:text-[#1d1d1f] disabled:opacity-30 transition-colors select-none"
         >
-          <svg
-            className="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M10 18l-6-6 6-6" />
           </svg>
           <span className="hidden sm:inline">上一章</span>
-        </BrutalistButton>
+        </button>
 
         <ReaderProgress progress={progress} className="flex-grow" />
 
-        <BrutalistButton
+        <button
           onClick={onNextChapter}
           disabled={disableNext}
-          className="flex items-center gap-2 px-4 py-2 text-base sm:text-lg"
+          className="flex items-center gap-1 text-[13px] text-gray-500 hover:text-[#1d1d1f] disabled:opacity-30 transition-colors select-none"
         >
           <span className="hidden sm:inline">下一章</span>
-          <svg
-            className="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 6l6 6-6 6" />
           </svg>
-        </BrutalistButton>
+        </button>
       </div>
     </footer>
   );

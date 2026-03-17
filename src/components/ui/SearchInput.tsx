@@ -10,7 +10,7 @@ interface SearchInputProps {
 const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChange,
-  placeholder = '搜索...',
+  placeholder = '搜索',
   className = '',
 }) => {
   return (
@@ -20,21 +20,19 @@ const SearchInput: React.FC<SearchInputProps> = ({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`
+        className="
           w-full
-          bg-white
-          border-4 border-black
-          rounded-[20px]
-          shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
-          font-bold text-lg
-          px-4 py-3 pl-12
-          focus:outline-4 focus:outline-[#d4a017]
-          focus:outline-offset-2
-          transition-all duration-100
-        `}
+          bg-black/[0.05]
+          text-[13px]
+          rounded-md
+          pl-7 pr-3 py-1.5
+          placeholder-gray-500
+          focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#007aff] focus:ring-offset-[-2px]
+          transition-all duration-200
+        "
       />
       <svg
-        className="w-6 h-6 text-black absolute left-3 top-1/2 -translate-y-1/2"
+        className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -42,7 +40,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth="3"
+          strokeWidth="2"
           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
         />
       </svg>

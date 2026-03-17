@@ -17,12 +17,13 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({
 }) => {
   return (
     <div
-      className="relative flex h-screen flex-col overflow-hidden bg-[#f5f5dc] text-[#3d2b1f]"
+      className="relative flex h-screen flex-col overflow-hidden text-[#333333]"
+      style={{ backgroundColor: "#fdfdfd" }}
       onMouseMove={onMouseMove}
       onTouchStart={onTouchStart}
     >
       {header}
-      <main className="flex-1 overflow-hidden px-4 py-6 pt-24 pb-24 sm:px-8 md:px-12">
+      <main className="flex-1 overflow-hidden px-[60px] pt-[56px] pb-[56px]">
         <div className="h-full overflow-hidden">{content}</div>
       </main>
       {footer}
@@ -31,3 +32,4 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({
 };
 
 export default ReaderLayout;
+

@@ -1,11 +1,12 @@
 @tailwind utilities;
 /* 阅读器应用样式 */
 body {
-  font-family: "Public Sans", sans-serif;
-  font-weight: 700;
-  background-color: #f5f5dc;
-  color: #3d2b1f;
-  line-height: 1.2;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-weight: 400;
+  background-color: #ffffff;
+  color: #333333;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* 隐藏滚动条 */
@@ -19,11 +20,10 @@ body {
   outline-offset: 4px;
 }
 
-/* 导航选中状态 */
+/* 导航选中状态 (Apple Books style) */
 .nav-item-active {
-  background-color: #b3312c !important;
-  color: #ffffff !important;
-  border-radius: 16px;
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  border-radius: 6px;
 }
 
 /* 响应式面板样式 */
@@ -40,39 +40,7 @@ body {
   justify-content: center;
 }
 
-.mobile-sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 280px;
-  background-color: #f5f5dc;
-  border-right: 4px solid #3d2b1f;
-  z-index: 50;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease-in-out;
-}
-
-.mobile-sidebar.open {
-  transform: translateX(0);
-}
-
-.mobile-details-pane {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 320px;
-  background-color: #f5f5dc;
-  border-left: 4px solid #3d2b1f;
-  z-index: 50;
-  transform: translateX(100%);
-  transition: transform 0.3s ease-in-out;
-}
-
-.mobile-details-pane.open {
-  transform: translateX(0);
-}
+/* Mobile sidebar - now handled via Tailwind in Layout.tsx */
 
 #analyzedSentenceOutput {
   line-height: 1.8; /* 减少行高 */
@@ -196,43 +164,7 @@ body {
   background-color: #e0e0e0;
 }
 
-/* 响应式布局容器可见性保障 */
-.desktop-layout,
-.tablet-layout {
-  display: none !important;
-}
-
-.mobile-layout {
-  display: flex !important;
-}
-
-@media (min-width: 768px) {
-  .mobile-layout {
-    display: none !important;
-  }
-  .tablet-layout {
-    display: flex !important;
-  }
-}
-
-@media (min-width: 1024px) {
-  .desktop-layout {
-    display: flex !important;
-  }
-  .tablet-layout {
-    display: none !important;
-  }
-}
-
-.tablet-details-overlay {
-  display: none !important;
-}
-
-@media (min-width: 768px) and (max-width: 1023.98px) {
-  .tablet-details-overlay {
-    display: flex !important;
-  }
-}
+/* Responsive layout handled inline with Tailwind md: breakpoints in Layout.tsx */
 #analyzedSentenceOutput {
   line-height: 1.8; /* 减少行高 */
   padding-top: 0.5em; /* 减少上内边距 */
@@ -614,32 +546,7 @@ body {
   color: #000; /* 确保文本颜色在背景上清晰可见 */
 }
 
-/* 阅读器应用样式 */
-body {
-  font-family: "Public Sans", sans-serif;
-  font-weight: 700; /* 默认粗体 */
-  background-color: #f5f5dc;
-  color: #3d2b1f;
-  line-height: 1.2; /* 紧凑行距 */
-}
-
-/* 隐藏滚动条 */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-/* 书籍选中高亮 */
-.book-item-active .border-dashed {
-  outline: 5px solid #a0c4e8;
-  outline-offset: 4px;
-}
-
-/* 导航选中状态 */
-.nav-item-active {
-  background-color: #b3312c !important;
-  color: #ffffff !important;
-  border-radius: 16px;
-}
+/* ===== LEGACY DUPLICATE REMOVED — see top of file for canonical rules ===== */
 
 /* 响应式面板样式 */
 .mobile-overlay {

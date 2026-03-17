@@ -19,10 +19,9 @@ const NavItem: React.FC<NavItemProps> = ({ item, isActive, onClick }) => {
         onClick();
       }}
       className={`
-        flex items-center p-3 rounded-2xl font-bold text-xl
-        transition-all duration-200
-        hover:bg-[#f0f0f0]
-        ${isActive ? 'bg-[#b3312c] text-white' : 'text-black'}
+        flex items-center px-2 py-1 rounded-md text-[13px] font-medium text-black
+        transition-colors duration-100 select-none mt-0.5
+        ${isActive ? 'bg-black/[0.08]' : 'hover:bg-black/[0.04]'}
       `}
     >
       {item.icon}

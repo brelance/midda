@@ -6,31 +6,17 @@ interface UserProfileProps {
 }
 
 const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
+  const initial = user.name.charAt(0);
   return (
-    <a
-      href="#"
-      className="
-        flex items-center p-3 rounded-2xl font-bold text-xl
-        text-black transition-all duration-200
-        hover:bg-[#f0f0f0]
-      "
+    <div
+      className="flex items-center space-x-2 cursor-pointer px-2 py-1 rounded-md hover:bg-black/[0.04] transition-colors duration-100 select-none"
       onClick={(e) => e.preventDefault()}
     >
-      <svg
-        className="w-7 h-7 mr-3"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="3"
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-        />
-      </svg>
-      <span>{user.name}</span>
-    </a>
+      <div className="w-7 h-7 rounded-full bg-gray-400 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
+        {initial}
+      </div>
+      <span className="text-[13px] font-medium text-gray-700 truncate">{user.name}</span>
+    </div>
   );
 };
 
