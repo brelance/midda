@@ -596,7 +596,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   }, [resetAnalysisPlaybackState]);
 
   useEffect(() => {
-    setCurrentChapterId(defaultChapterId);
+    setCurrentChapterId((prev) => (prev === defaultChapterId ? prev : defaultChapterId));
   }, [defaultChapterId]);
 
   useEffect(() => {
@@ -1554,6 +1554,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     goToChapter(nextChapterId);
   }, [goToChapter, nextChapterId]);
 
+  const handlePageChange = useCallback((page: number, total: number) => {
+    setCurrentPage((prev) => (prev === page ? prev : page));
+    setTotalPages((prev) => (prev === total ? prev : total));
+  }, []);
+
   const handleOpenToc = useCallback(() => {
     setIsTocOpen((prev) => {
       if (prev) {
@@ -1664,10 +1669,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
               scrollMode={scrollMode}
               onNextChapter={handleNextChapter}
               onPrevChapter={handlePrevChapter}
-              onPageChange={(page, total) => {
-                setCurrentPage(page);
-                setTotalPages(total);
-              }}
+              onPageChange={handlePageChange}
             />
           )
         }

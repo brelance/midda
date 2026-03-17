@@ -427,6 +427,9 @@ export default function App() {
 
   // Debounce timer ref for progress DB writes (avoid write-per-scroll-event)
   const progressPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Stable ref for books so callbacks don't re-create when books changes
+  const booksRef = useRef(books);
+  booksRef.current = books;
 
   const handleReaderChapterChange = useCallback(
     (chapterId: string) => {
@@ -439,7 +442,7 @@ export default function App() {
       }));
       // Persist chapter position to DB immediately on chapter switch
       if (window?.api?.db?.books?.upsert) {
-        const bookTarget = books.find((b) => b.id === readerBookId);
+        const bookTarget = booksRef.current.find((b) => b.id === readerBookId);
         if (bookTarget) {
           void window.api.db.books.upsert({
             id: readerBookId,
@@ -453,7 +456,7 @@ export default function App() {
         }
       }
     },
-    [readerBookId, updateBookById, books]
+    [readerBookId, updateBookById]
   );
 
   const handleReaderProgressChange = useCallback(
@@ -473,7 +476,7 @@ export default function App() {
       progressPersistTimerRef.current = setTimeout(() => {
         progressPersistTimerRef.current = null;
         if (!window?.api?.db?.books?.upsert) return;
-        const bookTarget = books.find((b) => b.id === readerBookId);
+        const bookTarget = booksRef.current.find((b) => b.id === readerBookId);
         if (!bookTarget) return;
         void window.api.db.books.upsert({
           id: readerBookId,
@@ -484,7 +487,7 @@ export default function App() {
         }).catch((err) => console.error("持久化阅读进度失败:", err));
       }, 400);
     },
-    [readerBookId, updateBookById, books]
+    [readerBookId, updateBookById]
   );
 
   const sortBy = sortOptions[sortByIndex];
