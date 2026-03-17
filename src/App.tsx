@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Layout from "./components/layout/Layout";
 import ReaderPage from "./pages/ReaderPage";
 import { Book, User, NavigationItem, EpubBookData, Chapter } from "./types/types";
@@ -423,6 +423,9 @@ export default function App() {
     setReaderInitialChapterId(null);
   };
 
+  // Debounce timer ref for progress DB writes (avoid write-per-scroll-event)
+  const progressPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleReaderChapterChange = useCallback(
     (chapterId: string) => {
       if (!readerBookId) return;
@@ -432,21 +435,54 @@ export default function App() {
         lastReadChapterId: chapterId,
         lastReadDate: new Date(),
       }));
+      // Persist chapter position to DB immediately on chapter switch
+      if (window?.api?.db?.books?.upsert) {
+        const bookTarget = books.find((b) => b.id === readerBookId);
+        if (bookTarget) {
+          void window.api.db.books.upsert({
+            id: readerBookId,
+            title: bookTarget.title,
+            filePath: bookTarget.filePath ?? "",
+            currentChapterId: chapterId,
+            lastReadChapterId: chapterId,
+            status: bookTarget.status,
+            progress: bookTarget.progress,
+          }).catch((err) => console.error("持久化章节失败:", err));
+        }
+      }
     },
-    [readerBookId, updateBookById]
+    [readerBookId, updateBookById, books]
   );
 
   const handleReaderProgressChange = useCallback(
     (progress: number) => {
       if (!readerBookId) return;
       const normalized = Math.min(100, Math.max(0, Number(progress.toFixed(1))));
+      const nextStatus = normalized >= 100 ? "completed" : "reading";
       updateBookById(readerBookId, (book) => ({
         ...book,
         progress: normalized,
-        status: normalized >= 100 ? "completed" : "reading",
+        status: nextStatus,
       }));
+      // Debounced DB write: flush at most once per 400 ms while scrolling
+      if (progressPersistTimerRef.current !== null) {
+        clearTimeout(progressPersistTimerRef.current);
+      }
+      progressPersistTimerRef.current = setTimeout(() => {
+        progressPersistTimerRef.current = null;
+        if (!window?.api?.db?.books?.upsert) return;
+        const bookTarget = books.find((b) => b.id === readerBookId);
+        if (!bookTarget) return;
+        void window.api.db.books.upsert({
+          id: readerBookId,
+          title: bookTarget.title,
+          filePath: bookTarget.filePath ?? "",
+          progress: normalized,
+          status: nextStatus,
+        }).catch((err) => console.error("持久化阅读进度失败:", err));
+      }, 400);
     },
-    [readerBookId, updateBookById]
+    [readerBookId, updateBookById, books]
   );
 
   const sortBy = sortOptions[sortByIndex];

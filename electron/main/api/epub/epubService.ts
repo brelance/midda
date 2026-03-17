@@ -58,112 +58,100 @@ export class EPUBService {
     emit({ stage: "initializing", percent: 5 });
 
     const id = await this.generateId(sourcePath ?? filePath);
+    // Set imageroot so that epub.getChapter() rewrites <img src> to
+    // epub-img://{bookId}/{manifestId}/{zipPath}  — handled by epubProtocol.ts
+    const imageroot = `epub-img://${id}/`;
 
-    return new Promise((resolve, reject) => {
-      const epub = new EPub(filePath);
+    // Guard against malformed EPUBs that never resolve parse()
+    const parseTimeoutMs = 30_000;
 
-      const handleFailure = (error: unknown, stage: EpubParseStage) => {
-        if (error instanceof EpubParseError || error instanceof EpubCoverError) {
-          reject(error);
-          return;
-        }
-        reject(
-          new EpubParseError(
-            error instanceof Error ? error.message : "EPUB 解析失败",
-            stage,
-            error
+    try {
+      const epub = new EPub(filePath, imageroot);
+
+      // New epub v2 API: parse() returns a Promise directly (no EventEmitter)
+      await Promise.race([
+        epub.parse(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new EpubParseError("EPUB 解析超时（30s）", "initializing")
+              ),
+            parseTimeoutMs
           )
-        );
+        ),
+      ]);
+
+      emit({ stage: "metadata", percent: 25 });
+      const metadata = this.extractMetadata(epub, sourcePath);
+
+      emit({ stage: "cover", percent: 40 });
+      let cover: string | undefined;
+      try {
+        cover = await this.extractCover(epub);
+      } catch (error) {
+        // 封面缺失并非致命错误，仅打印警告
+        console.warn("封面提取失败:", error);
+        cover = undefined;
+      }
+
+      emit({ stage: "chapters", percent: 55 });
+      const chapters = await this.extractChapters(
+        epub,
+        includeRawHtml,
+        (current, total, chapterId) => {
+          emit({
+            stage: "chapters",
+            percent: 55 + Math.round((current / total) * 35),
+            detail: { current, total, chapterId },
+          });
+        }
+      );
+
+      emit({ stage: "finalizing", percent: 95 });
+
+      const result: EpubBookData = {
+        id,
+        title: metadata.title || "未知标题",
+        author: this.normalizeAuthor(metadata.creator),
+        cover,
+        chapters,
+        metadata,
+        filePath,
+        addedDate: new Date(),
+        progress: 0,
+        status: "not-started",
       };
 
-      epub.on("error", (error: unknown) => handleFailure(error, "initializing"));
-
-      epub.on("end", async () => {
-        try {
-          emit({ stage: "metadata", percent: 25 });
-          const metadata = this.extractMetadata(epub, sourcePath);
-
-          emit({ stage: "cover", percent: 40 });
-          let cover: string | undefined;
-          try {
-            cover = await this.extractCover(epub);
-          } catch (error) {
-            // 封面缺失并非致命错误，仅打印警告
-            console.warn("封面提取失败:", error);
-            if (error instanceof EpubCoverError) {
-              cover = undefined;
-            } else {
-              cover = undefined;
-            }
-          }
-
-          emit({ stage: "chapters", percent: 55 });
-          const chapters = await this.extractChapters(
-            epub,
-            includeRawHtml,
-            (current, total, chapterId) => {
-              emit({
-                stage: "chapters",
-                percent: 55 + Math.round((current / total) * 35),
-                detail: { current, total, chapterId },
-              });
-            }
-          );
-
-          emit({ stage: "finalizing", percent: 95 });
-
-          resolve({
-            id,
-            title: metadata.title || "未知标题",
-            author: this.normalizeAuthor(metadata.creator),
-            cover,
-            chapters,
-            metadata,
-            filePath,
-            addedDate: new Date(),
-            progress: 0,
-            status: "not-started",
-          });
-
-          emit({ stage: "finalizing", percent: 100 });
-        } catch (error) {
-          handleFailure(error, "finalizing");
-        }
-      });
-
-      epub.parse();
-    });
+      emit({ stage: "finalizing", percent: 100 });
+      return result;
+    } catch (error) {
+      if (error instanceof EpubParseError || error instanceof EpubCoverError) {
+        throw error;
+      }
+      throw new EpubParseError(
+        error instanceof Error ? error.message : "EPUB 解析失败",
+        "initializing",
+        error
+      );
+    }
   }
 
   async extractCoverFromFile(filePath: string): Promise<string | undefined> {
-    return new Promise((resolve, reject) => {
+    try {
       const epub = new EPub(filePath);
-
-      epub.on("error", (error: unknown) => {
-        reject(
-          new EpubParseError(
-            error instanceof Error ? error.message : "封面解析失败",
-            "cover",
-            error
-          )
-        );
-      });
-
-      epub.on("end", async () => {
-        try {
-          const cover = await this.extractCover(epub);
-          resolve(cover);
-        } catch (error) {
-          if (error instanceof EpubCoverError) {
-            resolve(undefined);
-          } else {
-            reject(error);
-          }
-        }
-      });
-
-      epub.parse();
-    });
+      await epub.parse();
+      return await this.extractCover(epub);
+    } catch (error) {
+      if (error instanceof EpubCoverError) {
+        return undefined;
+      }
+      throw new EpubParseError(
+        error instanceof Error ? error.message : "封面解析失败",
+        "cover",
+        error
+      );
+    }
   }
 
   private extractMetadata(epub: any, sourcePath?: string): EpubMetadata {
@@ -191,22 +179,20 @@ export class EPUBService {
       throw new EpubCoverError("未在 EPUB 文件中找到封面资源");
     }
 
-    return new Promise((resolve, reject) => {
-      epub.getImage(coverId, (error: unknown, data: Buffer, mimeType: string) => {
-        if (error) {
-          reject(new EpubCoverError("封面资源读取失败", error));
-          return;
-        }
-
-        if (!data || !mimeType) {
-          reject(new EpubCoverError("封面资源数据为空"));
-          return;
-        }
-
-        const base64 = `data:${mimeType};base64,${data.toString("base64")}`;
-        resolve(base64);
-      });
-    });
+    try {
+      // New epub v2 API: getImage() returns Promise<{ data: Buffer; mimeType: string }>
+      const result = (await epub.getImage(coverId)) as {
+        data: Buffer;
+        mimeType: string;
+      };
+      if (!result?.data || !result?.mimeType) {
+        throw new EpubCoverError("封面资源数据为空");
+      }
+      return `data:${result.mimeType};base64,${result.data.toString("base64")}`;
+    } catch (error) {
+      if (error instanceof EpubCoverError) throw error;
+      throw new EpubCoverError("封面资源读取失败", error);
+    }
   }
 
   private async extractChapters(
@@ -241,40 +227,39 @@ export class EPUBService {
 
       visited.add(manifestId);
       const manifestItem = manifestIndex.byId.get(manifestId) ?? {};
-      const defaultHref = typeof manifestItem.href === "string" ? manifestItem.href : "";
+      const defaultHref =
+        typeof manifestItem.href === "string" ? manifestItem.href : "";
       const chapterHref = entry.href ?? defaultHref;
 
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise<void>((resolve) => {
-        epub.getChapter(manifestId, (error: unknown, text: string) => {
-          if (error) {
-            console.warn(`获取章节 ${manifestId} 失败:`, error);
-          } else {
-            const normalizedText =
-              typeof text === "string" ? text : String(text ?? "");
-            if (this.hasRenderableContent(normalizedText)) {
-              const orderIndex = chapters.length;
-              const chapterTitle =
-                entry.title?.trim() ||
-                this.extractChapterTitle(normalizedText) ||
-                `章节 ${orderIndex + 1}`;
-              chapters.push({
-                id: manifestId,
-                title: chapterTitle,
-                content: includeRawHtml ? normalizedText : "",
-                href: chapterHref,
-                order: orderIndex,
-              });
-            } else {
-              console.warn(`章节 ${manifestId} 无有效内容，已跳过`);
-            }
-          }
+      try {
+        // New epub v2 API: getChapter() returns Promise<string> directly
+        // eslint-disable-next-line no-await-in-loop
+        const text = (await epub.getChapter(manifestId)) as string;
+        const normalizedText =
+          typeof text === "string" ? text : String(text ?? "");
 
-          processed += 1;
-          onProgress(processed, total, manifestId);
-          resolve();
-        });
-      });
+        if (this.hasRenderableContent(normalizedText)) {
+          const orderIndex = chapters.length;
+          const chapterTitle =
+            entry.title?.trim() ||
+            this.extractChapterTitle(normalizedText) ||
+            `章节 ${orderIndex + 1}`;
+          chapters.push({
+            id: manifestId,
+            title: chapterTitle,
+            content: includeRawHtml ? normalizedText : "",
+            href: chapterHref,
+            order: orderIndex,
+          });
+        } else {
+          console.warn(`章节 ${manifestId} 无有效内容，已跳过`);
+        }
+      } catch (error) {
+        console.warn(`获取章节 ${manifestId} 失败:`, error);
+      }
+
+      processed += 1;
+      onProgress(processed, total, manifestId);
     }
 
     return chapters;
@@ -304,9 +289,8 @@ export class EPUBService {
       return true;
     }
 
-    const hasMediaSource = /<(img|video|audio)\b[^>]*(src|data)\s*=\s*['"][^'"]+/i.test(
-      text
-    );
+    const hasMediaSource =
+      /<(img|video|audio)\b[^>]*(src|data)\s*=\s*['"][^'"]+/i.test(text);
     return hasMediaSource;
   }
 
@@ -318,25 +302,30 @@ export class EPUBService {
 
     Object.entries(manifest as Record<string, unknown>).forEach(
       ([id, rawItem]) => {
-        const item = (rawItem ?? {}) as { href?: unknown; properties?: unknown };
-      byId.set(id, item);
+        const item = (rawItem ?? {}) as {
+          href?: unknown;
+          properties?: unknown;
+        };
+        byId.set(id, item);
 
-      if (typeof item.href === "string") {
-        const normalized = this.normalizeZipPath(item.href);
-        hrefToId.set(normalized, id);
-      }
+        if (typeof item.href === "string") {
+          const normalized = this.normalizeZipPath(item.href);
+          hrefToId.set(normalized, id);
+        }
 
-      if (
-        typeof item.properties === "string" &&
-        item.properties
-          .split(/\s+/)
-          .filter(Boolean)
-          .includes("nav")
-      ) {
-        const normalizedHref =
-          typeof item.href === "string" ? this.normalizeZipPath(item.href) : "";
-        navEntries.push({ id, href: normalizedHref });
-      }
+        if (
+          typeof item.properties === "string" &&
+          item.properties
+            .split(/\s+/)
+            .filter(Boolean)
+            .includes("nav")
+        ) {
+          const normalizedHref =
+            typeof item.href === "string"
+              ? this.normalizeZipPath(item.href)
+              : "";
+          navEntries.push({ id, href: normalizedHref });
+        }
       }
     );
 
@@ -349,9 +338,10 @@ export class EPUBService {
   ): Promise<ResolvedTocEntry[]> {
     const baseToc = Array.isArray(epub?.toc) ? epub.toc : [];
     if (baseToc.length > 0) {
-        return baseToc
-          .map((tocItem: any) => {
-          const hrefValue = typeof tocItem?.href === "string" ? tocItem.href : "";
+      return baseToc
+        .map((tocItem: any) => {
+          const hrefValue =
+            typeof tocItem?.href === "string" ? tocItem.href : "";
           const normalizedHref = this.normalizeZipPath(
             hrefValue.split("#")[0] ?? hrefValue
           );
@@ -381,16 +371,9 @@ export class EPUBService {
     }
 
     try {
-      const navContent: string = await new Promise((resolve, reject) => {
-        epub.getChapterRaw(navEntry.id, (error: unknown, xhtml: string) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve(typeof xhtml === "string" ? xhtml : String(xhtml ?? ""));
-        });
-      });
-
+      // New epub v2 API: getChapterRaw() returns Promise<string>
+      const xhtml = (await epub.getChapterRaw(navEntry.id)) as string;
+      const navContent = typeof xhtml === "string" ? xhtml : String(xhtml ?? "");
       return this.parseNavDocument(navContent, navEntry.href, manifestIndex);
     } catch (error) {
       console.warn("解析 EPUB 导航文档失败:", error);
@@ -462,7 +445,8 @@ export class EPUBService {
 
     const navSection = navMatch[1];
     const navBaseDir = path.posix.dirname(navHref);
-    const anchorRegex = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    const anchorRegex =
+      /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
 
     const entries: ResolvedTocEntry[] = [];
     const seen = new Set<string>();
@@ -578,10 +562,15 @@ export class EPUBService {
 
   private normalizeCreator(rawCreator?: string | string[]): string {
     if (Array.isArray(rawCreator)) {
-      return rawCreator.map((item) => item?.trim()).filter(Boolean)[0] ?? "未知作者";
+      return (
+        rawCreator.map((item) => item?.trim()).filter(Boolean)[0] ?? "未知作者"
+      );
     }
     if (!rawCreator) return "未知作者";
-    return this.normalizeWhitespace(rawCreator).split(/[;,]/)[0]!.trim() || "未知作者";
+    return (
+      this.normalizeWhitespace(rawCreator).split(/[;,]/)[0]!.trim() ||
+      "未知作者"
+    );
   }
 
   private normalizeAuthor(rawCreator?: string | string[]): string {
@@ -607,7 +596,9 @@ export class EPUBService {
 
   private normalizeIdentifier(rawIdentifier?: string | string[]): string {
     if (Array.isArray(rawIdentifier)) {
-      return rawIdentifier.map((item) => item?.trim()).filter(Boolean)[0] ?? "";
+      return (
+        rawIdentifier.map((item) => item?.trim()).filter(Boolean)[0] ?? ""
+      );
     }
     if (!rawIdentifier) return "";
     return this.normalizeWhitespace(rawIdentifier);

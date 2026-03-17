@@ -6,9 +6,13 @@ import { setupWordDictApiHandler } from "./api/llm/word_detail/wordict.api";
 import { setupTokensApiHandler } from "./api/llm/tokens.api";
 import { setupInteractiveRoleplayApiHandler } from "./api/llm/interactive_roleplay/interactiveRoleplay.api";
 import { setupEpubApiHandler } from "./api/epub/epub.api";
+import { registerEpubImageScheme, setupEpubImageProtocol } from "./api/epub/epubProtocol";
 import { setupTtsApiHandler } from "./api/tts/tts.api";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import { app, BrowserWindow } from "electron";
+
+// Register epub-img:// scheme as privileged BEFORE app is ready
+registerEpubImageScheme();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,6 +82,9 @@ app.whenReady().then(() => {
   // 新增EPUB处理器
   setupEpubApiHandler();
   setupTtsApiHandler();
+
+  // Setup epub-img:// protocol handler
+  setupEpubImageProtocol();
 
   createWindow();
 

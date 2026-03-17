@@ -1,5 +1,5 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
-import type { TokenData, WordDetail, SentenceAnalysisRecord } from "./types/types";
+import type { TokenData, WordDetail, SentenceAnalysisRecord, EpubBookData } from "./types/types";
 import type {
   TtsSentencePayload,
   TtsStartRequestOptions,
@@ -121,10 +121,11 @@ export interface IElectronAPI {
 
   epub: {
     selectFile: () => Promise<string | null>;
-    parseFile: (filePath: string) => Promise<any>;
+    parseFile: (filePath: string) => Promise<EpubBookData>;
     getCover: (filePath: string) => Promise<string | undefined>;
     removeFromLibrary: (bookId: string) => Promise<boolean>;
-    onParseProgress: (callback: (progress: any) => void) => void;
+    /** Returns an unsubscribe function; call it to remove only this listener */
+    onParseProgress: (callback: (progress: any) => void) => () => void;
     cleanupEpubListeners: () => void;
   };
 

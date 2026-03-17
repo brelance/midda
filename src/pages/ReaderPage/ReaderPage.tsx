@@ -624,12 +624,43 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     setIsChatSending(false);
   }, [chatSessionKey]);
   useEffect(() => {
-    setChapterProgress(0);
     const node = contentRef.current;
-    if (node) {
-      node.scrollTop = 0;
+    const bookId = book.id;
+    const chapterId = currentChapterId;
+
+    if (!bookId || !chapterId) {
+      if (node) node.scrollTop = 0;
+      setChapterProgress(0);
+      return;
     }
-  }, [currentChapterId]);
+
+    // Reset scroll immediately for fast visual feedback
+    if (node) node.scrollTop = 0;
+    setChapterProgress(0);
+
+    // Then asynchronously restore saved position (if any)
+    const readingPositionsApi = window?.api?.db?.readingPositions;
+    if (!readingPositionsApi?.get) return;
+
+    let cancelled = false;
+    readingPositionsApi.get(bookId, chapterId).then((record) => {
+      if (cancelled || !record) return;
+      const savedOffset = record.scrollOffset ?? 0;
+      if (savedOffset <= 0) return;
+      // Wait for DOM to finish rendering the new chapter before restoring
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!cancelled && contentRef.current) {
+            contentRef.current.scrollTop = savedOffset;
+          }
+        });
+      });
+    }).catch(() => {
+      // Ignore restore errors; user just starts from the top
+    });
+
+    return () => { cancelled = true; };
+  }, [currentChapterId, book.id]);
 
   const totalChapters = chapters.length;
 
@@ -1435,11 +1466,32 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     }
   }, [isSentenceAnalysisRunning, viewMode, processPendingSentences]);
 
+  const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
     const progress = calculateScrollProgress(target);
     setChapterProgress(progress);
-  }, []);
+
+    // Debounced save of scroll offset to DB (500 ms)
+    if (!activeChapterId || !book.id) return;
+    if (scrollSaveTimerRef.current !== null) {
+      clearTimeout(scrollSaveTimerRef.current);
+    }
+    const capturedScrollTop = target.scrollTop;
+    const capturedHeight = target.clientHeight;
+    scrollSaveTimerRef.current = setTimeout(() => {
+      scrollSaveTimerRef.current = null;
+      if (!window?.api?.db?.readingPositions?.upsert) return;
+      void window.api.db.readingPositions.upsert({
+        bookId: book.id,
+        chapterId: activeChapterId,
+        scrollProgress: progress,
+        scrollOffset: capturedScrollTop,
+        viewportHeight: capturedHeight,
+      }).catch((err) => console.error("保存阅读位置失败:", err));
+    }, 500);
+  }, [activeChapterId, book.id]);
 
   const prevChapterId = useMemo(
     () => getPrevChapterId(chapters, currentIndex),

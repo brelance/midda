@@ -140,11 +140,13 @@ const api = {
     removeFromLibrary: (bookId: string): Promise<boolean> =>
       ipcRenderer.invoke("epub:remove-from-library", bookId),
 
-    // 监听器（如果需要异步通知）
-    onParseProgress: (callback: (progress: any) => void) =>
-      ipcRenderer.on("epub:parse-progress", (_, progress) =>
-        callback(progress)
-      ),
+    onParseProgress: (callback: (progress: any) => void): (() => void) => {
+      const listener = (_: Electron.IpcRendererEvent, progress: any) =>
+        callback(progress);
+      ipcRenderer.on("epub:parse-progress", listener);
+      // Return a cleanup function so callers can remove exactly this listener
+      return () => ipcRenderer.removeListener("epub:parse-progress", listener);
+    },
 
     cleanupEpubListeners: () => {
       ipcRenderer.removeAllListeners("epub:parse-progress");
