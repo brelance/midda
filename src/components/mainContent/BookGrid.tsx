@@ -1,6 +1,6 @@
 import React from 'react';
 import BookItem from './BookItem';
-import { Book } from '../../types/types';
+import { Book, EpubBookData } from '../../types/types';
 
 interface BookGridProps {
   books: Book[];
@@ -8,6 +8,7 @@ interface BookGridProps {
   onSelectBook: (book: Book) => void;
   onEnterReader?: (book: Book, chapterId?: string) => void;
   onDeleteBook?: (book: Book) => void;
+  onAddBook?: (bookData: EpubBookData) => Promise<void> | void;
   /** Book currently being read (for "继续阅读" section) */
   readingBook?: Book | null;
 }
@@ -18,6 +19,7 @@ const BookGrid: React.FC<BookGridProps> = ({
   onSelectBook,
   onEnterReader,
   onDeleteBook,
+  onAddBook,
   readingBook,
 }) => {
   const currentlyReading = readingBook ?? books.find((b) => b.status === 'reading') ?? null;
@@ -80,7 +82,10 @@ const BookGrid: React.FC<BookGridProps> = ({
         {/* 书架网格 */}
         <section>
           <h2 className="text-[20px] font-bold mb-6 text-[#1d1d1f]">全部书籍</h2>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-5 gap-y-8">
+          <div
+            className="gap-x-5 gap-y-8"
+            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, 120px)" }}
+          >
             {books.map((book) => (
               <BookItem
                 key={book.id}
@@ -104,6 +109,18 @@ const BookGrid: React.FC<BookGridProps> = ({
                   height: "168px",
                   borderRadius: "2px 4px 4px 2px",
                   border: "1.5px dashed rgba(0,0,0,0.15)",
+                }}
+                onClick={async () => {
+                  if (!onAddBook) return;
+                  try {
+                    const filePath = await window.api.epub.selectFile();
+                    if (!filePath) return;
+                    const bookData = await window.api.epub.parseFile(filePath);
+                    await onAddBook(bookData);
+                  } catch (error) {
+                    console.error("添加书籍失败:", error);
+                    alert("添加书籍失败，请检查文件格式是否正确");
+                  }
                 }}
               >
                 <svg className="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

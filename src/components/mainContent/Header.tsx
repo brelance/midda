@@ -21,7 +21,10 @@ const Header: React.FC<HeaderProps> = ({
   onBookAdded,
 }) => {
   return (
-    <header className="flex-shrink-0 flex items-center justify-between px-8 pt-10 pb-3 bg-white">
+    <header
+      className="flex-shrink-0 flex items-center justify-between px-8 pt-10 pb-3 bg-white"
+      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+    >
       {/* Mobile hamburger */}
       <button
         onClick={toggleSidebar}
@@ -33,16 +36,16 @@ const Header: React.FC<HeaderProps> = ({
       </button>
 
       {/* Page title */}
-      <h1 className="text-[32px] font-bold tracking-tight text-[#1d1d1f] flex-1">书架</h1>
+      <h1 className="text-[24px] font-bold tracking-tight text-[#1d1d1f] flex-1">主页</h1>
 
       {/* Right controls */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-3" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
         {/* Desktop search */}
         <div className="hidden md:block">
           <SearchInput
             value={searchQuery}
             onChange={onSearch}
-            placeholder="搜索书架..."
+            placeholder="搜索书籍..."
             className="w-52"
           />
         </div>

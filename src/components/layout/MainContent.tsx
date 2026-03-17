@@ -68,6 +68,7 @@ const MainContent: React.FC<MainContentProps> = ({
         onSelectBook={onSelectBook}
         onEnterReader={onEnterReader}
         onDeleteBook={onDeleteBook}
+        onAddBook={onBookAdded}
         readingBook={readingBook}
       />
     </main>

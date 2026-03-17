@@ -84,9 +84,12 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
         ${isVisible ? "translate-y-0" : "-translate-y-full"}
       `}
     >
-      <div className="flex items-center justify-between px-4 py-2 max-w-6xl mx-auto">
+      <div
+        className="flex items-center justify-between px-4 py-2 max-w-6xl mx-auto"
+        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      >
         {/* ── Left: navigation (pl-[76px] clears macOS traffic lights) ── */}
-        <div className="flex items-center gap-1 pl-[76px]">
+        <div className="flex items-center gap-1 pl-[76px]" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <IconBtn onClick={onBack} label="返回书架">
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
@@ -105,7 +108,7 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
         <ReaderBookInfo bookTitle={bookTitle} chapterTitle={chapterTitle} />
 
         {/* ── Right: actions ───────────────────────────────────── */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           {/* Analysis controls group */}
           <IconBtn
             onClick={ac.onToggleMode}
