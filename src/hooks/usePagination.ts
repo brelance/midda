@@ -86,12 +86,20 @@ export function usePagination(
     // Set the CSS variable that column-width reads from
     viewport.style.setProperty("--page-col-width", `${pageWidth}px`);
 
+    // Temporarily let columns flow naturally so we can measure total width
+    inner.style.width = "max-content";
+
     // Force a synchronous layout so scrollWidth is up-to-date
     // Access offsetHeight to flush pending layout
     void inner.offsetHeight;
 
     const scrollWidth = inner.scrollWidth;
     const computed = Math.max(1, Math.round(scrollWidth / pageWidth));
+
+    // Lock inner width to exact multiple of viewport width.
+    // This forces CSS column boundaries to perfectly align with
+    // the translateX page offsets, preventing content bleed.
+    inner.style.width = `${computed * pageWidth}px`;
 
     totalPagesRef.current = computed;
     setTotalPages(computed);
@@ -103,6 +111,9 @@ export function usePagination(
       currentPageRef.current = clamped;
       setCurrentPage(clamped);
       inner.style.transform = `translateX(-${clamped * pageWidth}px)`;
+    } else {
+      // Re-apply transform in case width change shifted columns
+      inner.style.transform = `translateX(-${cur * pageWidth}px)`;
     }
   }, [getPageWidth]);
 
