@@ -21,14 +21,7 @@ interface ReaderSettingsModalProps {
   onReadingModeChange: (mode: ReadingMode) => void;
 }
 
-const themeSwatches = [
-  { color: "#f5f5dc", active: true },
-  { color: "#c1e1c1", active: false },
-  { color: "#f0e68c", active: false },
-  { color: "#1e1e1e", active: false },
-];
-
-/** Segmented control — two option toggle button group */
+/** iOS-style segmented control */
 const SegmentedControl = <T extends string>({
   options,
   value,
@@ -41,30 +34,99 @@ const SegmentedControl = <T extends string>({
   id: string;
 }) => (
   <div
-    className="flex overflow-hidden rounded-[14px] border-4 border-[#3d2b1f]"
+    className="flex overflow-hidden rounded-lg bg-black/[0.06] p-0.5"
     role="group"
     id={id}
   >
-    {options.map((opt, i) => (
+    {options.map((opt) => (
       <button
         key={opt.value}
         type="button"
         role="radio"
         aria-checked={value === opt.value}
         onClick={() => onChange(opt.value)}
-        className={`flex-1 px-3 py-2 text-sm font-bold transition-colors ${
-          i > 0 ? "border-l-4 border-[#3d2b1f]" : ""
-        } ${
-          value === opt.value
-            ? "bg-[#3d2b1f] text-white"
-            : "bg-white text-[#3d2b1f] hover:bg-[#f0ede8]"
-        }`}
+        className={`
+          flex-1 rounded-md px-3.5 py-1.5 text-[13px] font-medium
+          transition-all duration-200
+          ${value === opt.value
+            ? "bg-white text-[#1d1d1f] shadow-sm"
+            : "text-gray-500 hover:text-gray-700"
+          }
+        `}
       >
         {opt.label}
       </button>
     ))}
   </div>
 );
+
+/** iOS-style toggle switch */
+const ToggleSwitch: React.FC<{
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}> = ({ checked, onChange, label }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    aria-label={label}
+    onClick={() => onChange(!checked)}
+    className={`
+      relative h-[31px] w-[51px] flex-shrink-0 rounded-full
+      transition-colors duration-250 ease-in-out
+      ${checked ? "bg-[#34c759]" : "bg-gray-300"}
+    `}
+  >
+    <span
+      className={`
+        absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white
+        shadow-sm shadow-black/15
+        transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]
+        ${checked ? "translate-x-[22px]" : "translate-x-[2px]"}
+      `}
+    />
+  </button>
+);
+
+/** Stepper (+ / –) for font size, line height, etc. */
+const Stepper: React.FC<{
+  label: string;
+  value: string;
+  onDecrement?: () => void;
+  onIncrement?: () => void;
+}> = ({ label: _label, value, onDecrement, onIncrement }) => (
+  <div className="flex items-center gap-0 overflow-hidden rounded-lg border border-gray-200/80 bg-white">
+    <button
+      type="button"
+      onClick={onDecrement}
+      disabled={!onDecrement}
+      className="flex h-8 w-9 items-center justify-center text-[#007aff] text-lg font-medium transition-colors hover:bg-black/[0.04] active:bg-black/[0.08] disabled:text-gray-300"
+      aria-label={`减小${_label}`}
+    >
+      −
+    </button>
+    <span className="flex h-8 w-10 items-center justify-center border-x border-gray-200/80 text-[13px] font-medium text-[#1d1d1f]">
+      {value}
+    </span>
+    <button
+      type="button"
+      onClick={onIncrement}
+      disabled={!onIncrement}
+      className="flex h-8 w-9 items-center justify-center text-[#007aff] text-lg font-medium transition-colors hover:bg-black/[0.04] active:bg-black/[0.08] disabled:text-gray-300"
+      aria-label={`增大${_label}`}
+    >
+      +
+    </button>
+  </div>
+);
+
+const themeSwatches = [
+  { color: "#ffffff", label: "白色", active: true },
+  { color: "#faf5e4", label: "暖白", active: false },
+  { color: "#d4edda", label: "绿色", active: false },
+  { color: "#1c1c1e", label: "深色", active: false },
+];
 
 const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   isOpen,
@@ -102,35 +164,44 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-3 py-4 sm:px-4 sm:py-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm px-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="reader-settings-title"
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-[420px] max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-[20px] border-4 border-[#3d2b1f] bg-[#f5f5dc] shadow-[8px_8px_0px_0px_#3d2b1f] sm:max-h-[calc(100vh-4rem)]"
+        className={`
+          flex w-full sm:w-auto sm:min-w-[380px] sm:max-w-[420px]
+          max-h-[85vh]
+          flex-col overflow-hidden
+          rounded-2xl
+          bg-[#f2f2f7]/95 backdrop-blur-xl
+          shadow-2xl shadow-black/15
+          animate-[slideUp_300ms_cubic-bezier(0.32,0.72,0,1)]
+        `}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] px-3 py-2 sm:px-4 sm:py-3">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-2">
           <h2
             id="reader-settings-title"
-            className="text-lg font-black text-[#3d2b1f] sm:text-xl"
+            className="text-lg font-semibold text-[#1d1d1f] tracking-tight"
           >
             显示设置
           </h2>
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-white shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none sm:h-11 sm:w-11"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/[0.06] text-gray-500 transition-colors hover:bg-black/[0.1] hover:text-gray-700 active:scale-95"
             onClick={onClose}
             aria-label="关闭设置"
           >
             <svg
-              className="h-6 w-6 sm:h-7 sm:w-7"
+              className="h-4 w-4"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth={3}
+              strokeWidth={2.5}
               strokeLinecap="round"
               strokeLinejoin="round"
               aria-hidden="true"
@@ -140,171 +211,138 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5">
-          <div className="space-y-4 sm:space-y-5">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto overscroll-contain no-scrollbar px-5 py-4">
+          <div className="space-y-5">
 
             {/* ── 阅读方式 ── */}
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
-              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
-                阅读方式
-              </span>
-              <SegmentedControl
-                id="scroll-mode-control"
-                value={scrollMode}
-                onChange={onScrollModeChange}
-                options={[
-                  { label: "滚动", value: "scroll" },
-                  { label: "翻页", value: "page" },
-                ]}
-              />
-            </div>
-
-            {/* ── 版面 ── */}
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
-              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
-                版面
-              </span>
-              <SegmentedControl
-                id="reading-mode-control"
-                value={readingMode}
-                onChange={onReadingModeChange}
-                options={[
-                  { label: "单页", value: "single" },
-                  { label: "双页", value: "double" },
-                ]}
-              />
-            </div>
-
-            {/* ── 字体大小 ── */}
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
-              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
-                字体大小
-              </span>
-              <div className="flex items-center gap-3 sm:gap-4">
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-11 sm:w-11"
-                >
-                  –
-                </button>
-                <span className="w-12 text-center text-base font-black text-[#3d2b1f] sm:w-14 sm:text-lg">
-                  常规
+            <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
+              <div className="flex items-center justify-between">
+                <span className="text-[15px] font-medium text-[#1d1d1f]">
+                  阅读方式
                 </span>
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-11 sm:w-11"
-                >
-                  ＋
-                </button>
+                <SegmentedControl
+                  id="scroll-mode-control"
+                  value={scrollMode}
+                  onChange={onScrollModeChange}
+                  options={[
+                    { label: "滚动", value: "scroll" },
+                    { label: "翻页", value: "page" },
+                  ]}
+                />
+              </div>
+
+              <div className="my-3 h-px bg-gray-100" />
+
+              <div className="flex items-center justify-between">
+                <span className="text-[15px] font-medium text-[#1d1d1f]">
+                  版面
+                </span>
+                <SegmentedControl
+                  id="reading-mode-control"
+                  value={readingMode}
+                  onChange={onReadingModeChange}
+                  options={[
+                    { label: "单页", value: "single" },
+                    { label: "双页", value: "double" },
+                  ]}
+                />
               </div>
             </div>
 
-            {/* ── 行高 ── */}
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
-              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
-                行高
-              </span>
-              <div className="flex items-center gap-3 sm:gap-4">
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-11 sm:w-11"
-                >
-                  –
-                </button>
-                <span className="w-12 text-center text-base font-black text-[#3d2b1f] sm:w-14 sm:text-lg">
-                  1.8
+            {/* ── 字体与排版 ── */}
+            <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
+              <div className="flex items-center justify-between">
+                <span className="text-[15px] font-medium text-[#1d1d1f]">
+                  字体大小
                 </span>
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-[18px] border-4 border-[#3d2b1f] bg-[#d4a017] text-xl font-black text-white shadow-[4px_4px_0px_0px_#3d2b1f] sm:h-11 sm:w-11"
-                >
-                  ＋
-                </button>
+                <Stepper label="字体大小" value="常规" />
+              </div>
+
+              <div className="my-3 h-px bg-gray-100" />
+
+              <div className="flex items-center justify-between">
+                <span className="text-[15px] font-medium text-[#1d1d1f]">
+                  行高
+                </span>
+                <Stepper label="行高" value="1.8" />
               </div>
             </div>
 
             {/* ── 主题 ── */}
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
-              <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
+            <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
+              <span className="mb-3 block text-[15px] font-medium text-[#1d1d1f]">
                 主题
               </span>
-              <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-4">
                 {themeSwatches.map((theme) => (
                   <button
                     key={theme.color}
                     type="button"
+                    aria-label={theme.label}
                     style={{ backgroundColor: theme.color }}
-                    className={`h-9 w-9 rounded-full border-4 border-[#3d2b1f] transition sm:h-10 sm:w-10 ${
-                      theme.active
-                        ? "outline outline-4 outline-offset-4 outline-[#3d2b1f]"
-                        : ""
-                    }`}
+                    className={`
+                      h-9 w-9 rounded-full border
+                      transition-all duration-150
+                      ${theme.active
+                        ? "border-[#007aff] ring-2 ring-[#007aff]/30 ring-offset-2"
+                        : "border-gray-200 hover:border-gray-400"
+                      }
+                      ${theme.color === "#1c1c1e" ? "border-gray-600" : ""}
+                    `}
                   />
                 ))}
               </div>
             </div>
 
-            {/* ── 划过分词朗读 ── */}
-            <div className="flex items-center justify-between border-b-4 border-[#3d2b1f] pb-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
-                  划过分词朗读
-                </span>
-                <span className="text-sm text-[#6b5b4b]">
-                  鼠标划过分词时自动朗读并高亮路径。
-                </span>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={enableTokenHoverTts}
-                onClick={() => onEnableTokenHoverTtsChange(!enableTokenHoverTts)}
-                className={`relative h-10 w-[74px] rounded-full border-4 border-[#3d2b1f] shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none ${
-                  enableTokenHoverTts ? "bg-[#15803d]" : "bg-[#d8cfc4]"
-                }`}
-              >
-                <span
-                  className={`absolute top-1/2 h-7 w-7 -translate-y-1/2 rounded-full border-4 border-[#3d2b1f] bg-white transition ${
-                    enableTokenHoverTts ? "left-[40px]" : "left-[6px]"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* ── TTS 朗读语言 ── */}
-            <div className="flex flex-col gap-3">
+            {/* ── TTS 设置 ── */}
+            <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
               <div className="flex items-center justify-between">
-                <span className="text-base font-bold text-[#3d2b1f] sm:text-lg">
+                <div className="flex-1 pr-3">
+                  <span className="text-[15px] font-medium text-[#1d1d1f]">
+                    划过分词朗读
+                  </span>
+                  <p className="mt-0.5 text-[13px] leading-snug text-gray-400">
+                    鼠标划过分词时自动朗读
+                  </p>
+                </div>
+                <ToggleSwitch
+                  checked={enableTokenHoverTts}
+                  onChange={onEnableTokenHoverTtsChange}
+                  label="划过分词朗读"
+                />
+              </div>
+
+              <div className="my-3 h-px bg-gray-100" />
+
+              <div>
+                <span className="text-[15px] font-medium text-[#1d1d1f]">
                   TTS 朗读语言
                 </span>
+                <p className="mt-0.5 mb-2.5 text-[13px] leading-snug text-gray-400">
+                  选择朗读时优先使用的语音语言
+                </p>
+                <select
+                  id="tts-language-select"
+                  className="
+                    w-full appearance-none rounded-lg
+                    border border-gray-200/80 bg-[#f9f9f9]
+                    px-3 py-2.5 text-[15px] text-[#1d1d1f]
+                    transition-colors
+                    focus:border-[#007aff] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20
+                  "
+                  value={ttsLanguage}
+                  onChange={(event) => onTtsLanguageChange(event.target.value)}
+                >
+                  {ttsLanguageOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <p className="text-sm text-[#6b5b4b]">
-                选择朗读时优先使用的语音语言，若当前系统不支持将自动退回默认语音。
-              </p>
-              <select
-                id="tts-language-select"
-                className="w-full rounded-[18px] border-4 border-[#3d2b1f] bg-white px-3 py-3 text-base font-semibold text-[#3d2b1f] shadow-[6px_6px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[3px_3px_0px_0px_#3d2b1f] focus:translate-x-[3px] focus:translate-y-[3px] focus:shadow-[3px_3px_0px_0px_#3d2b1f] focus:outline-none sm:px-4"
-                value={ttsLanguage}
-                onChange={(event) => onTtsLanguageChange(event.target.value)}
-              >
-                {ttsLanguageOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
-        </div>
-
-        <div className="flex justify-end border-t-4 border-[#3d2b1f] px-3 py-3 sm:px-4 sm:py-4">
-          <button
-            type="button"
-            className="rounded-[18px] border-4 border-[#3d2b1f] bg-white px-5 py-2 text-sm font-bold text-[#3d2b1f] shadow-[4px_4px_0px_0px_#3d2b1f] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_0px_#3d2b1f] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none sm:rounded-[20px] sm:px-6"
-            onClick={onClose}
-          >
-            关闭
-          </button>
         </div>
       </div>
     </div>

@@ -993,6 +993,14 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     stopAnalysisPlayback,
   ]);
 
+  const handleToggleAnalysisMode = useCallback(() => {
+    if (viewMode === "analysis") {
+      handleExitAnalysisMode();
+    } else {
+      handleEnterAnalysisMode();
+    }
+  }, [viewMode, handleEnterAnalysisMode, handleExitAnalysisMode]);
+
   const handleShowExistingSentenceAnalysis = useCallback(() => {
     if (isShowingExistingAnalysis) {
       clearExistingAnalysisOverlay();
@@ -1631,16 +1639,17 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             onOpenToc={handleOpenToc}
             onOpenChat={handleOpenChatSidebar}
             onOpenSettings={handleOpenSettings}
-            viewMode={viewMode}
-            onEnterAnalysisMode={handleEnterAnalysisMode}
-            onExitAnalysisMode={handleExitAnalysisMode}
-            onShowExistingAnalysis={handleShowExistingSentenceAnalysis}
-            isShowingExistingAnalysis={isShowingExistingAnalysis}
-            onToggleSentenceAnalysisRunning={handleToggleSentenceAnalysisRunning}
-            isSentenceAnalysisRunning={isSentenceAnalysisRunning}
-            onToggleAnalysisPlayback={handleAnalysisPlaybackToggle}
-            analysisPlaybackStatus={analysisPlaybackState.status}
-            isAnalysisPlaybackDisabled={isAnalysisPlaybackDisabled}
+            analysisControls={{
+              viewMode,
+              onToggleMode: handleToggleAnalysisMode,
+              onToggleShowAnalysis: handleShowExistingSentenceAnalysis,
+              isShowingAnalysis: isShowingExistingAnalysis,
+              onToggleAnalysisRunning: handleToggleSentenceAnalysisRunning,
+              isAnalysisRunning: isSentenceAnalysisRunning,
+              onTogglePlayback: handleAnalysisPlaybackToggle,
+              playbackStatus: analysisPlaybackState.status,
+              isPlaybackDisabled: isAnalysisPlaybackDisabled,
+            }}
           />
         }
         content={
