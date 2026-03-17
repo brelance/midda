@@ -98,6 +98,7 @@ export class EPUBService {
       emit({ stage: "chapters", percent: 55 });
       const chapters = await this.extractChapters(
         epub,
+        id,
         includeRawHtml,
         (current, total, chapterId) => {
           emit({
@@ -197,6 +198,7 @@ export class EPUBService {
 
   private async extractChapters(
     epub: any,
+    bookId: string,
     includeRawHtml: boolean,
     onProgress: ChapterProgressCallback
   ): Promise<EpubChapter[]> {
@@ -238,6 +240,15 @@ export class EPUBService {
         const normalizedText =
           typeof text === "string" ? text : String(text ?? "");
 
+        // Extract CSS for this chapter (parse <link> tags from raw XHTML)
+        // eslint-disable-next-line no-await-in-loop
+        const cssContent = await this.extractChapterCss(
+          epub,
+          manifestId,
+          chapterHref,
+          bookId
+        );
+
         if (this.hasRenderableContent(normalizedText)) {
           const orderIndex = chapters.length;
           const chapterTitle =
@@ -250,6 +261,7 @@ export class EPUBService {
             content: includeRawHtml ? normalizedText : "",
             href: chapterHref,
             order: orderIndex,
+            cssContent: cssContent || undefined,
           });
         } else {
           console.warn(`章节 ${manifestId} 无有效内容，已跳过`);
@@ -292,6 +304,121 @@ export class EPUBService {
     const hasMediaSource =
       /<(img|video|audio)\b[^>]*(src|data)\s*=\s*['"][^'"]+/i.test(text);
     return hasMediaSource;
+  }
+
+  /**
+   * Extract and merge all CSS stylesheets referenced by a chapter's XHTML.
+   *
+   * Strategy:
+   * 1. Use getChapterRaw() to obtain the full XHTML (including <head>)
+   * 2. Parse <link rel="stylesheet" href="..."> tags
+   * 3. Resolve hrefs relative to the chapter's zip-internal path
+   * 4. Read each CSS file via epub.readFile()
+   * 5. Rewrite url() references to epub-img:// protocol
+   * 6. Concatenate and return
+   */
+  private async extractChapterCss(
+    epub: any,
+    manifestId: string,
+    chapterHref: string,
+    bookId: string
+  ): Promise<string> {
+    let rawXhtml: string;
+    try {
+      rawXhtml = (await epub.getChapterRaw(manifestId)) as string;
+    } catch {
+      return "";
+    }
+
+    // Determine the chapter's directory inside the zip
+    const chapterDir = path.posix.dirname(
+      this.normalizeZipPath(chapterHref)
+    );
+
+    // Match <link rel="stylesheet" href="..."> (order-independent attributes)
+    const linkRe =
+      /<link\b[^>]*?\brel\s*=\s*["']stylesheet["'][^>]*?\bhref\s*=\s*["']([^"']+)["'][^>]*?\/?>/gi;
+    // Also match href-comes-before-rel variant
+    const linkRe2 =
+      /<link\b[^>]*?\bhref\s*=\s*["']([^"']+)["'][^>]*?\brel\s*=\s*["']stylesheet["'][^>]*?\/?>/gi;
+
+    const cssHrefs = new Set<string>();
+    let m: RegExpExecArray | null;
+    while ((m = linkRe.exec(rawXhtml)) !== null) cssHrefs.add(m[1]);
+    while ((m = linkRe2.exec(rawXhtml)) !== null) cssHrefs.add(m[1]);
+
+    if (cssHrefs.size === 0) return "";
+
+    // Build a href → manifestId lookup from the epub manifest
+    const manifest = epub?.manifest ?? {};
+    const hrefToManifestId = new Map<string, string>();
+    for (const [mid, item] of Object.entries(
+      manifest as Record<string, any>
+    )) {
+      if (typeof item?.href === "string") {
+        hrefToManifestId.set(this.normalizeZipPath(item.href), mid);
+      }
+    }
+
+    const cssParts: string[] = [];
+
+    for (const rawHref of cssHrefs) {
+      // Resolve relative href to absolute zip path
+      const resolvedPath = this.normalizeZipPath(
+        path.posix.normalize(
+          rawHref.startsWith("/")
+            ? rawHref.slice(1)
+            : chapterDir && chapterDir !== "."
+            ? `${chapterDir}/${rawHref}`
+            : rawHref
+        )
+      );
+
+      let cssText: string;
+      try {
+        const data = (await epub.readFile(resolvedPath)) as Buffer | string;
+        cssText =
+          typeof data === "string"
+            ? data
+            : (data as Buffer).toString("utf-8");
+      } catch {
+        console.warn(`[epub-css] CSS file not found: ${resolvedPath}`);
+        continue;
+      }
+
+      // Rewrite url("../relative/path") → url("epub-img://{bookId}/{mid}/{zipPath}")
+      const cssDir = path.posix.dirname(resolvedPath);
+      cssText = cssText.replace(
+        /url\(\s*(["']?)([^"')\s]+)\1\s*\)/gi,
+        (_match, _quote, urlValue: string) => {
+          // Skip data: and absolute protocol URLs
+          if (
+            urlValue.startsWith("data:") ||
+            /^[a-z][a-z0-9+\-.]*:/i.test(urlValue)
+          ) {
+            return `url("${urlValue}")`;
+          }
+          const resolvedAsset = this.normalizeZipPath(
+            path.posix.normalize(
+              urlValue.startsWith("/")
+                ? urlValue.slice(1)
+                : cssDir && cssDir !== "."
+                ? `${cssDir}/${urlValue}`
+                : urlValue
+            )
+          );
+          const assetManifestId = hrefToManifestId.get(resolvedAsset);
+          if (!assetManifestId) {
+            return `url("${urlValue}")`;
+          }
+          return `url("epub-img://${bookId}/${assetManifestId}/${resolvedAsset}")`;
+        }
+      );
+
+      cssParts.push(cssText);
+    }
+
+    return cssParts.join("\n");
   }
 
   private buildManifestIndex(epub: any): ManifestIndex {

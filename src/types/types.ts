@@ -84,6 +84,7 @@ export interface Chapter {
   pageNumber: number;
   isRead: boolean;
   content?: string; // 章节内容
+  cssContent?: string; // EPUB 样式
   href?: string; // 章节链接
   order?: number; // 章节顺序
 }
@@ -105,6 +106,7 @@ export interface EpubChapter {
   content: string;
   href: string;
   order: number;
+  cssContent?: string;
 }
 
 export interface EpubBookData {

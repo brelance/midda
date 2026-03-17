@@ -596,6 +596,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     () => currentChapter?.content ?? buildFallbackContent(),
     [currentChapter]
   );
+  const chapterCssContent = currentChapter?.cssContent;
   const chapterPlainText = useMemo(
     () => htmlToPlainText(chapterContentHtml),
     [chapterContentHtml]
@@ -1627,6 +1628,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
               ref={contentRef}
               chapterTitle={chapterTitle}
               contentHtml={chapterContentHtml}
+              cssContent={chapterCssContent}
               onScroll={handleScroll}
               readingMode={readingMode}
             />

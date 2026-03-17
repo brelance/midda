@@ -214,6 +214,7 @@ export interface ChapterRecord {
   href?: string;
   orderIndex: number;
   contentHtml?: string;
+  cssContent?: string;
   isRead: boolean;
   wordCount?: number;
   createdAt: string;
@@ -227,6 +228,7 @@ export interface ChapterUpsertPayload {
   href?: string;
   orderIndex: number;
   contentHtml?: string;
+  cssContent?: string;
   isRead?: boolean;
   wordCount?: number;
 }
@@ -240,6 +242,7 @@ export class ChapterRepository {
       href,
       order_index,
       content_html,
+      css_content,
       is_read,
       word_count
     ) VALUES (
@@ -249,6 +252,7 @@ export class ChapterRepository {
       @href,
       @orderIndex,
       @contentHtml,
+      @cssContent,
       @isRead,
       @wordCount
     )
@@ -257,6 +261,7 @@ export class ChapterRepository {
       href = excluded.href,
       order_index = excluded.order_index,
       content_html = excluded.content_html,
+      css_content = excluded.css_content,
       is_read = excluded.is_read,
       word_count = excluded.word_count,
       updated_at = CURRENT_TIMESTAMP
@@ -270,6 +275,7 @@ export class ChapterRepository {
       href,
       order_index,
       content_html,
+      css_content,
       is_read,
       word_count,
       created_at,
@@ -291,6 +297,7 @@ export class ChapterRepository {
           title: item.title ?? null,
           href: item.href ?? null,
           contentHtml: item.contentHtml ?? null,
+          cssContent: item.cssContent ?? null,
           wordCount: item.wordCount ?? null,
           isRead: item.isRead ? 1 : 0,
         });
@@ -318,6 +325,7 @@ interface ChapterRow {
   href: string | null;
   order_index: number;
   content_html: string | null;
+  css_content: string | null;
   is_read: number;
   word_count: number | null;
   created_at: string;
@@ -332,6 +340,7 @@ function mapChapterRow(row: ChapterRow): ChapterRecord {
     href: toNullable(row.href),
     orderIndex: row.order_index,
     contentHtml: toNullable(row.content_html),
+    cssContent: toNullable(row.css_content),
     isRead: row.is_read === 1,
     wordCount: toNullable(row.word_count),
     createdAt: row.created_at,

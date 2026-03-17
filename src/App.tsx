@@ -62,6 +62,7 @@ const mapDbChapterToChapter = (record: LibraryChapterRecord): Chapter => ({
   pageNumber: 0,
   isRead: record.isRead,
   content: record.contentHtml ?? "",
+  cssContent: record.cssContent ?? undefined,
   href: record.href ?? undefined,
   order: record.orderIndex,
 });
@@ -283,6 +284,7 @@ export default function App() {
               href: chapter.href,
               orderIndex: chapter.order,
               contentHtml: chapter.content,
+              cssContent: chapter.cssContent ?? undefined,
             }));
 
           if (chapterPayloads.length > 0) {

@@ -45,6 +45,7 @@ export interface LibraryChapterRecord {
   href?: string;
   orderIndex: number;
   contentHtml?: string;
+  cssContent?: string;
   isRead: boolean;
   wordCount?: number;
   createdAt: string;
@@ -58,6 +59,7 @@ export interface LibraryChapterUpsertPayload {
   href?: string;
   orderIndex: number;
   contentHtml?: string;
+  cssContent?: string;
   isRead?: boolean;
   wordCount?: number;
 }

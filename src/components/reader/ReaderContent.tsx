@@ -5,6 +5,7 @@ import { ReadingMode } from "../../types/reader";
 interface ReaderContentProps {
   chapterTitle: string;
   contentHtml: string;
+  cssContent?: string;
   onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
   readingMode: ReadingMode;
 }
@@ -60,8 +61,155 @@ const sanitizeEpubHtml = (html: string): string => {
   });
 };
 
+/**
+ * Scope EPUB CSS rules so they only apply inside .epub-content wrappers,
+ * preventing EPUB styles from bleeding into the application UI.
+ *
+ * Rules:
+ * - `body`, `html`, `:root` → `.epub-content`
+ * - `@font-face` → kept as-is (font declarations are inherently global)
+ * - `@keyframes` → kept as-is
+ * - `@media` wrapper → preserved, inner selectors are prefixed
+ * - Everything else → `.epub-content <selector>`
+ */
+function scopeEpubCss(css: string, scope: string): string {
+  if (!css || !css.trim()) return "";
+
+  // Remove @charset (must be at very top of stylesheet, breaks <style> injection)
+  const cleaned = css.replace(/@charset\s+["'][^"']*["']\s*;/gi, "");
+
+  const result: string[] = [];
+  let i = 0;
+  const len = cleaned.length;
+
+  while (i < len) {
+    // Skip whitespace
+    if (/\s/.test(cleaned[i])) {
+      result.push(cleaned[i]);
+      i++;
+      continue;
+    }
+
+    // Comments
+    if (cleaned.startsWith("/*", i)) {
+      const end = cleaned.indexOf("*/", i + 2);
+      if (end === -1) {
+        result.push(cleaned.slice(i));
+        break;
+      }
+      result.push(cleaned.slice(i, end + 2));
+      i = end + 2;
+      continue;
+    }
+
+    // At-rules
+    if (cleaned[i] === "@") {
+      const atKeywordMatch = cleaned.slice(i).match(/^@([\w-]+)/);
+      const atKeyword = atKeywordMatch ? atKeywordMatch[1].toLowerCase() : "";
+
+      // Block at-rules with nested rules: @media, @supports, @document
+      if (["media", "supports", "document", "layer"].includes(atKeyword)) {
+        const blockStart = cleaned.indexOf("{", i);
+        if (blockStart === -1) {
+          result.push(cleaned.slice(i));
+          break;
+        }
+        // Find matching closing brace
+        let depth = 1;
+        let j = blockStart + 1;
+        while (j < len && depth > 0) {
+          if (cleaned[j] === "{") depth++;
+          else if (cleaned[j] === "}") depth--;
+          j++;
+        }
+        const prelude = cleaned.slice(i, blockStart + 1);
+        const inner = cleaned.slice(blockStart + 1, j - 1);
+        result.push(prelude);
+        result.push(scopeEpubCss(inner, scope)); // recurse for inner rules
+        result.push("}");
+        i = j;
+        continue;
+      }
+
+      // Non-block at-rules: @font-face, @keyframes, @import, @charset, @namespace
+      // Find end of this rule (next ; or { ... })
+      const nextBrace = cleaned.indexOf("{", i);
+      const nextSemi = cleaned.indexOf(";", i);
+
+      if (nextBrace !== -1 && (nextSemi === -1 || nextBrace < nextSemi)) {
+        // Block at-rule without inner rules (@font-face, @keyframes)
+        let depth = 1;
+        let j = nextBrace + 1;
+        while (j < len && depth > 0) {
+          if (cleaned[j] === "{") depth++;
+          else if (cleaned[j] === "}") depth--;
+          j++;
+        }
+        result.push(cleaned.slice(i, j)); // keep verbatim
+        i = j;
+      } else if (nextSemi !== -1) {
+        result.push(cleaned.slice(i, nextSemi + 1));
+        i = nextSemi + 1;
+      } else {
+        result.push(cleaned.slice(i));
+        break;
+      }
+      continue;
+    }
+
+    // Regular CSS rule: find selector(s) + {declarations}
+    const braceStart = cleaned.indexOf("{", i);
+    if (braceStart === -1) {
+      // Trailing content with no block – ignore
+      break;
+    }
+
+    const rawSelectors = cleaned.slice(i, braceStart).trim();
+
+    // Find the matching closing brace
+    let depth = 1;
+    let j = braceStart + 1;
+    while (j < len && depth > 0) {
+      if (cleaned[j] === "{") depth++;
+      else if (cleaned[j] === "}") depth--;
+      j++;
+    }
+
+    const declarations = cleaned.slice(braceStart + 1, j - 1);
+
+    // Prefix each comma-separated selector
+    const prefixed = rawSelectors
+      .split(",")
+      .map((sel) => {
+        const trimmed = sel.trim();
+        if (!trimmed) return "";
+        // Map global selectors to the scope class itself
+        if (/^(html|body|:root)$/i.test(trimmed)) {
+          return `.${scope}`;
+        }
+        // Already scoped - don't double-scope
+        if (trimmed.startsWith(`.${scope}`)) {
+          return trimmed;
+        }
+        return `.${scope} ${trimmed}`;
+      })
+      .filter(Boolean)
+      .join(", ");
+
+    if (prefixed) {
+      result.push(`${prefixed} {${declarations}}`);
+    }
+
+    i = j;
+  }
+
+  return result.join("");
+}
+
+const EPUB_CSS_SCOPE = "epub-content";
+
 const ReaderContent = forwardRef<HTMLDivElement, ReaderContentProps>(
-  ({ chapterTitle, contentHtml, onScroll, readingMode }, ref) => {
+  ({ chapterTitle, contentHtml, cssContent, onScroll, readingMode }, ref) => {
     const containerMaxWidth =
       readingMode === "double" ? "max-w-[1100px]" : "max-w-[780px]";
     const modeClass =
@@ -70,6 +218,10 @@ const ReaderContent = forwardRef<HTMLDivElement, ReaderContentProps>(
         : "";
 
     const safeHtml = useMemo(() => sanitizeEpubHtml(contentHtml), [contentHtml]);
+    const scopedCss = useMemo(
+      () => (cssContent ? scopeEpubCss(cssContent, EPUB_CSS_SCOPE) : ""),
+      [cssContent]
+    );
 
     return (
       <div
@@ -77,11 +229,17 @@ const ReaderContent = forwardRef<HTMLDivElement, ReaderContentProps>(
         onScroll={onScroll}
         className={`reading-content no-scrollbar mx-auto h-full ${containerMaxWidth} overflow-y-auto px-2 text-lg leading-8 text-[#3d2b1f] md:px-4 md:text-xl`}
       >
-        <h1 className="mb-6 text-4xl font-black">{chapterTitle}</h1>
-        <div
-          className={`space-y-6 font-normal ${modeClass}`}
-          dangerouslySetInnerHTML={{ __html: safeHtml }}
-        />
+        {scopedCss && (
+          // eslint-disable-next-line react/no-danger
+          <style dangerouslySetInnerHTML={{ __html: scopedCss }} />
+        )}
+        <div className={`${EPUB_CSS_SCOPE}`}>
+          <h1 className="mb-6 text-4xl font-black">{chapterTitle}</h1>
+          <div
+            className={`space-y-6 font-normal ${modeClass}`}
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
+          />
+        </div>
       </div>
     );
   }

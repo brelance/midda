@@ -40,6 +40,7 @@ function initializeSchema(database: DB): void {
       href TEXT,
       order_index INTEGER NOT NULL,
       content_html TEXT,
+      css_content TEXT,
       is_read INTEGER NOT NULL DEFAULT 0,
       word_count INTEGER,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -110,6 +111,21 @@ function initializeSchema(database: DB): void {
   `;
 
   database.exec(ddlStatements);
+
+  // ── Schema migrations ────────────────────────────────────────────────────
+  // Run idempotent ALTER TABLE statements for columns added after the initial
+  // schema creation.  SQLite ALTER TABLE ADD COLUMN is safe on existing DBs
+  // but throws if the column already exists, so we wrap each one.
+  const migrations: string[] = [
+    `ALTER TABLE chapters ADD COLUMN css_content TEXT`,
+  ];
+  for (const migration of migrations) {
+    try {
+      database.exec(migration);
+    } catch {
+      // Column already exists – ignore
+    }
+  }
 }
 
 try {
