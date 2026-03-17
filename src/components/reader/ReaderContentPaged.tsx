@@ -119,19 +119,13 @@ const ReaderContentPaged = forwardRef<
       return () => cancelAnimationFrame(id);
     }, [contentHtml, readingMode, recalculate]);
 
-    // Column gap = 0px so pages don't bleed visually between columns
-    // column-width drives how many columns appear in the viewport width
-    const innerStyle = useMemo((): React.CSSProperties => {
-      return {
-        columnFill: "auto",
-        columnGap: "0px",
-        height: "100%",
-        // CSS columns expand width naturally — we shouldn't constrain it
-        willChange: "transform",
-        transition: "transform 350ms cubic-bezier(0.4, 0, 0.2, 1)",
-        // columnsPerPage handled via CSS class below
-      };
-    }, []);
+    // Only set properties that change dynamically or are animation-specific.
+    // columnFill, columnGap, column-width are handled by CSS class.
+    const innerStyle = useMemo((): React.CSSProperties => ({
+      height: "100%",
+      willChange: "transform",
+      transition: "transform 350ms cubic-bezier(0.4, 0, 0.2, 1)",
+    }), []);
 
     const innerClassName =
       readingMode === "double"

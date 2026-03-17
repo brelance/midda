@@ -419,8 +419,20 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
   const [currentChapterId, setCurrentChapterId] = useState(defaultChapterId);
   const [chapterProgress, setChapterProgress] = useState(0);
-  const [readingMode, setReadingMode] = useState<ReadingMode>("single");
-  const [scrollMode, setScrollMode] = useState<ScrollMode>("scroll");
+  const [readingMode, setReadingMode] = useState<ReadingMode>(() => {
+    try {
+      const saved = window.localStorage.getItem("reader.readingMode");
+      if (saved === "double") return "double";
+    } catch { /* ignore */ }
+    return "single";
+  });
+  const [scrollMode, setScrollMode] = useState<ScrollMode>(() => {
+    try {
+      const saved = window.localStorage.getItem("reader.scrollMode");
+      if (saved === "page") return "page";
+    } catch { /* ignore */ }
+    return "scroll";
+  });
   // Page tracking state for footer display
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -555,6 +567,16 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       // ignore persistence errors
     }
   }, [enableTokenHoverTts]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("reader.scrollMode", scrollMode); }
+    catch { /* ignore */ }
+  }, [scrollMode]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("reader.readingMode", readingMode); }
+    catch { /* ignore */ }
+  }, [readingMode]);
 
   const resetAnalysisPlaybackState = useCallback(() => {
     setAnalysisPlaybackState({

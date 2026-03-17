@@ -42,6 +42,21 @@ export function usePagination(
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
+  // ── Stable refs so callbacks never go stale ─────────────────────────────
+  // currentPage and totalPages kept in refs so ResizeObserver callback and
+  // navigation functions always read the latest value without re-subscribing.
+  const currentPageRef = useRef(0);
+  const totalPagesRef = useRef(1);
+  const onNextChapterRef = useRef(onNextChapter);
+  const onPrevChapterRef = useRef(onPrevChapter);
+
+  useEffect(() => { onNextChapterRef.current = onNextChapter; }, [onNextChapter]);
+  useEffect(() => { onPrevChapterRef.current = onPrevChapter; }, [onPrevChapter]);
+
+  // Keep refs in sync with state
+  useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
+  useEffect(() => { totalPagesRef.current = totalPages; }, [totalPages]);
+
   // ── Page size computation ───────────────────────────────────────────────
   const getPageWidth = useCallback((): number => {
     const viewport = viewportRef.current;
@@ -65,6 +80,7 @@ export function usePagination(
       if (!inner) return;
       const scrollWidth = inner.scrollWidth;
       const computed = Math.max(1, Math.round(scrollWidth / pageWidth));
+      totalPagesRef.current = computed;
       setTotalPages(computed);
     });
   }, [getPageWidth]);
@@ -83,39 +99,41 @@ export function usePagination(
   // ── Navigation ──────────────────────────────────────────────────────────
   const goToPage = useCallback(
     (page: number) => {
-      const total = totalPages;
+      const total = totalPagesRef.current;
       const clamped = Math.max(0, Math.min(page, total - 1));
+      currentPageRef.current = clamped;
       setCurrentPage(clamped);
       applyTranslation(clamped);
     },
-    [totalPages, applyTranslation]
+    [applyTranslation]
   );
 
   const goToNextPage = useCallback((): boolean => {
-    setCurrentPage((prev) => {
-      if (prev >= totalPages - 1) {
-        onNextChapter?.();
-        return prev;
-      }
-      const next = prev + 1;
-      applyTranslation(next);
-      return next;
-    });
-    return currentPage < totalPages - 1;
-  }, [currentPage, totalPages, applyTranslation, onNextChapter]);
+    const cur = currentPageRef.current;
+    const total = totalPagesRef.current;
+    if (cur >= total - 1) {
+      onNextChapterRef.current?.();
+      return false;
+    }
+    const next = cur + 1;
+    currentPageRef.current = next;
+    setCurrentPage(next);
+    applyTranslation(next);
+    return true;
+  }, [applyTranslation]);
 
   const goToPrevPage = useCallback((): boolean => {
-    setCurrentPage((prev) => {
-      if (prev <= 0) {
-        onPrevChapter?.();
-        return prev;
-      }
-      const next = prev - 1;
-      applyTranslation(next);
-      return next;
-    });
-    return currentPage > 0;
-  }, [currentPage, applyTranslation, onPrevChapter]);
+    const cur = currentPageRef.current;
+    if (cur <= 0) {
+      onPrevChapterRef.current?.();
+      return false;
+    }
+    const next = cur - 1;
+    currentPageRef.current = next;
+    setCurrentPage(next);
+    applyTranslation(next);
+    return true;
+  }, [applyTranslation]);
 
   /** Find which page a DOM element lives on and jump there. Used by TTS. */
   const goToPageContaining = useCallback(
@@ -141,7 +159,9 @@ export function usePagination(
     [getPageWidth, goToPage]
   );
 
-  // ── ResizeObserver ──────────────────────────────────────────────────────
+  // ── ResizeObserver — registered ONCE, uses refs for current page ────────
+  // No dependency on currentPage state — avoids disconnect/reconnect on every
+  // page turn. The ref always provides the latest page number.
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -149,14 +169,16 @@ export function usePagination(
     const ro = new ResizeObserver(() => {
       recalculate();
       // Re-apply translation so current page stays correct after resize
-      applyTranslation(currentPage);
+      applyTranslation(currentPageRef.current);
     });
     ro.observe(viewport);
     return () => ro.disconnect();
-  }, [recalculate, applyTranslation, currentPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Intentionally empty — uses refs; recalculate/applyTranslation are stable
 
-  // ── Reset on columnsPerPage change ──────────────────────────────────────
+  // ── Reset on columnsPerPage or chapter change ───────────────────────────
   useEffect(() => {
+    currentPageRef.current = 0;
     setCurrentPage(0);
     applyTranslation(0);
     // Delay recalculate so CSS columns can settle
@@ -164,7 +186,8 @@ export function usePagination(
     return () => clearTimeout(id);
   }, [columnsPerPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pageProgress = totalPages <= 1 ? 1 : currentPage / (totalPages - 1);
+  const pageProgress =
+    totalPages <= 1 ? 1 : currentPage / (totalPages - 1);
 
   return {
     currentPage,
