@@ -58,18 +58,18 @@ export class BookRepository {
     )
     ON CONFLICT(id) DO UPDATE SET
       title = excluded.title,
-      author = excluded.author,
-      description = excluded.description,
-      cover_path = excluded.cover_path,
+      author = COALESCE(excluded.author, books.author),
+      description = COALESCE(excluded.description, books.description),
+      cover_path = COALESCE(excluded.cover_path, books.cover_path),
       file_path = excluded.file_path,
-      source_path = excluded.source_path,
+      source_path = COALESCE(excluded.source_path, books.source_path),
       status = excluded.status,
       progress = excluded.progress,
-      current_chapter_id = excluded.current_chapter_id,
-      last_read_chapter_id = excluded.last_read_chapter_id,
-      metadata_language = excluded.metadata_language,
-      metadata_publisher = excluded.metadata_publisher,
-      metadata_identifier = excluded.metadata_identifier,
+      current_chapter_id = COALESCE(excluded.current_chapter_id, books.current_chapter_id),
+      last_read_chapter_id = COALESCE(excluded.last_read_chapter_id, books.last_read_chapter_id),
+      metadata_language = COALESCE(excluded.metadata_language, books.metadata_language),
+      metadata_publisher = COALESCE(excluded.metadata_publisher, books.metadata_publisher),
+      metadata_identifier = COALESCE(excluded.metadata_identifier, books.metadata_identifier),
       updated_at = CURRENT_TIMESTAMP
   `);
 
