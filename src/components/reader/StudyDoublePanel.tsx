@@ -194,30 +194,7 @@ const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
   );
 };
 
-// ── Legend bar ────────────────────────────────────────────────────────────
-const StudyLegend: React.FC = () => (
-  <div className="study-legend">
-    <span className="study-legend-item">
-      <span className="study-legend-dot" style={{ background: "#2C6BE0" }} />
-      動詞
-    </span>
-    <span className="study-legend-item">
-      <span className="study-legend-dot" style={{ background: "#B45309" }} />
-      形容詞
-    </span>
-    <span className="study-legend-item">
-      <span className="study-legend-dot" style={{ background: "#9B9B9B" }} />
-      助詞
-    </span>
-    <span className="study-legend-item">
-      <span
-        className="study-legend-dot"
-        style={{ background: "var(--reader-text, #1C1C1E)", opacity: 0.7 }}
-      />
-      名詞
-    </span>
-  </div>
-);
+
 
 // ── Floating popover ────────────────────────────────────────────────────────
 interface StudyPopoverProps {
@@ -420,16 +397,6 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
           {chapterTitle}
         </h1>
 
-        {/* Legend + progress */}
-        <div className="study-right-header">
-          <StudyLegend />
-          {sentencesTotal > 0 && (
-            <span className="study-progress-label">
-              {sentencesLoaded}/{sentencesTotal} 句已分析
-            </span>
-          )}
-        </div>
-
         {/* Sentence rows */}
         <div className="study-sentences-container">
           {sentences.length === 0 ? (
@@ -447,6 +414,31 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* ── Fixed badge: analysis progress (bottom-right of viewport) ── */}
+      {sentencesTotal > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "1.25rem",
+            right: "1.5rem",
+            zIndex: 200,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            color: "#fff",
+            fontSize: "0.72rem",
+            fontVariantNumeric: "tabular-nums",
+            letterSpacing: "0.02em",
+            padding: "0.25rem 0.65rem",
+            borderRadius: "999px",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          {sentencesLoaded}/{sentencesTotal} 句已分析
+        </div>
+      )}
 
       {/* ── Token popover ── */}
       <StudyPopover state={popover} onClose={closePopover} />
