@@ -39,6 +39,7 @@ import {
   sendRoleplayMessage,
 } from "../../services/interactiveRoleplay";
 import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
+import { splitIntoSentences } from "../../utils/lang/sentenceSegmenter";
 
 interface ReaderPageProps {
   book: Book;
@@ -80,8 +81,6 @@ interface SentenceSeed {
   paragraphIndex: number;
   sentenceIndex: number;
 }
-
-const SENTENCE_SPLIT_REGEX = /(?<=[。！？!?\.．])/u;
 
 const PARAGRAPH_TAGS = new Set([
   "p",
@@ -163,7 +162,8 @@ const TTS_LANGUAGE_OPTIONS = [
 
 const extractSentencesFromHtml = (
   html: string,
-  chapterId: string
+  chapterId: string,
+  locale?: string
 ): SentenceSeed[] => {
   if (typeof window === "undefined") {
     return [];
@@ -253,8 +253,7 @@ const extractSentencesFromHtml = (
   };
 
   const processParagraph = (text: string) => {
-    const rawSegments = text
-      .split(SENTENCE_SPLIT_REGEX)
+    const rawSegments = splitIntoSentences(text, locale)
       .map((segment) => trimAsciiWhitespace(collapseAsciiWhitespace(segment)))
       .filter(Boolean);
 
@@ -326,7 +325,9 @@ const extractSentencesFromHtml = (
     const tagName = element.tagName.toLowerCase();
 
     if (tagName === "br") {
-      appendToBuffer("\n");
+      // Treat <br> as a paragraph boundary so that EPUBs using <br> instead
+      // of <p> don't collapse the entire chapter into one paragraph.
+      flushInlineBuffer();
       return;
     }
 
@@ -363,8 +364,7 @@ const extractSentencesFromHtml = (
     return [];
   }
 
-  const fallbackSegments = fallbackText
-    .split(SENTENCE_SPLIT_REGEX)
+  const fallbackSegments = splitIntoSentences(fallbackText, locale)
     .map((segment) => trimAsciiWhitespace(collapseAsciiWhitespace(segment)))
     .filter(Boolean);
 
@@ -1137,7 +1137,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
     const sentences = extractSentencesFromHtml(
       chapterContentHtml,
-      activeChapterId
+      activeChapterId,
+      analysisLanguageRef.current
     );
 
     const previous = sentenceItemsRef.current;
