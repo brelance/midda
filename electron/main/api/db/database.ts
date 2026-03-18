@@ -141,7 +141,7 @@ try {
 process.on("exit", () => {
   if (db) {
     db.close();
-    console.log("Database connection closed.");
+    // 不在 exit 事件里调用 console.log：此时 stdout 已关闭，写入会触发 EIO 崩溃
   }
 });
 
