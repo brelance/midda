@@ -67,8 +67,6 @@ const ReaderContentPaged = forwardRef<
     const {
       currentPage,
       totalPages,
-      canGoPrev,
-      canGoNext,
       goToNextPage,
       goToPrevPage,
       goToPageContaining,
@@ -162,17 +160,10 @@ const ReaderContentPaged = forwardRef<
           </div>
         </div>
 
-        {/* Hover-reveal page turn buttons */}
-        <PageTurnButton
-          direction="prev"
-          onClick={goToPrevPage}
-          disabled={!canGoPrev}
-        />
-        <PageTurnButton
-          direction="next"
-          onClick={goToNextPage}
-          disabled={!canGoNext}
-        />
+        {/* Hover-reveal page turn buttons — never disabled so chapter
+            transitions fire when the user clicks past the last/first page */}
+        <PageTurnButton direction="prev" onClick={goToPrevPage} />
+        <PageTurnButton direction="next" onClick={goToNextPage} />
       </div>
     );
   }

@@ -681,12 +681,7 @@ body {
   height: auto;
 }
 
-/* Page-turn hover zone — transparent overlays on left/right edges */
+/* Page-turn hover zone — fixed overlays on left/right window edges */
 .page-turn-zone {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  width: 15%;
-  z-index: 20;
-  cursor: pointer;
+  /* Positioning is set inline via React style prop */
 }
