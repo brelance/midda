@@ -4,6 +4,8 @@ import { ReadingMode, ScrollMode } from "../../types/reader";
 import ReaderContentPaged, {
   type ReaderContentPagedHandle,
 } from "./ReaderContentPaged";
+import StudyDoublePanel from "./StudyDoublePanel";
+import type { ReaderSentenceAnalysisItem } from "./ReaderSentenceAnalysisPanel";
 
 interface ReaderContentProps {
   chapterTitle: string;
@@ -15,6 +17,11 @@ interface ReaderContentProps {
   onNextChapter?: () => void;
   onPrevChapter?: () => void;
   onPageChange?: (page: number, total: number, progress: number) => void;
+  /** Used in study-double mode: annotated sentences for the right column */
+  studyPanelSentences?: ReaderSentenceAnalysisItem[];
+  bookId?: string;
+  enableTokenHoverTts?: boolean;
+  ttsLanguage?: string;
 }
 
 /**
@@ -230,6 +237,10 @@ const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
       onNextChapter,
       onPrevChapter,
       onPageChange,
+      studyPanelSentences,
+      bookId,
+      enableTokenHoverTts,
+      ttsLanguage,
     },
     ref
   ) => {
@@ -238,6 +249,22 @@ const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
       () => (cssContent ? scopeEpubCss(cssContent, EPUB_CSS_SCOPE) : ""),
       [cssContent]
     );
+
+    // ── Study double-page mode ─────────────────────────────────────────
+    if (readingMode === "study-double") {
+      return (
+        <StudyDoublePanel
+          chapterTitle={chapterTitle}
+          contentHtml={safeHtml}
+          scopedCss={scopedCss || undefined}
+          sentences={studyPanelSentences ?? []}
+          bookId={bookId ?? ""}
+          enableTokenHoverTts={enableTokenHoverTts}
+          ttsLanguage={ttsLanguage}
+          onScroll={onScroll}
+        />
+      );
+    }
 
     // ── Page mode ──────────────────────────────────────────────────────
     if (scrollMode === "page") {

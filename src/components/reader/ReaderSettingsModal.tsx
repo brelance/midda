@@ -254,15 +254,20 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               </div>
               <div className="my-3 h-px bg-gray-100" />
               <div className="flex items-center justify-between">
-                <span className={`text-[15px] font-medium ${scrollMode === "scroll" ? "text-gray-400" : "text-[#1d1d1f]"}`}>版面</span>
+                <div>
+                  <span className="text-[15px] font-medium text-[#1d1d1f]">版面</span>
+                  {readingMode === "study-double" && (
+                    <p className="mt-0.5 text-[12px] leading-snug text-[#007aff]">精读双页不支持翻页模式</p>
+                  )}
+                </div>
                 <SegmentedControl
                   id="reading-mode-control"
                   value={readingMode}
                   onChange={onReadingModeChange}
-                  disabled={scrollMode === "scroll"}
                   options={[
                     { label: "单页", value: "single" },
                     { label: "双页", value: "double" },
+                    { label: "精读", value: "study-double" },
                   ]}
                 />
               </div>

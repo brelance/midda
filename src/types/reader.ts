@@ -1,6 +1,6 @@
 import { Book, Chapter } from "./types";
 
-export type ReadingMode = "single" | "double";
+export type ReadingMode = "single" | "double" | "study-double";
 export type ScrollMode = "scroll" | "page";
 export type ReaderViewMode = "reading" | "analysis";
 export type ReaderTheme = "light" | "warm" | "green" | "dark";

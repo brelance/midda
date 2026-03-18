@@ -1464,7 +1464,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
   useEffect(() => {
     const normalizedChapterId = activeChapterId ?? null;
-    if (viewMode !== "analysis") {
+    const isAnalysisActive = viewMode === "analysis" || readingMode === "study-double";
+    if (!isAnalysisActive) {
       if (
         sentenceItemsChapterRef.current &&
         sentenceItemsChapterRef.current !== normalizedChapterId
@@ -1533,13 +1534,21 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     if (analysisRunningRef.current) {
       void processPendingSentences();
     }
-  }, [viewMode, chapterContentHtml, activeChapterId, processPendingSentences]);
+  }, [viewMode, readingMode, chapterContentHtml, activeChapterId, processPendingSentences]);
 
   useEffect(() => {
-    if (isSentenceAnalysisRunning && viewMode === "analysis") {
+    if (isSentenceAnalysisRunning && (viewMode === "analysis" || readingMode === "study-double")) {
       void processPendingSentences();
     }
-  }, [isSentenceAnalysisRunning, viewMode, processPendingSentences]);
+  }, [isSentenceAnalysisRunning, viewMode, readingMode, processPendingSentences]);
+
+  // Auto-start analysis loop when study-double mode is activated
+  useEffect(() => {
+    if (readingMode === "study-double" && !analysisRunningRef.current) {
+      analysisRunningRef.current = true;
+      setIsSentenceAnalysisRunning(true);
+    }
+  }, [readingMode]);
 
   const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1715,6 +1724,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
               onNextChapter={handleNextChapter}
               onPrevChapter={handlePrevChapter}
               onPageChange={handlePageChange}
+              studyPanelSentences={readingMode === "study-double" ? displaySentenceItems : undefined}
+              bookId={book.id}
+              enableTokenHoverTts={enableTokenHoverTts}
+              ttsLanguage={analysisTtsLanguage}
             />
           )
         }
