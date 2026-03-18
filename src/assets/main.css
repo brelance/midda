@@ -923,6 +923,14 @@ body {
   font-size: 0.76rem;
   color: rgba(255, 255, 255, 0.55);
   letter-spacing: 0.07em;
+  margin-bottom: 4px;
+}
+
+.study-popover-baseform {
+  font-family: -apple-system, "Inter", sans-serif;
+  font-size: 0.72rem;
+  color: rgba(180, 200, 255, 0.7);
+  letter-spacing: 0.05em;
   margin-bottom: 8px;
 }
 

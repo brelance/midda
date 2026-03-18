@@ -3,6 +3,7 @@ export interface TokenData {
   pos: string;
   furigana?: string;
   romaji?: string;
+  baseForm?: string;
 }
 
 export interface SentenceAnalysisRecord {

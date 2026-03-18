@@ -5,8 +5,10 @@ import { parseJson } from "../core/json";
 type LanguagePromptBuilder = (sentence: string) => string;
 
 const LANGUAGE_PROMPTS: Record<string, LanguagePromptBuilder> = {
-  ja: (sentence) => `请对以下日语句子进行详细的词法分析，并以JSON数组格式返回结果。每个对象应包含以下字段："word", "pos", "furigana", "romaji"。
+  ja: (sentence) => `请对以下日语句子进行详细的词法分析，并以JSON数组格式返回结果。每个对象应包含以下字段："word", "pos", "furigana", "romaji", "baseForm"。
     
+其中 "baseForm" 是该词的辞书形（原形），例如："食べた"→"食べる"，"難しくて"→"難しい"，助词/记号等无活用变化的词 baseForm 与 word 相同。
+
 请特别注意以下分析要求：
 1. 将助动词与对应动词正确结合。如"食べた"应作为一个单词，而不是分开为"食べ"和"た"。
 2. 正确识别动词的时态变化，如"いた"是"いる"的过去时，应作为一个完整单词处理。

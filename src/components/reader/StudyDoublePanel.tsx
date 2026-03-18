@@ -61,6 +61,7 @@ interface TokenPopoverState {
   reading: string;
   pos: string;
   romaji: string;
+  baseForm: string;
   meaning: string;
   loading: boolean;
 }
@@ -73,6 +74,7 @@ const INITIAL_POPOVER: TokenPopoverState = {
   reading: "",
   pos: "",
   romaji: "",
+  baseForm: "",
   meaning: "",
   loading: false,
 };
@@ -252,6 +254,11 @@ const StudyPopover: React.FC<StudyPopoverProps> = ({ state, onClose }) => {
             {state.reading}
             {state.romaji ? `　${state.romaji}` : ""}
           </div>
+          {state.baseForm && (
+            <div className="study-popover-baseform">
+              原形：{state.baseForm}
+            </div>
+          )}
           <div className="study-popover-divider" />
           <div className="study-popover-row">
             <span
@@ -329,6 +336,7 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
         reading: token.furigana ?? "",
         pos: token.pos,
         romaji: token.romaji ?? "",
+        baseForm: token.baseForm && token.baseForm !== token.word ? token.baseForm : "",
         meaning: "",
         loading: true,
       });
