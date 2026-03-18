@@ -40,11 +40,13 @@ function createWindow() {
     // icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 12, y: 12 },
+    width: 1000,
+    height: 785,
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
     },
-    minWidth: 360,
-    minHeight: 240,
+    minWidth: 800,
+    minHeight: 600,
   });
 
   // Test active push message to Renderer-process.

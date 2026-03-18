@@ -7,94 +7,77 @@ interface NavMenuProps {
   onNavChange: (nav: NavigationItem) => void;
 }
 
-// Small 16x16 icon wrapper for Apple Books sidebar
-const Icon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="w-4 h-4 mr-2 flex-shrink-0 text-gray-500">{children}</span>
-);
-
 const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
-  const primaryItems = [
-    {
-      id: 'bookshelf' as NavigationItem,
-      label: '主页',
-      icon: (
-        <Icon>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-        </Icon>
-      ),
-    },
-    {
-      id: 'discover' as NavigationItem,
-      label: '发现',
-      icon: (
-        <Icon>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Icon>
-      ),
-    },
-    {
-      id: 'store' as NavigationItem,
-      label: '书城',
-      icon: (
-        <Icon>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
-        </Icon>
-      ),
-    },
-  ];
-
-  const libraryItems = [
-    {
-      id: 'bookshelf' as NavigationItem,
-      label: '全部',
-      icon: (
-        <Icon>
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-          </svg>
-        </Icon>
-      ),
-    },
-  ];
-
   return (
-    <div className="overflow-y-auto">
-      {/* Apple Books section */}
-      <div className="mb-4">
-        <div className="px-2 text-[11px] font-bold text-gray-500 mb-1 tracking-wide uppercase">
-          Apple Books
-        </div>
-        {primaryItems.map((item) => (
-          <NavItem
-            key={item.id + item.label}
-            item={item}
-            isActive={activeNav === item.id && item.label === '主页'}
-            onClick={() => onNavChange(item.id)}
-          />
-        ))}
+    <nav className="space-y-5">
+      {/* ── Primary ── */}
+      <div>
+        <NavItem
+          label="主页"
+          isActive={activeNav === 'bookshelf'}
+          onClick={() => onNavChange('bookshelf')}
+          icon={
+            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          }
+        />
       </div>
 
-      {/* Library section */}
-      <div className="mb-4">
-        <div className="px-2 text-[11px] font-bold text-gray-500 mb-1 tracking-wide uppercase">
+      {/* ── 书库 ── */}
+      <div>
+        <div className="px-2 mb-1 text-[11px] font-semibold text-gray-400 tracking-wider uppercase select-none">
           书库
         </div>
-        {libraryItems.map((item) => (
-          <NavItem
-            key={item.id + item.label}
-            item={item}
-            isActive={false}
-            onClick={() => onNavChange(item.id)}
-          />
-        ))}
+        <NavItem
+          label="全部"
+          isActive={false}
+          onClick={() => onNavChange('bookshelf')}
+          icon={
+            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          }
+        />
+        <NavItem
+          label="欲读清单"
+          isActive={false}
+          onClick={() => {}}
+          icon={
+            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
+        <NavItem
+          label="已读完"
+          isActive={false}
+          onClick={() => {}}
+          icon={
+            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
       </div>
-    </div>
+
+      {/* ── 我的藏书 ── */}
+      <div>
+        <div className="px-2 mb-1 text-[11px] font-semibold text-gray-400 tracking-wider uppercase select-none">
+          我的藏书
+        </div>
+        <NavItem
+          label="新建藏书"
+          isActive={false}
+          onClick={() => {}}
+          icon={
+            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          }
+        />
+      </div>
+    </nav>
   );
 };
 

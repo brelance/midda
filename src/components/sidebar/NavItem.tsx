@@ -1,32 +1,32 @@
 import React from 'react';
 
 interface NavItemProps {
-  item: {
-    id: string;
-    label: string;
-    icon: React.ReactNode;
-  };
+  label: string;
+  icon: React.ReactNode;
   isActive: boolean;
   onClick: () => void;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ item, isActive, onClick }) => {
+const NavItem: React.FC<NavItemProps> = ({ label, icon, isActive, onClick }) => {
   return (
-    <a
-      href="#"
-      onClick={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
+    <button
+      type="button"
+      onClick={onClick}
       className={`
-        flex items-center px-2 py-1 rounded-md text-[13px] font-medium text-black
-        transition-colors duration-100 select-none mt-0.5
-        ${isActive ? 'bg-black/[0.08]' : 'hover:bg-black/[0.04]'}
+        flex items-center w-full gap-2 px-2 py-[5px] rounded-md
+        text-[13px] font-medium text-[#1d1d1f]
+        transition-colors duration-100 select-none
+        ${isActive
+          ? "bg-black/[0.08]"
+          : "hover:bg-black/[0.04] active:bg-black/[0.08]"
+        }
       `}
     >
-      {item.icon}
-      {item.label}
-    </a>
+      <span className={`flex-shrink-0 ${isActive ? "text-[#007aff]" : "text-gray-500"}`}>
+        {icon}
+      </span>
+      {label}
+    </button>
   );
 };
 

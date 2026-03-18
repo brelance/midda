@@ -46,8 +46,8 @@ const Layout: React.FC<LayoutProps> = ({
 }) => {
   return (
     <div className="h-screen bg-white text-[#333333] overflow-hidden">
-      {/* Desktop + Tablet: two-column layout */}
-      <div className="hidden md:flex h-full w-full">
+      {/* Desktop layout: always show sidebar + main content */}
+      <div className="flex h-full w-full">
         <Sidebar
           activeNav={activeNav}
           onNavChange={onNavChange}
@@ -55,27 +55,7 @@ const Layout: React.FC<LayoutProps> = ({
           isMobile={false}
           isOpen={true}
           onClose={() => {}}
-          searchQuery={searchQuery}
-          onSearch={onSearch}
         />
-        <MainContent
-          books={books}
-          selectedBook={selectedBook}
-          searchQuery={searchQuery}
-          sortBy={sortBy}
-          onSelectBook={onSelectBook}
-          onSearch={onSearch}
-          onSort={onSort}
-          toggleSidebar={toggleSidebar}
-          toggleDetailsPane={toggleDetailsPane}
-          onBookAdded={onBookAdded}
-          onEnterReader={onEnterReader}
-          onDeleteBook={onDeleteBook}
-        />
-      </div>
-
-      {/* Mobile: single column */}
-      <div className="flex md:hidden h-full w-full">
         <MainContent
           books={books}
           selectedBook={selectedBook}
@@ -112,8 +92,6 @@ const Layout: React.FC<LayoutProps> = ({
               isMobile={true}
               isOpen={isSidebarOpen}
               onClose={closeSidebar}
-              searchQuery={searchQuery}
-              onSearch={onSearch}
             />
           </div>
         </div>
