@@ -5,7 +5,7 @@ import ReaderContentPaged, {
   type ReaderContentPagedHandle,
 } from "./ReaderContentPaged";
 import StudyDoublePanel from "./StudyDoublePanel";
-import type { ReaderSentenceAnalysisItem } from "./ReaderSentenceAnalysisPanel";
+import type { ReaderSentenceAnalysisItem } from "./StudyDoublePanel";
 
 interface ReaderContentProps {
   chapterTitle: string;

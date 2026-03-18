@@ -9,20 +9,13 @@ import ReaderLayout from "../../components/reader/ReaderLayout";
 import ReaderHeader from "../../components/reader/ReaderHeader";
 import ReaderFooter from "../../components/reader/ReaderFooter";
 import ReaderContent from "../../components/reader/ReaderContent";
-import ReaderSentenceAnalysisPanel, {
-  ReaderSentenceAnalysisItem,
-} from "../../components/reader/ReaderSentenceAnalysisPanel";
 import ReaderSettingsModal from "../../components/reader/ReaderSettingsModal";
 import ReaderTocSidebar from "../../components/reader/ReaderTocSidebar";
 import ReaderChatSidebar from "../../components/reader/ReaderChatSidebar";
 import { Book, Chapter, TokenData } from "../../types/types";
-import { ReadingMode, ScrollMode, ReaderViewMode, ReaderTheme } from "../../types/reader";
+import { ReadingMode, ScrollMode, ReaderTheme } from "../../types/reader";
 import type { ReaderContentHandle } from "../../components/reader/ReaderContent";
-import type {
-  TtsPlaybackStatus,
-  TtsSentencePayload,
-  TtsStateUpdate,
-} from "../../types/tts";
+import type { ReaderSentenceAnalysisItem } from "../../components/reader/StudyDoublePanel";
 import type {
   RoleplayAnalysisState,
   RoleplayChatHistoryMessage,
@@ -86,12 +79,6 @@ interface SentenceSeed {
   chapterId: string;
   paragraphIndex: number;
   sentenceIndex: number;
-}
-
-interface AnalysisPlaybackState {
-  status: TtsPlaybackStatus;
-  currentIndex: number | null;
-  currentSentenceId: string | null;
 }
 
 const SENTENCE_SPLIT_REGEX = /(?<=[。！？!?\.．])/u;
@@ -457,7 +444,6 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   // Page tracking state for footer display
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [viewMode, setViewMode] = useState<ReaderViewMode>("reading");
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
   const [roleplayAnalysisByChapter, setRoleplayAnalysisByChapter] = useState<
@@ -476,21 +462,17 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [isChatSending, setIsChatSending] = useState(false);
   const [isSentenceAnalysisRunning, setIsSentenceAnalysisRunning] =
     useState(false);
-  const [isShowingExistingAnalysis, setIsShowingExistingAnalysis] =
-    useState(false);
-  const [existingAnalysisResults, setExistingAnalysisResults] = useState<{
-    byId: Record<string, TokenData[]>;
-    byText: Record<string, TokenData[]>;
-  }>({ byId: {}, byText: {} });
-  const showExistingAnalysisRequestIdRef = useRef(0);
-  const clearExistingAnalysisOverlay = useCallback(() => {
-    showExistingAnalysisRequestIdRef.current += 1;
-    setIsShowingExistingAnalysis(false);
-    setExistingAnalysisResults({ byId: {}, byText: {} });
-  }, []);
-  const clearAnalysisLanguage = useCallback(() => {
-    analysisLanguageRef.current = undefined;
-  }, []);
+
+  const [sentenceItems, setSentenceItems] = useState<ReaderSentenceAnalysisItem[]>([]);
+  const sentenceItemsRef = useRef<ReaderSentenceAnalysisItem[]>([]);
+  const sentenceItemsChapterRef = useRef<string | null>(null);
+  const processingRef = useRef(false);
+  const analysisRunningRef = useRef(isSentenceAnalysisRunning);
+  const analysisLanguageRef = useRef<string | undefined>(undefined);
+  const analysisLanguageDetectionPromiseRef =
+    useRef<Promise<string | undefined> | null>(null);
+  const roleplayAnalysisRequestIdRef = useRef(0);
+
   const ensureAnalysisLanguageReady = useCallback(async () => {
     if (analysisLanguageRef.current || sentenceItemsRef.current.length === 0) {
       return analysisLanguageRef.current;
@@ -517,53 +499,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     return analysisLanguageDetectionPromiseRef.current;
   }, []);
 
-  const [sentenceItems, setSentenceItems] = useState<
-    ReaderSentenceAnalysisItem[]
-  >([]);
-  const sentenceItemsRef = useRef<ReaderSentenceAnalysisItem[]>([]);
-  const sentenceItemsChapterRef = useRef<string | null>(null);
-  const processingRef = useRef(false);
-  const analysisRunningRef = useRef(isSentenceAnalysisRunning);
-  const analysisLanguageRef = useRef<string | undefined>(undefined);
-  const analysisLanguageDetectionPromiseRef =
-    useRef<Promise<string | undefined> | null>(null);
-  const roleplayAnalysisRequestIdRef = useRef(0);
-  const [analysisPlaybackState, setAnalysisPlaybackState] =
-    useState<AnalysisPlaybackState>({
-      status: "idle",
-      currentIndex: null,
-      currentSentenceId: null,
-    });
-  const analysisSentencesQueue = useMemo<TtsSentencePayload[]>(
-    () =>
-      sentenceItems.map((item) => ({
-        id: item.id,
-        text: item.text,
-      })),
-    [sentenceItems]
-  );
-  const displaySentenceItems = useMemo(() => {
-    if (!isShowingExistingAnalysis) {
-      return sentenceItems;
-    }
-    return sentenceItems.map((item) => {
-      const tokens =
-        existingAnalysisResults.byId[item.id] ??
-        existingAnalysisResults.byText[item.text];
-      if (!tokens) {
-        return item;
-      }
-      if (item.status === "loaded" && item.tokens && item.tokens.length > 0) {
-        return item;
-      }
-      return {
-        ...item,
-        status: "loaded" as ReaderSentenceAnalysisItem["status"],
-        tokens,
-        error: undefined,
-      };
-    });
-  }, [existingAnalysisResults, isShowingExistingAnalysis, sentenceItems]);
+
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [analysisTtsLanguage, setAnalysisTtsLanguage] =
     useState<string>("ja-JP");
@@ -614,22 +550,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     catch { /* ignore */ }
   }, [readerTheme]);
 
-  const resetAnalysisPlaybackState = useCallback(() => {
-    setAnalysisPlaybackState({
-      status: "idle",
-      currentIndex: null,
-      currentSentenceId: null,
-    });
-  }, []);
 
-  const stopAnalysisPlayback = useCallback(() => {
-    resetAnalysisPlaybackState();
-    if (window?.api?.tts?.stop) {
-      void window.api.tts
-        .stop()
-        .catch((error) => console.error("停止TTS失败:", error));
-    }
-  }, [resetAnalysisPlaybackState]);
 
   useEffect(() => {
     setCurrentChapterId((prev) => (prev === defaultChapterId ? prev : defaultChapterId));
@@ -646,8 +567,6 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   }, [book.id]);
 
   const contentRef = useRef<ReaderContentHandle>(null);
-  // Separate ref for the analysis panel which always renders as an HTMLDivElement
-  const analysisContentRef = useRef<HTMLDivElement>(null);
 
   const currentIndex = useMemo(
     () => findChapterIndex(chapters, currentChapterId),
@@ -985,14 +904,13 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   );
 
   const resetSentenceAnalysisItems = useCallback(() => {
+    analysisLanguageRef.current = undefined;
     setSentenceItems(() => {
       sentenceItemsRef.current = [];
       sentenceItemsChapterRef.current = null;
       return [];
     });
-    clearAnalysisLanguage();
-    resetAnalysisPlaybackState();
-  }, [clearAnalysisLanguage, resetAnalysisPlaybackState]);
+  }, []);
 
   const handleOpenSettings = useCallback(() => {
     setIsSettingsModalOpen(true);
@@ -1007,109 +925,14 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const handleTtsLanguageChange = useCallback(
     (language: string) => {
       setAnalysisTtsLanguage(language);
-      stopAnalysisPlayback();
     },
-    [stopAnalysisPlayback]
+    []
   );
-
-  const handleEnterAnalysisMode = useCallback(() => {
-    setViewMode("analysis");
-    showToolbarsTemporarily(1800);
-  }, [showToolbarsTemporarily]);
-
-  const handleExitAnalysisMode = useCallback(() => {
-    stopAnalysisPlayback();
-    setIsSentenceAnalysisRunning(false);
-    clearExistingAnalysisOverlay();
-    setViewMode("reading");
-    showToolbarsTemporarily(1800);
-  }, [
-    clearExistingAnalysisOverlay,
-    showToolbarsTemporarily,
-    stopAnalysisPlayback,
-  ]);
-
-  const handleToggleAnalysisMode = useCallback(() => {
-    if (viewMode === "analysis") {
-      handleExitAnalysisMode();
-    } else {
-      handleEnterAnalysisMode();
-    }
-  }, [viewMode, handleEnterAnalysisMode, handleExitAnalysisMode]);
-
-  const handleShowExistingSentenceAnalysis = useCallback(() => {
-    if (isShowingExistingAnalysis) {
-      clearExistingAnalysisOverlay();
-      showToolbarsTemporarily(1800);
-      return;
-    }
-
-    if (
-      viewMode !== "analysis" ||
-      !activeChapterId ||
-      !window?.api?.db?.sentenceAnalysis?.listByContext
-    ) {
-      return;
-    }
-
-    const requestId = ++showExistingAnalysisRequestIdRef.current;
-
-    void (async () => {
-      try {
-        const records =
-          (await window.api.db.sentenceAnalysis.listByContext(book.id, {
-            chapterId: activeChapterId,
-          })) ?? [];
-
-        if (records.length === 0) {
-          return;
-        }
-
-        const byId: Record<string, TokenData[]> = {};
-        const byText: Record<string, TokenData[]> = {};
-
-        records.forEach((record) => {
-          if (record.tokens && record.tokens.length > 0) {
-            if (record.sentenceId) {
-              byId[record.sentenceId] = record.tokens;
-            }
-            byText[record.text] = record.tokens;
-          }
-        });
-
-        if (
-          Object.keys(byId).length === 0 &&
-          Object.keys(byText).length === 0
-        ) {
-          return;
-        }
-
-        if (showExistingAnalysisRequestIdRef.current !== requestId) {
-          return;
-        }
-
-        setExistingAnalysisResults({ byId, byText });
-        setIsShowingExistingAnalysis(true);
-      } catch (error) {
-        console.error("加载已存储的句子分析失败:", error);
-      }
-    })();
-
-    showToolbarsTemporarily(1800);
-  }, [
-    activeChapterId,
-    book.id,
-    clearExistingAnalysisOverlay,
-    isShowingExistingAnalysis,
-    showToolbarsTemporarily,
-    viewMode,
-  ]);
 
   const handleToggleSentenceAnalysisRunning = useCallback(() => {
     setIsSentenceAnalysisRunning((prev) => {
       const next = !prev;
       if (!next) {
-        stopAnalysisPlayback();
         resetSentenceAnalysisItems();
       } else {
         void ensureAnalysisLanguageReady();
@@ -1121,109 +944,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     ensureAnalysisLanguageReady,
     resetSentenceAnalysisItems,
     showToolbarsTemporarily,
-    stopAnalysisPlayback,
   ]);
-
-  const handleAnalysisPlaybackToggle = useCallback(async () => {
-    if (viewMode !== "analysis" || sentenceItems.length === 0) {
-      return;
-    }
-
-    const ttsApi = window?.api?.tts;
-    if (!ttsApi) {
-      return;
-    }
-
-    try {
-      if (analysisPlaybackState.status === "playing") {
-        await ttsApi.pause();
-      } else if (analysisPlaybackState.status === "paused") {
-        await ttsApi.resume();
-      } else {
-        const startIndex = analysisPlaybackState.currentIndex ?? 0;
-        const languageOption =
-          analysisTtsLanguage === "system" ? undefined : analysisTtsLanguage;
-        await ttsApi.start(analysisSentencesQueue, {
-          startIndex,
-          language: languageOption,
-        });
-      }
-      showToolbarsTemporarily(1800);
-    } catch (error) {
-      console.error("TTS控制失败:", error);
-    }
-  }, [
-    analysisPlaybackState.currentIndex,
-    analysisPlaybackState.status,
-    analysisTtsLanguage,
-    analysisSentencesQueue,
-    sentenceItems.length,
-    showToolbarsTemporarily,
-    viewMode,
-  ]);
-
-  const handleSentenceSelect = useCallback(
-    async (sentenceId: string) => {
-      if (viewMode !== "analysis") {
-        return;
-      }
-
-      const sentenceIndex = sentenceItems.findIndex(
-        (item) => item.id === sentenceId
-      );
-
-      if (sentenceIndex === -1) {
-        return;
-      }
-
-      const ttsApi = window?.api?.tts;
-      if (!ttsApi) {
-        return;
-      }
-
-      setAnalysisPlaybackState((prev) => ({
-        ...prev,
-        currentIndex: sentenceIndex,
-        currentSentenceId: sentenceId,
-      }));
-
-      try {
-        if (analysisPlaybackState.status === "idle") {
-          if (analysisSentencesQueue.length === 0) {
-            return;
-          }
-          const languageOption =
-            analysisTtsLanguage === "system" ? undefined : analysisTtsLanguage;
-          await ttsApi.start(analysisSentencesQueue, {
-            startIndex: sentenceIndex,
-            language: languageOption,
-          });
-        } else {
-          await ttsApi.jumpTo(sentenceIndex);
-        }
-
-        showToolbarsTemporarily(1800);
-      } catch (error) {
-        console.error("跳转TTS失败:", error);
-      }
-    },
-    [
-      analysisPlaybackState.status,
-      analysisTtsLanguage,
-      analysisSentencesQueue,
-      sentenceItems,
-      showToolbarsTemporarily,
-      viewMode,
-    ]
-  );
-
-  const isTtsAvailable =
-    typeof window !== "undefined" && Boolean(window.api?.tts);
-  const isAnalysisPlaybackDisabled =
-    !isTtsAvailable || viewMode !== "analysis" || sentenceItems.length === 0;
-  const sentenceSelectionHandler = isAnalysisPlaybackDisabled
-    ? undefined
-    : handleSentenceSelect;
 
   useEffect(() => {
     showToolbarsTemporarily(1800);
@@ -1234,81 +955,16 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   }, [sentenceItems]);
 
   useEffect(() => {
-    if (
-      viewMode === "analysis" &&
-      sentenceItems.length > 0 &&
-      !analysisLanguageRef.current &&
-      !analysisLanguageDetectionPromiseRef.current
-    ) {
-      void ensureAnalysisLanguageReady();
-    }
-  }, [ensureAnalysisLanguageReady, sentenceItems, viewMode]);
-
-  useEffect(() => {
     analysisRunningRef.current = isSentenceAnalysisRunning;
   }, [isSentenceAnalysisRunning]);
 
   useEffect(() => {
-    clearExistingAnalysisOverlay();
-  }, [activeChapterId, clearExistingAnalysisOverlay, viewMode]);
-
-  useEffect(() => {
-    clearAnalysisLanguage();
-  }, [activeChapterId, clearAnalysisLanguage]);
-
-  useEffect(() => {
-    return () => {
-      showExistingAnalysisRequestIdRef.current += 1;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (viewMode !== "analysis") {
-      stopAnalysisPlayback();
-    }
-  }, [stopAnalysisPlayback, viewMode]);
-
-  useEffect(() => {
-    stopAnalysisPlayback();
-  }, [currentChapterId, stopAnalysisPlayback]);
-
-  useEffect(() => {
-    const ttsApi = window?.api?.tts;
-    if (!ttsApi?.onStateChange) {
-      return;
-    }
-
-    const unsubscribe = ttsApi.onStateChange((state: TtsStateUpdate) => {
-      setAnalysisPlaybackState((prev) => {
-        if (
-          prev.status === state.status &&
-          prev.currentIndex === state.currentIndex &&
-          prev.currentSentenceId === state.currentSentenceId
-        ) {
-          return prev;
-        }
-
-        return {
-          status: state.status,
-          currentIndex: state.currentIndex,
-          currentSentenceId: state.currentSentenceId,
-        };
-      });
-
-      if (state.error) {
-        console.error("TTS错误:", state.error);
-      }
-    });
-
-    return () => {
-      unsubscribe?.();
-      ttsApi.cleanup?.();
-    };
-  }, []);
+    analysisLanguageRef.current = undefined;
+  }, [activeChapterId]);
 
   const processPendingSentences = useCallback(async () => {
     if (
-      viewMode !== "analysis" ||
+      readingMode !== "study-double" ||
       !isSentenceAnalysisRunning ||
       !analysisRunningRef.current ||
       !activeChapterId ||
@@ -1432,40 +1088,17 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       processingRef.current = false;
     }
   }, [
-    viewMode,
+    readingMode,
     isSentenceAnalysisRunning,
     activeChapterId,
     book.id,
     ensureAnalysisLanguageReady,
   ]);
 
-  const handleRetrySentence = useCallback(
-    (sentenceId: string) => {
-      setSentenceItems((prev) => {
-        const next = prev.map((item) =>
-          item.id === sentenceId
-            ? {
-                ...item,
-                status: "idle" as ReaderSentenceAnalysisItem["status"],
-                tokens: undefined,
-                error: undefined,
-              }
-            : item
-        );
-        sentenceItemsRef.current = next;
-        return next;
-      });
-      if (analysisRunningRef.current) {
-        void processPendingSentences();
-      }
-    },
-    [processPendingSentences]
-  );
 
   useEffect(() => {
     const normalizedChapterId = activeChapterId ?? null;
-    const isAnalysisActive = viewMode === "analysis" || readingMode === "study-double";
-    if (!isAnalysisActive) {
+    if (readingMode !== "study-double") {
       if (
         sentenceItemsChapterRef.current &&
         sentenceItemsChapterRef.current !== normalizedChapterId
@@ -1534,13 +1167,13 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     if (analysisRunningRef.current) {
       void processPendingSentences();
     }
-  }, [viewMode, readingMode, chapterContentHtml, activeChapterId, processPendingSentences]);
+  }, [readingMode, chapterContentHtml, activeChapterId, processPendingSentences]);
 
   useEffect(() => {
-    if (isSentenceAnalysisRunning && (viewMode === "analysis" || readingMode === "study-double")) {
+    if (isSentenceAnalysisRunning && readingMode === "study-double") {
       void processPendingSentences();
     }
-  }, [isSentenceAnalysisRunning, viewMode, readingMode, processPendingSentences]);
+  }, [isSentenceAnalysisRunning, readingMode, processPendingSentences]);
 
   // Auto-start analysis loop when study-double mode is activated
   useEffect(() => {
@@ -1684,52 +1317,27 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             onOpenToc={handleOpenToc}
             onOpenChat={handleOpenChatSidebar}
             onOpenSettings={handleOpenSettings}
-            analysisControls={{
-              viewMode,
-              onToggleMode: handleToggleAnalysisMode,
-              onToggleShowAnalysis: handleShowExistingSentenceAnalysis,
-              isShowingAnalysis: isShowingExistingAnalysis,
-              onToggleAnalysisRunning: handleToggleSentenceAnalysisRunning,
-              isAnalysisRunning: isSentenceAnalysisRunning,
-              onTogglePlayback: handleAnalysisPlaybackToggle,
-              playbackStatus: analysisPlaybackState.status,
-              isPlaybackDisabled: isAnalysisPlaybackDisabled,
-            }}
+            isAnalysisRunning={readingMode === "study-double" ? isSentenceAnalysisRunning : undefined}
+            onToggleAnalysisRunning={readingMode === "study-double" ? handleToggleSentenceAnalysisRunning : undefined}
           />
         }
         content={
-          viewMode === "analysis" ? (
-            <ReaderSentenceAnalysisPanel
-              ref={analysisContentRef}
-              sentences={displaySentenceItems}
-              bookId={book.id}
-              chapterId={activeChapterId}
-              chapterTitle={chapterTitle}
-              onRetry={handleRetrySentence}
-              onScroll={handleScroll}
-              activeSentenceId={analysisPlaybackState.currentSentenceId}
-              onSentenceSelect={sentenceSelectionHandler}
-              enableTokenHoverTts={enableTokenHoverTts}
-              ttsLanguage={analysisTtsLanguage}
-            />
-          ) : (
-            <ReaderContent
-              ref={contentRef}
-              chapterTitle={chapterTitle}
-              contentHtml={chapterContentHtml}
-              cssContent={chapterCssContent}
-              onScroll={handleScroll}
-              readingMode={readingMode}
-              scrollMode={scrollMode}
-              onNextChapter={handleNextChapter}
-              onPrevChapter={handlePrevChapter}
-              onPageChange={handlePageChange}
-              studyPanelSentences={readingMode === "study-double" ? displaySentenceItems : undefined}
-              bookId={book.id}
-              enableTokenHoverTts={enableTokenHoverTts}
-              ttsLanguage={analysisTtsLanguage}
-            />
-          )
+          <ReaderContent
+            ref={contentRef}
+            chapterTitle={chapterTitle}
+            contentHtml={chapterContentHtml}
+            cssContent={chapterCssContent}
+            onScroll={handleScroll}
+            readingMode={readingMode}
+            scrollMode={scrollMode}
+            onNextChapter={handleNextChapter}
+            onPrevChapter={handlePrevChapter}
+            onPageChange={handlePageChange}
+            studyPanelSentences={readingMode === "study-double" ? sentenceItems : undefined}
+            bookId={book.id}
+            enableTokenHoverTts={enableTokenHoverTts}
+            ttsLanguage={analysisTtsLanguage}
+          />
         }
         footer={
           <ReaderFooter

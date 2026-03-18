@@ -5,7 +5,16 @@ import React, {
   useRef,
   useState,
 } from "react";
-import type { ReaderSentenceAnalysisItem } from "./ReaderSentenceAnalysisPanel";
+export interface ReaderSentenceAnalysisItem {
+  id: string;
+  text: string;
+  chapterId: string;
+  paragraphIndex: number;
+  sentenceIndex: number;
+  status: "idle" | "loading" | "loaded" | "error";
+  tokens?: import("../../types/types").TokenData[];
+  error?: string;
+}
 import type { TokenData } from "../../types/types";
 import {
   containsKanji,

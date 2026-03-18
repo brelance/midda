@@ -1,20 +1,5 @@
 import React from "react";
 import ReaderBookInfo from "./ReaderBookInfo";
-import { ReaderViewMode } from "../../types/reader";
-import type { TtsPlaybackStatus } from "../../types/tts";
-
-/** Aggregated analysis-mode controls passed as a single prop */
-export interface AnalysisControlsProps {
-  viewMode: ReaderViewMode;
-  onToggleMode: () => void;
-  onToggleShowAnalysis?: () => void;
-  isShowingAnalysis: boolean;
-  onToggleAnalysisRunning?: () => void;
-  isAnalysisRunning: boolean;
-  onTogglePlayback?: () => void;
-  playbackStatus: TtsPlaybackStatus;
-  isPlaybackDisabled: boolean;
-}
 
 interface ReaderHeaderProps {
   bookTitle: string;
@@ -24,7 +9,9 @@ interface ReaderHeaderProps {
   onOpenToc?: () => void;
   onOpenChat?: () => void;
   onOpenSettings?: () => void;
-  analysisControls: AnalysisControlsProps;
+  /** Only shown when in study-double mode */
+  isAnalysisRunning?: boolean;
+  onToggleAnalysisRunning?: () => void;
 }
 
 /** Small toolbar icon-button */
@@ -69,10 +56,10 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
   onOpenToc,
   onOpenChat,
   onOpenSettings,
-  analysisControls: ac,
+  isAnalysisRunning,
+  onToggleAnalysisRunning,
 }) => {
-  const isAnalysisMode = ac.viewMode === "analysis";
-  const isPlaybackActive = ac.playbackStatus === "playing";
+  const showAnalysisToggle = onToggleAnalysisRunning !== undefined;
 
   return (
     <header
@@ -109,86 +96,30 @@ const ReaderHeader: React.FC<ReaderHeaderProps> = ({
 
         {/* ── Right: actions ───────────────────────────────────── */}
         <div className="flex items-center gap-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-          {/* Analysis controls group */}
-          <IconBtn
-            onClick={ac.onToggleMode}
-            label={isAnalysisMode ? "阅读模式" : "分析模式"}
-            text={isAnalysisMode ? "阅读" : "分析"}
-            active={isAnalysisMode}
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              {isAnalysisMode ? (
-                /* Book icon — switch back to reading */
-                <>
-                  <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
-                  <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
-                </>
-              ) : (
-                /* Microscope icon — enter analysis */
-                <>
-                  <circle cx="12" cy="9" r="4" />
-                  <path d="M12 13v5" />
-                  <path d="M8 18h8" />
-                </>
-              )}
-            </svg>
-          </IconBtn>
 
-          {/* Analysis-mode sub-controls — only visible in analysis mode */}
-          {isAnalysisMode && (
+          {/* Study-double: analysis start/stop */}
+          {showAnalysisToggle && (
             <>
               <IconBtn
-                onClick={ac.onToggleShowAnalysis}
-                disabled={!ac.onToggleShowAnalysis}
-                label={ac.isShowingAnalysis ? "隐藏分析" : "显示分析"}
-                active={ac.isShowingAnalysis}
-                text={ac.isShowingAnalysis ? "隐藏" : "显示"}
+                onClick={onToggleAnalysisRunning}
+                label={isAnalysisRunning ? "停止注音分析" : "开始注音分析"}
+                active={isAnalysisRunning}
+                text={isAnalysisRunning ? "停止分析" : "开始分析"}
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </IconBtn>
-
-              <IconBtn
-                onClick={ac.onToggleAnalysisRunning}
-                disabled={!ac.onToggleAnalysisRunning}
-                label={ac.isAnalysisRunning ? "停止分析" : "开始分析"}
-                active={ac.isAnalysisRunning}
-                text={ac.isAnalysisRunning ? "停止" : "分析"}
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 19h16" />
-                  <rect x="4" y="4" width="16" height="12" rx="2" />
-                </svg>
-              </IconBtn>
-
-              <IconBtn
-                onClick={ac.onTogglePlayback}
-                disabled={!ac.onTogglePlayback || ac.isPlaybackDisabled}
-                label={isPlaybackActive ? "暂停" : "播放"}
-                active={isPlaybackActive}
-                text={isPlaybackActive ? "暂停" : ac.playbackStatus === "paused" ? "继续" : "播放"}
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  {isPlaybackActive ? (
-                    <>
-                      <line x1="10" y1="9" x2="10" y2="15" />
-                      <line x1="14" y1="9" x2="14" y2="15" />
-                    </>
+                  {isAnalysisRunning ? (
+                    /* Stop square */
+                    <rect x="5" y="5" width="14" height="14" rx="2" />
                   ) : (
-                    <path d="M10 9l5 3-5 3z" />
+                    /* Play triangle */
+                    <path d="M5 3l14 9-14 9V3z" />
                   )}
                 </svg>
               </IconBtn>
+              <Divider />
             </>
           )}
 
-          {/* Divider between analysis and panel toggles */}
-          <Divider />
-
-          {/* Panel toggle group */}
           <IconBtn onClick={onOpenChat} disabled={!onOpenChat} label="聊天" text="聊天">
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
