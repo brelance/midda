@@ -179,7 +179,11 @@ const extractSentencesFromHtml = (
     value.replace(/^[\t\f\v\r \u00A0]+/, "").replace(/[\t\f\v\r \u00A0]+$/, "");
 
   const normalizeParagraphText = (element: Element): string => {
-    const raw = element.textContent ?? "";
+    // Clone so we don't mutate the live DOM
+    const clone = element.cloneNode(true) as Element;
+    // Strip ruby annotation nodes — rt (reading text) and rp (fallback parentheses)
+    clone.querySelectorAll("rt, rp").forEach((n) => n.remove());
+    const raw = clone.textContent ?? "";
     if (!raw) {
       return "";
     }
@@ -302,6 +306,14 @@ const extractSentencesFromHtml = (
 
   const traverseNode = (node: Node) => {
     if (node.nodeType === Node.TEXT_NODE) {
+      // Skip text nodes that are inside <rt> or <rp> (ruby annotation)
+      const parent = node.parentElement;
+      if (parent) {
+        const pTag = parent.tagName.toLowerCase();
+        if (pTag === "rt" || pTag === "rp") {
+          return;
+        }
+      }
       appendToBuffer(node.textContent);
       return;
     }
