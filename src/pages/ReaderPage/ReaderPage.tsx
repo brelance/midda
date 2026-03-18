@@ -353,8 +353,10 @@ const extractSentencesFromHtml = (
     return sentences;
   }
 
+  const fallbackContainer = container.cloneNode(true) as Element;
+  fallbackContainer.querySelectorAll("rt, rp").forEach((n) => n.remove());
   const fallbackText = trimAsciiWhitespace(
-    collapseAsciiWhitespace(container.textContent ?? "")
+    collapseAsciiWhitespace(fallbackContainer.textContent ?? "")
   );
 
   if (!fallbackText) {

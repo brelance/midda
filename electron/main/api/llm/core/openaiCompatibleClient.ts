@@ -37,7 +37,11 @@ export class OpenAICompatibleClient implements LLMClient {
       Object.assign(payload, request.extra);
     }
 
-    const response = await fetch(this.env.chatCompletionsUrl, {
+    const baseUrl = this.env.chatCompletionsUrl.replace(/\/+$/, "");
+    const fullUrl = baseUrl.endsWith("/chat/completions")
+      ? baseUrl
+      : `${baseUrl}/chat/completions`;
+    const response = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
