@@ -455,6 +455,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     } catch { /* ignore */ }
     return "light";
   });
+  const [fontFamily, setFontFamily] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem("reader.fontFamily") ?? "";
+    } catch { /* ignore */ }
+    return "";
+  });
   // Page tracking state for footer display
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -563,6 +569,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     try { window.localStorage.setItem("reader.theme", readerTheme); }
     catch { /* ignore */ }
   }, [readerTheme]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("reader.fontFamily", fontFamily); }
+    catch { /* ignore */ }
+  }, [fontFamily]);
 
 
 
@@ -1377,6 +1388,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         }
         fontSize={fontSize}
         lineHeight={lineHeight}
+        fontFamily={fontFamily || undefined}
         readerTheme={readerTheme}
         onMouseMove={handleMouseMove}
         onTouchStart={handleTouchStart}
@@ -1420,6 +1432,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         onFontSizeChange={setFontSize}
         lineHeight={lineHeight}
         onLineHeightChange={setLineHeight}
+        fontFamily={fontFamily}
+        onFontFamilyChange={setFontFamily}
         readerTheme={readerTheme}
         onThemeChange={setReaderTheme}
       />

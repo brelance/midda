@@ -23,12 +23,27 @@ interface ReaderSettingsModalProps {
   onFontSizeChange: (size: number) => void;
   lineHeight: number;
   onLineHeightChange: (lh: number) => void;
+  fontFamily: string;
+  onFontFamilyChange: (family: string) => void;
   readerTheme: ReaderTheme;
   onThemeChange: (theme: ReaderTheme) => void;
 }
 
 const FONT_SIZE_STEPS = [14, 16, 18, 20, 22, 24];
 const LINE_HEIGHT_STEPS = [1.4, 1.6, 1.8, 2.0, 2.2];
+
+const FONT_FAMILY_OPTIONS: { value: string; label: string }[] = [
+  { value: "",                              label: "书籍默认" },
+  { value: "-apple-system, 'Hiragino Sans', sans-serif",        label: "Hiragino Sans（ヒラギノ角ゴ）" },
+  { value: "'Hiragino Mincho ProN', serif",  label: "Hiragino Mincho（ヒラギノ明朝）" },
+  { value: "'SF Pro Text', -apple-system, sans-serif",          label: "SF Pro Text" },
+  { value: "'Noto Sans JP', sans-serif",     label: "Noto Sans JP" },
+  { value: "'Noto Serif JP', serif",         label: "Noto Serif JP" },
+  { value: "'Georgia', serif",               label: "Georgia" },
+  { value: "'Palatino', 'Palatino Linotype', serif",            label: "Palatino" },
+  { value: "'PingFang SC', sans-serif",      label: "苹方" },
+  { value: "'Songti SC', serif",             label: "宋体" },
+];
 
 const THEME_OPTIONS: { id: ReaderTheme; color: string; label: string }[] = [
   { id: "light", color: "#ffffff", label: "白色" },
@@ -126,7 +141,7 @@ const Stepper: React.FC<{
     >
       −
     </button>
-    <span className="flex h-8 w-10 items-center justify-center border-x border-gray-200/80 text-[13px] font-medium text-[#1d1d1f]">
+    <span className="flex h-8 min-w-10 max-w-28 items-center justify-center border-x border-gray-200/80 px-2 text-[13px] font-medium text-[#1d1d1f] whitespace-nowrap overflow-hidden text-ellipsis">
       {value}
     </span>
     <button
@@ -157,6 +172,8 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   onFontSizeChange,
   lineHeight,
   onLineHeightChange,
+  fontFamily,
+  onFontFamilyChange,
   readerTheme,
   onThemeChange,
 }) => {
@@ -296,6 +313,24 @@ const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
                   onIncrement={handleLineHeightIncrement}
                   disableDecrement={lineHeightIndex <= 0}
                   disableIncrement={lineHeightIndex >= LINE_HEIGHT_STEPS.length - 1}
+                />
+              </div>
+              <div className="my-3 h-px bg-gray-100" />
+              <div className="flex items-center justify-between">
+                <span className="text-[15px] font-medium text-[#1d1d1f]">字体</span>
+                <Stepper
+                  label="字体"
+                  value={FONT_FAMILY_OPTIONS[FONT_FAMILY_OPTIONS.findIndex((o) => o.value === fontFamily) >= 0 ? FONT_FAMILY_OPTIONS.findIndex((o) => o.value === fontFamily) : 0].label}
+                  onDecrement={() => {
+                    const idx = FONT_FAMILY_OPTIONS.findIndex((o) => o.value === fontFamily);
+                    const prev = idx <= 0 ? FONT_FAMILY_OPTIONS.length - 1 : idx - 1;
+                    onFontFamilyChange(FONT_FAMILY_OPTIONS[prev].value);
+                  }}
+                  onIncrement={() => {
+                    const idx = FONT_FAMILY_OPTIONS.findIndex((o) => o.value === fontFamily);
+                    const next = idx >= FONT_FAMILY_OPTIONS.length - 1 ? 0 : idx + 1;
+                    onFontFamilyChange(FONT_FAMILY_OPTIONS[next].value);
+                  }}
                 />
               </div>
             </div>

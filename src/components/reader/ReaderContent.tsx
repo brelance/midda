@@ -296,6 +296,7 @@ const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
           fontSize: "var(--reader-font-size, 18px)",
           lineHeight: "var(--reader-line-height, 1.8)",
           color: "var(--reader-text, #1d1d1f)",
+          fontFamily: "var(--reader-font-family, inherit)",
         }}
       >
         {scopedCss && (

@@ -8,6 +8,7 @@ interface ReaderLayoutProps {
   footer: React.ReactNode;
   fontSize?: number;
   lineHeight?: number;
+  fontFamily?: string;
   readerTheme?: ReaderTheme;
   onMouseMove?: (event: React.MouseEvent<HTMLDivElement>) => void;
   onTouchStart?: (event: React.TouchEvent<HTMLDivElement>) => void;
@@ -19,6 +20,7 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({
   footer,
   fontSize = 18,
   lineHeight = 1.8,
+  fontFamily,
   readerTheme = "light",
   onMouseMove,
   onTouchStart,
@@ -31,6 +33,7 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({
       style={{
         "--reader-font-size": `${fontSize}px`,
         "--reader-line-height": `${lineHeight}`,
+        "--reader-font-family": fontFamily || "inherit",
         "--reader-bg": theme.bg,
         "--reader-text": theme.text,
         "--reader-card": theme.card,

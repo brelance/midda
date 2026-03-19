@@ -771,6 +771,7 @@ body {
 
 /* Main kanji / word */
 .study-kanji {
+  font-family: var(--reader-font-family, inherit);
   font-size: var(--reader-font-size, 18px);
   line-height: 1.2;
   letter-spacing: 0.03em;
