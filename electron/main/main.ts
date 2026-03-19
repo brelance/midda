@@ -8,6 +8,7 @@ import { setupInteractiveRoleplayApiHandler } from "./api/llm/interactive_rolepl
 import { setupEpubApiHandler } from "./api/epub/epub.api";
 import { registerEpubImageScheme, setupEpubImageProtocol } from "./api/epub/epubProtocol";
 import { setupTtsApiHandler } from "./api/tts/tts.api";
+import { setupLocalDictApiHandler } from "./api/dict/dict.api";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import { app, BrowserWindow } from "electron";
 
@@ -86,6 +87,9 @@ app.whenReady().then(() => {
   // 新增EPUB处理器
   setupEpubApiHandler();
   setupTtsApiHandler();
+
+  // 本地词典
+  setupLocalDictApiHandler();
 
   // Setup epub-img:// protocol handler
   setupEpubImageProtocol();

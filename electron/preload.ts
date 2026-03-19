@@ -189,6 +189,14 @@ const api = {
       ipcRenderer.removeAllListeners("tts:state");
     },
   },
+
+  localDict: {
+    lookup: (
+      word: string,
+      options?: { includeTags?: boolean }
+    ): Promise<unknown> =>
+      ipcRenderer.invoke("word-dict-local", { word, ...options }),
+  },
 };
 
 if (process.contextIsolated) {
