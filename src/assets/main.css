@@ -553,8 +553,8 @@ body {
 }
 
 ::selection {
-  background-color: #b3d4fc; /* 一个柔和的蓝色 */
-  color: #000; /* 确保文本颜色在背景上清晰可见 */
+  background-color: rgba(0, 0, 0, 0.12); /* Apple 风格浅灰色 */
+  color: inherit;
 }
 
 /* ===== LEGACY DUPLICATE REMOVED — see top of file for canonical rules ===== */

@@ -10,6 +10,7 @@ interface ReaderLayoutProps {
   lineHeight?: number;
   fontFamily?: string;
   readerTheme?: ReaderTheme;
+  isHeaderVisible?: boolean;
   onMouseMove?: (event: React.MouseEvent<HTMLDivElement>) => void;
   onTouchStart?: (event: React.TouchEvent<HTMLDivElement>) => void;
 }
@@ -22,6 +23,7 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({
   lineHeight = 1.8,
   fontFamily,
   readerTheme = "light",
+  isHeaderVisible = false,
   onMouseMove,
   onTouchStart,
 }) => {
@@ -43,10 +45,10 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({
       onMouseMove={onMouseMove}
       onTouchStart={onTouchStart}
     >
-      {/* Transparent drag strip — always on top, never blocks clicks */}
+      {/* Transparent drag strip — switches to no-drag when header is visible so buttons remain clickable */}
       <div
-        className="fixed top-0 left-0 right-0 z-[60] h-7 pointer-events-none"
-        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        className="fixed top-0 left-0 right-0 z-40 h-7"
+        style={{ WebkitAppRegion: isHeaderVisible ? "no-drag" : "drag" } as React.CSSProperties}
       />
       {header}
       <main className="flex-1 overflow-hidden px-[60px] pt-[56px] pb-[56px]">

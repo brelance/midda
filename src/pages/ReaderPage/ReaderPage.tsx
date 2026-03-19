@@ -1334,6 +1334,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   return (
     <>
       <ReaderLayout
+        isHeaderVisible={isHeaderVisible}
         header={
           <ReaderHeader
             bookTitle={book.title}
