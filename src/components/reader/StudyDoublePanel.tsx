@@ -5,6 +5,11 @@ import React, {
   useRef,
   useState,
 } from "react";
+import {
+  lookupDict,
+  formatDictResult,
+  type DictDisplayData,
+} from "../../services/localDictService";
 export interface ReaderSentenceAnalysisItem {
   id: string;
   text: string;
@@ -61,8 +66,12 @@ interface TokenPopoverState {
   pos: string;
   romaji: string;
   baseForm: string;
-  meaning: string;
-  loading: boolean;
+  // Local dict data
+  dictLoading: boolean;
+  dictData: DictDisplayData | null;
+  // AI (LLM) data — loaded on demand
+  aiMeaning: string;
+  aiLoading: boolean;
 }
 
 const INITIAL_POPOVER: TokenPopoverState = {
@@ -74,8 +83,10 @@ const INITIAL_POPOVER: TokenPopoverState = {
   pos: "",
   romaji: "",
   baseForm: "",
-  meaning: "",
-  loading: false,
+  dictLoading: false,
+  dictData: null,
+  aiMeaning: "",
+  aiLoading: false,
 };
 
 // ── StudyToken ──────────────────────────────────────────────────────────────
@@ -200,10 +211,16 @@ const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
 // ── StudyPopover ────────────────────────────────────────────────────────────
 interface StudyPopoverProps {
   state: TokenPopoverState;
+  sentenceText: string;
   onClose: () => void;
+  onRequestAi: () => void;
 }
 
-const StudyPopover: React.FC<StudyPopoverProps> = ({ state, onClose }) => {
+const StudyPopover: React.FC<StudyPopoverProps> = ({
+  state,
+  onClose,
+  onRequestAi,
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const basePos = state.pos.split("-")[0];
   const posZh = posChineseMap[basePos] ?? posChineseMap["default"];
@@ -215,6 +232,7 @@ const StudyPopover: React.FC<StudyPopoverProps> = ({ state, onClose }) => {
     助動詞: "rgba(155,155,155,0.25)",
   };
   const tagBg = posColorMap[basePos] ?? "rgba(255,255,255,0.12)";
+  const dict = state.dictData;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -234,37 +252,103 @@ const StudyPopover: React.FC<StudyPopoverProps> = ({ state, onClose }) => {
       className="study-popover"
       style={{ left: state.x, top: state.y }}
     >
-      {state.loading ? (
+      {state.dictLoading ? (
         <div className="study-popover-loading">查询中…</div>
       ) : (
         <>
-          <div className="study-popover-word">{state.word}</div>
+          {/* ── Header: surface word + TTS + AI ── */}
+          <div className="study-popover-header">
+            <div className="study-popover-word">{state.word}</div>
+            <div className="study-popover-actions">
+              {state.word && (
+                <button
+                  className="study-popover-speak"
+                  onClick={() => speakJapanese(state.word)}
+                  title="朗读"
+                >
+                  ♪
+                </button>
+              )}
+              <button
+                className={`study-popover-ai-btn${
+                  state.aiLoading ? " loading" : ""
+                }${state.aiMeaning ? " done" : ""}`}
+                onClick={onRequestAi}
+                disabled={state.aiLoading || !!state.aiMeaning}
+                title="AI 释义"
+              >
+                AI
+              </button>
+            </div>
+          </div>
+
+          {/* ── Reading + romaji (always from surface token) ── */}
           <div className="study-popover-reading">
             {state.reading}
             {state.romaji ? `　${state.romaji}` : ""}
           </div>
+
+          {/* ── Base form + dict headword ── */}
           {state.baseForm && (
             <div className="study-popover-baseform">
               原形：{state.baseForm}
+              {dict?.found && dict.headword !== state.baseForm && (
+                <span>（{dict.headword}）</span>
+              )}
             </div>
           )}
+
           <div className="study-popover-divider" />
+
+          {/* ── POS tag row ── */}
           <div className="study-popover-row">
             <span className="study-popover-tag" style={{ background: tagBg }}>
               {state.pos} · {posZh}
             </span>
-            {state.word && (
-              <button
-                className="study-popover-speak"
-                onClick={() => speakJapanese(state.word)}
-                title="朗读"
-              >
-                ♪
-              </button>
+            {dict?.found && dict.pos.length > 0 && (
+              <span className="study-popover-tag-en">
+                {dict.pos.slice(0, 2).join(", ")}
+              </span>
             )}
           </div>
-          {state.meaning && (
-            <div className="study-popover-meaning">{state.meaning}</div>
+
+          {/* ── JMdict glosses ── */}
+          {dict?.found && dict.glosses.length > 0 && (
+            <div className="study-popover-glosses">
+              {dict.glosses.slice(0, 5).map((g, i) => (
+                <div key={i} className="study-popover-gloss-item">
+                  <span className="study-popover-gloss-num">{i + 1}.</span>
+                  <span>{g}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── No dict result hint ── */}
+          {dict && !dict.found && !state.aiMeaning && (
+            <div className="study-popover-no-dict">
+              本地词典无结果，点击 AI 按钮查询
+            </div>
+          )}
+
+          {/* ── AI meaning (on demand) ── */}
+          {state.aiLoading && (
+            <>
+              <div className="study-popover-divider" />
+              <div className="study-popover-ai-section">
+                <span className="study-popover-ai-label">AI</span>
+                <span className="study-popover-loading">查询中…</span>
+              </div>
+            </>
+          )}
+          {state.aiMeaning && (
+            <>
+              <div className="study-popover-divider" />
+              <div className="study-popover-ai-section">
+                <span className="study-popover-ai-label">AI</span>
+              </div>
+              <div className="study-popover-meaning">{state.aiMeaning}</div>
+            </>
           )}
         </>
       )}
@@ -372,6 +456,9 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
     return Array.from(map.entries()).sort(([a], [b]) => a - b);
   }, [sentences]);
 
+  // Keep a ref to the current sentence text for the AI callback
+  const currentSentenceRef = useRef("");
+
   const handleTokenClick = useCallback(
     async (
       e: React.MouseEvent<HTMLSpanElement>,
@@ -379,15 +466,16 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
       sentenceText: string
     ) => {
       e.stopPropagation();
+      currentSentenceRef.current = sentenceText;
 
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const pw = 260;
+      const pw = 300;
       let x = rect.left + rect.width / 2 - pw / 2;
       x = Math.max(8, Math.min(x, window.innerWidth - pw - 8));
-      const yAbove = rect.top - 180;
+      const yAbove = rect.top - 240;
       const y = yAbove < 80 ? rect.bottom + 8 : yAbove;
 
-      setPopover({
+      const basePopover: TokenPopoverState = {
         visible: true,
         x,
         y,
@@ -395,36 +483,107 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
         reading: token.furigana ?? "",
         pos: token.pos,
         romaji: token.romaji ?? "",
-        baseForm: token.baseForm && token.baseForm !== token.word ? token.baseForm : "",
-        meaning: "",
-        loading: true,
-      });
+        baseForm:
+          token.baseForm && token.baseForm !== token.word
+            ? token.baseForm
+            : "",
+        dictLoading: true,
+        dictData: null,
+        aiMeaning: "",
+        aiLoading: false,
+      };
+
+      setPopover(basePopover);
+
+      // Phase 1: local dictionary lookup (instant)
+      //
+      // Strategy:
+      // - If baseForm is available and differs from surface → query baseForm (reliable lemma)
+      // - If baseForm == surface (already dictionary form) → query as-is
+      // - If no baseForm → skip local dict (surface forms like した can be
+      //   homographs of other entries, e.g. 下, leading to false positives)
+      const emptyDict = { found: false, headword: "", reading: "", pos: [] as string[], glosses: [] as string[], senses: [] as import("../../types/localDict").DictSense[], allEntries: [] as import("../../types/localDict").DictEntry[] };
 
       try {
-        const detail = await window.api.wordDetail.sendWordDetailRequest(
-          token.word,
-          token.pos,
-          sentenceText,
-          token.furigana ?? "",
-          token.romaji ?? ""
-        );
-        setPopover((prev) => ({
-          ...prev,
-          loading: false,
-          meaning: detail?.chineseTranslation
-            ? `${detail.chineseTranslation}${detail.explanation ? `\n${detail.explanation}` : ""}`
-            : "",
-        }));
+        const hasBaseForm = !!token.baseForm;
+        const isAlreadyDictForm = !token.baseForm || token.baseForm === token.word;
+
+        if (!hasBaseForm) {
+          // No lemma info → don't risk a false-positive surface match
+          setPopover((prev) => ({
+            ...prev,
+            dictLoading: false,
+            dictData: emptyDict,
+          }));
+        } else {
+          // Query the baseForm (reliable lemma from LLM morphological analysis)
+          const dictResult = await lookupDict(token.baseForm!);
+          let dictData = dictResult
+            ? formatDictResult(dictResult)
+            : emptyDict;
+
+          // If baseForm lookup missed and the surface IS the dict form, try it
+          if (!dictData.found && isAlreadyDictForm) {
+            const surfaceResult = await lookupDict(token.word);
+            dictData = surfaceResult
+              ? formatDictResult(surfaceResult)
+              : emptyDict;
+          }
+
+          setPopover((prev) => ({
+            ...prev,
+            dictLoading: false,
+            dictData,
+          }));
+        }
       } catch {
         setPopover((prev) => ({
           ...prev,
-          loading: false,
-          meaning: "查询释义时出错",
+          dictLoading: false,
+          dictData: emptyDict,
         }));
       }
     },
     [bookId]
   );
+
+  // Keep popover state in a ref so handleRequestAi always reads latest values
+  const popoverRef = useRef(popover);
+  popoverRef.current = popover;
+
+  // Phase 2: AI lookup — triggered by user clicking the AI button
+  const handleRequestAi = useCallback(async () => {
+    setPopover((prev) => {
+      if (prev.aiLoading || prev.aiMeaning) return prev;
+      return { ...prev, aiLoading: true };
+    });
+
+    try {
+      const p = popoverRef.current;
+      const detail = await window.api.wordDetail.sendWordDetailRequest(
+        p.word,
+        p.pos,
+        currentSentenceRef.current,
+        p.reading,
+        p.romaji
+      );
+      setPopover((prev) => ({
+        ...prev,
+        aiLoading: false,
+        aiMeaning: detail?.chineseTranslation
+          ? `${detail.chineseTranslation}${
+              detail.explanation ? `\n${detail.explanation}` : ""
+            }`
+          : "无释义",
+      }));
+    } catch {
+      setPopover((prev) => ({
+        ...prev,
+        aiLoading: false,
+        aiMeaning: "AI 查询失败",
+      }));
+    }
+  }, []);
 
   const closePopover = useCallback(() => setPopover(INITIAL_POPOVER), []);
 
@@ -545,7 +704,12 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
         </div>
       )}
 
-      <StudyPopover state={popover} onClose={closePopover} />
+      <StudyPopover
+        state={popover}
+        sentenceText={currentSentenceRef.current}
+        onClose={closePopover}
+        onRequestAi={handleRequestAi}
+      />
     </div>
   );
 };

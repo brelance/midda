@@ -1,5 +1,6 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
 import type { TokenData, WordDetail, SentenceAnalysisRecord, EpubBookData } from "./types/types";
+import type { LocalDictResult } from "./types/localDict";
 import type {
   TtsSentencePayload,
   TtsStartRequestOptions,
@@ -117,6 +118,13 @@ export interface IElectronAPI {
       romaji: string,
       model?: string
     ) => Promise<WordDetail>;
+  };
+
+  localDict: {
+    lookup: (
+      word: string,
+      options?: { includeTags?: boolean }
+    ) => Promise<LocalDictResult>;
   };
 
   epub: {

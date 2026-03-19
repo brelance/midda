@@ -796,7 +796,7 @@ body {
 .study-popover {
   position: fixed;
   z-index: 500;
-  width: 260px;
+  width: 300px;
   background: rgba(28, 28, 30, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -829,12 +829,30 @@ body {
   padding: 8px 0;
 }
 
+/* ── Header row: word + action buttons ── */
+.study-popover-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .study-popover-word {
   font-size: 1.55rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   margin-bottom: 2px;
   line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+}
+
+.study-popover-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding-top: 2px;
 }
 
 .study-popover-reading {
@@ -878,6 +896,13 @@ body {
   color: rgba(255, 255, 255, 0.85);
 }
 
+.study-popover-tag-en {
+  font-family: -apple-system, "Inter", sans-serif;
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.04em;
+}
+
 .study-popover-speak {
   background: rgba(255, 255, 255, 0.1);
   border: none;
@@ -896,6 +921,95 @@ body {
 
 .study-popover-speak:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── AI button ── */
+.study-popover-ai-btn {
+  background: linear-gradient(135deg, #5e5ce6, #bf5af2);
+  border: none;
+  border-radius: 100px;
+  color: #fff;
+  font-family: -apple-system, "SF Pro Text", sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: opacity 150ms, transform 150ms;
+  line-height: 1.4;
+}
+
+.study-popover-ai-btn:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+.study-popover-ai-btn:disabled {
+  cursor: default;
+}
+
+.study-popover-ai-btn.loading {
+  opacity: 0.6;
+  animation: study-ai-pulse 1.2s ease-in-out infinite;
+}
+
+.study-popover-ai-btn.done {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 0.5;
+}
+
+@keyframes study-ai-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.9; }
+}
+
+/* ── JMdict glosses ── */
+.study-popover-glosses {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.study-popover-gloss-item {
+  font-family: -apple-system, "Inter", sans-serif;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.45;
+  display: flex;
+  gap: 6px;
+}
+
+.study-popover-gloss-num {
+  color: rgba(255, 255, 255, 0.35);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 1.2em;
+}
+
+/* ── No dict result hint ── */
+.study-popover-no-dict {
+  font-family: -apple-system, sans-serif;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+  padding: 8px 0 2px;
+}
+
+/* ── AI section ── */
+.study-popover-ai-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.study-popover-ai-label {
+  font-family: -apple-system, "Inter", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(191, 90, 242, 0.9);
+  letter-spacing: 0.05em;
 }
 
 .study-popover-meaning {
