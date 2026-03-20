@@ -22,6 +22,10 @@ import type {
   UserPreferenceRecord,
   SentenceAnalysisListFilters,
   SentenceAnalysisContext,
+  VocabStatus,
+  VocabularyRecord,
+  VocabularyContextRecord,
+  VocabularyUpsertPayload,
 } from "./types/database";
 import type {
   RoleplayAnalysisPayload,
@@ -95,6 +99,14 @@ export interface IElectronAPI {
       set: (key: string, value: string) => Promise<UserPreferenceRecord>;
       get: (key: string) => Promise<UserPreferenceRecord | null>;
       delete: (key: string) => Promise<boolean>;
+    };
+    vocabulary: {
+      upsert: (payload: VocabularyUpsertPayload) => Promise<VocabularyRecord>;
+      getAll: () => Promise<VocabularyRecord[]>;
+      getContexts: (vocabId: number) => Promise<VocabularyContextRecord[]>;
+      getBaseForms: () => Promise<string[]>;
+      updateStatus: (id: number, status: VocabStatus) => Promise<boolean>;
+      delete: (id: number) => Promise<boolean>;
     };
   };
 

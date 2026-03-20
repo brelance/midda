@@ -137,3 +137,49 @@ export type SentenceAnalysisContext = {
 };
 
 export type SentenceAnalysisRecordWithTokens = SentenceAnalysisRecord;
+
+// ── Vocabulary ──────────────────────────────────────────────────────────────
+
+export type VocabStatus = "new" | "learning" | "mastered";
+
+export interface VocabularyRecord {
+  id: number;
+  word: string;
+  baseForm: string;
+  reading?: string;
+  romaji?: string;
+  pos?: string;
+  glosses?: string[];
+  aiMeaning?: string;
+  sourceBookId?: string;
+  status: VocabStatus;
+  reviewCount: number;
+  easeFactor: number;
+  intervalDays: number;
+  nextReviewAt?: string;
+  createdAt: string;
+  lastReviewedAt?: string;
+}
+
+export interface VocabularyContextRecord {
+  id: number;
+  vocabularyId: number;
+  sentenceText: string;
+  bookId?: string;
+  chapterId?: string;
+  createdAt: string;
+}
+
+export interface VocabularyUpsertPayload {
+  word: string;
+  baseForm: string;
+  reading?: string;
+  romaji?: string;
+  pos?: string;
+  glosses?: string[];
+  aiMeaning?: string;
+  sourceBookId?: string;
+  sentenceText?: string;
+  sentenceBookId?: string;
+  sentenceChapterId?: string;
+}

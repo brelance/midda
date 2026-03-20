@@ -100,6 +100,7 @@ interface StudyTokenProps {
   ) => void;
   enableHoverTts: boolean;
   ttsLanguage?: string;
+  vocabSet?: Set<string>;
 }
 
 const StudyToken: React.FC<StudyTokenProps> = ({
@@ -108,8 +109,10 @@ const StudyToken: React.FC<StudyTokenProps> = ({
   onTokenClick,
   enableHoverTts,
   ttsLanguage,
+  vocabSet,
 }) => {
   const color = getPosColor(token.pos);
+  const isSeen = vocabSet?.has(token.baseForm || token.word);
   const showRuby =
     !!token.furigana &&
     token.furigana !== token.word &&
@@ -133,6 +136,7 @@ const StudyToken: React.FC<StudyTokenProps> = ({
       style={{ "--word-color": color } as React.CSSProperties}
       onClick={(e) => onTokenClick(e, token, sentenceText)}
       onMouseEnter={handleMouseEnter}
+      data-vocab={isSeen ? "seen" : undefined}
     >
       <span className="study-ruby">
         {showRuby ? token.furigana : "\u00A0"}
@@ -153,10 +157,12 @@ interface StudySentenceRowProps {
   onTokenClick: (
     e: React.MouseEvent<HTMLSpanElement>,
     token: TokenData,
-    sentenceText: string
+    sentenceText: string,
+    chapterId: string
   ) => void;
   enableHoverTts: boolean;
   ttsLanguage?: string;
+  vocabSet?: Set<string>;
 }
 
 const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
@@ -164,6 +170,7 @@ const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
   onTokenClick,
   enableHoverTts,
   ttsLanguage,
+  vocabSet,
 }) => {
   if (item.status === "loading") {
     return (
@@ -189,9 +196,10 @@ const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
             key={idx}
             token={token}
             sentenceText={item.text}
-            onTokenClick={onTokenClick}
+            onTokenClick={(e, tok, text) => onTokenClick(e, tok, text, item.chapterId)}
             enableHoverTts={enableHoverTts}
             ttsLanguage={ttsLanguage}
+            vocabSet={vocabSet}
           />
         ))}
       </div>
@@ -370,12 +378,14 @@ interface ParagraphGroupProps {
   onTokenClick: (
     e: React.MouseEvent<HTMLSpanElement>,
     token: TokenData,
-    sentenceText: string
+    sentenceText: string,
+    chapterId: string
   ) => void;
   enableHoverTts: boolean;
   ttsLanguage?: string;
   onSentenceTtsClick: (item: ReaderSentenceAnalysisItem) => void;
   playingSentenceId: string | null;
+  vocabSet?: Set<string>;
 }
 
 const ParagraphGroup: React.FC<ParagraphGroupProps> = ({
@@ -385,6 +395,7 @@ const ParagraphGroup: React.FC<ParagraphGroupProps> = ({
   ttsLanguage,
   onSentenceTtsClick,
   playingSentenceId,
+  vocabSet,
 }) => {
   return (
     <>
@@ -439,6 +450,7 @@ const ParagraphGroup: React.FC<ParagraphGroupProps> = ({
             onTokenClick={onTokenClick}
             enableHoverTts={enableHoverTts}
             ttsLanguage={ttsLanguage}
+            vocabSet={vocabSet}
           />
         ))}
       </div>
@@ -458,6 +470,15 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
 }) => {
   const [popover, setPopover] = useState<TokenPopoverState>(INITIAL_POPOVER);
   const [playingSentenceId, setPlayingSentenceId] = useState<string | null>(null);
+  const [vocabSet, setVocabSet] = useState<Set<string>>(new Set());
+
+  // ── Load vocabulary base forms for visual cue ──
+  useEffect(() => {
+    window.api.db.vocabulary
+      .getBaseForms()
+      .then((arr: string[]) => setVocabSet(new Set(arr)))
+      .catch(() => {/* ignore */});
+  }, [bookId]);
 
   // ── TTS state listener ──
   useEffect(() => {
@@ -507,7 +528,8 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
     async (
       e: React.MouseEvent<HTMLSpanElement>,
       token: TokenData,
-      sentenceText: string
+      sentenceText: string,
+      chapterId: string
     ) => {
       e.stopPropagation();
       currentSentenceRef.current = sentenceText;
@@ -586,6 +608,29 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
           dictLoading: false,
           dictData: emptyDict,
         }));
+      }
+
+      // ── Auto-save to vocabulary (silent, non-blocking) ──────────────────
+      if (token.pos !== "記号") {
+        const bf = token.baseForm || token.word;
+        void window.api.db.vocabulary.upsert({
+          word: token.word,
+          baseForm: bf,
+          reading: token.furigana,
+          romaji: token.romaji,
+          pos: token.pos,
+          sourceBookId: bookId,
+          sentenceText,
+          sentenceBookId: bookId,
+          sentenceChapterId: chapterId,
+        });
+        // Update local set so visual cue appears immediately
+        setVocabSet((prev) => {
+          if (prev.has(bf)) return prev;
+          const next = new Set(prev);
+          next.add(bf);
+          return next;
+        });
       }
     },
     [bookId]
@@ -720,6 +765,7 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
               ttsLanguage={ttsLanguage}
               onSentenceTtsClick={handleSentenceTts}
               playingSentenceId={playingSentenceId}
+              vocabSet={vocabSet}
             />
           ))
         )}

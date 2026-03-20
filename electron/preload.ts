@@ -17,6 +17,8 @@ import type {
   SentenceAnalysisListFilters,
   SentenceAnalysisJobUpsertPayload,
   SentenceAnalysisJobStatus,
+  VocabularyUpsertPayload,
+  VocabStatus,
 } from "../src/types/database";
 import type { RoleplayAnalysisPayload } from "../src/types/roleplay";
 const api = {
@@ -129,6 +131,19 @@ const api = {
         ipcRenderer.invoke("db:userPreferences:get", key),
       delete: (key: string) =>
         ipcRenderer.invoke("db:userPreferences:delete", key),
+    },
+    vocabulary: {
+      upsert: (payload: VocabularyUpsertPayload) =>
+        ipcRenderer.invoke("db:vocabulary:upsert", payload),
+      getAll: () => ipcRenderer.invoke("db:vocabulary:getAll"),
+      getContexts: (vocabId: number) =>
+        ipcRenderer.invoke("db:vocabulary:getContexts", vocabId),
+      getBaseForms: (): Promise<string[]> =>
+        ipcRenderer.invoke("db:vocabulary:getBaseForms"),
+      updateStatus: (id: number, status: VocabStatus) =>
+        ipcRenderer.invoke("db:vocabulary:updateStatus", id, status),
+      delete: (id: number) =>
+        ipcRenderer.invoke("db:vocabulary:delete", id),
     },
   },
 

@@ -13,6 +13,11 @@ import {
   SentenceAnalysisUpsertPayload,
   UserPreferencesRepository,
 } from "../../db/library.repositories";
+import {
+  VocabularyRepository,
+  VocabStatus,
+} from "../../db/vocabulary.repository";
+import type { VocabularyUpsertPayload } from "../../db/vocabulary.repository";
 
 const bookRepository = new BookRepository();
 const chapterRepository = new ChapterRepository();
@@ -20,6 +25,7 @@ const readingPositionRepository = new ChapterReadingPositionRepository();
 const sentenceAnalysisRepository = new SentenceAnalysisRepository();
 const sentenceAnalysisJobRepository = new SentenceAnalysisJobRepository();
 const userPreferencesRepository = new UserPreferencesRepository();
+const vocabularyRepository = new VocabularyRepository();
 
 export function registerDbHandlers(): void {
   // --- Books ---
@@ -178,5 +184,39 @@ export function registerDbHandlers(): void {
 
   ipcMain.handle("db:userPreferences:delete", (_event, key: string) => {
     return userPreferencesRepository.delete(key);
+  });
+
+  // --- Vocabulary ---
+  ipcMain.handle(
+    "db:vocabulary:upsert",
+    (_event, payload: VocabularyUpsertPayload) => {
+      return vocabularyRepository.upsert(payload);
+    }
+  );
+
+  ipcMain.handle("db:vocabulary:getAll", () => {
+    return vocabularyRepository.getAll();
+  });
+
+  ipcMain.handle(
+    "db:vocabulary:getContexts",
+    (_event, vocabId: number) => {
+      return vocabularyRepository.getContexts(vocabId);
+    }
+  );
+
+  ipcMain.handle("db:vocabulary:getBaseForms", () => {
+    return vocabularyRepository.getAllBaseForms();
+  });
+
+  ipcMain.handle(
+    "db:vocabulary:updateStatus",
+    (_event, id: number, status: VocabStatus) => {
+      return vocabularyRepository.updateStatus(id, status);
+    }
+  );
+
+  ipcMain.handle("db:vocabulary:delete", (_event, id: number) => {
+    return vocabularyRepository.delete(id);
   });
 }

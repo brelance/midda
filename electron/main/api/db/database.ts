@@ -95,6 +95,44 @@ function initializeSchema(database: DB): void {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS vocabulary (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      word TEXT NOT NULL,
+      base_form TEXT NOT NULL,
+      reading TEXT,
+      romaji TEXT,
+      pos TEXT,
+      glosses_json TEXT,
+      ai_meaning TEXT,
+      source_book_id TEXT,
+      status TEXT NOT NULL DEFAULT 'new'
+        CHECK (status IN ('new', 'learning', 'mastered')),
+      review_count INTEGER NOT NULL DEFAULT 0,
+      ease_factor REAL NOT NULL DEFAULT 2.5,
+      interval_days INTEGER NOT NULL DEFAULT 0,
+      next_review_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_reviewed_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS vocabulary_contexts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vocabulary_id INTEGER NOT NULL,
+      sentence_text TEXT NOT NULL,
+      sentence_hash TEXT NOT NULL,
+      book_id TEXT,
+      chapter_id TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (vocabulary_id) REFERENCES vocabulary(id) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_vocabulary_base_form
+      ON vocabulary(base_form);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_vocab_ctx_unique
+      ON vocabulary_contexts(vocabulary_id, sentence_hash);
+    CREATE INDEX IF NOT EXISTS idx_vocab_ctx_vocab_id
+      ON vocabulary_contexts(vocabulary_id);
+
     CREATE INDEX IF NOT EXISTS idx_books_status ON books(status);
     CREATE INDEX IF NOT EXISTS idx_books_progress ON books(progress);
     CREATE INDEX IF NOT EXISTS idx_books_updated_at ON books(updated_at);
