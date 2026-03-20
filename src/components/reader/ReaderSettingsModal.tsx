@@ -1,5 +1,6 @@
 import React from "react";
-import { ReadingMode, ScrollMode, ReaderTheme } from "../../types/reader";
+import type { ReaderTheme } from "../../types/reader";
+import { useReaderSettings } from "../../stores/readerSettingsStore";
 
 interface TtsLanguageOption {
   value: string;
@@ -9,24 +10,7 @@ interface TtsLanguageOption {
 interface ReaderSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  ttsLanguage: string;
-  onTtsLanguageChange: (language: string) => void;
   ttsLanguageOptions: TtsLanguageOption[];
-  enableTokenHoverTts: boolean;
-  onEnableTokenHoverTtsChange: (enabled: boolean) => void;
-  scrollMode: ScrollMode;
-  onScrollModeChange: (mode: ScrollMode) => void;
-  readingMode: ReadingMode;
-  onReadingModeChange: (mode: ReadingMode) => void;
-  // Typography & theme
-  fontSize: number;
-  onFontSizeChange: (size: number) => void;
-  lineHeight: number;
-  onLineHeightChange: (lh: number) => void;
-  fontFamily: string;
-  onFontFamilyChange: (family: string) => void;
-  readerTheme: ReaderTheme;
-  onThemeChange: (theme: ReaderTheme) => void;
 }
 
 const FONT_SIZE_STEPS = [14, 16, 18, 20, 22, 24];
@@ -159,24 +143,18 @@ const Stepper: React.FC<{
 const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   isOpen,
   onClose,
-  ttsLanguage,
-  onTtsLanguageChange,
   ttsLanguageOptions,
-  enableTokenHoverTts,
-  onEnableTokenHoverTtsChange,
-  scrollMode,
-  onScrollModeChange,
-  readingMode,
-  onReadingModeChange,
-  fontSize,
-  onFontSizeChange,
-  lineHeight,
-  onLineHeightChange,
-  fontFamily,
-  onFontFamilyChange,
-  readerTheme,
-  onThemeChange,
 }) => {
+  const {
+    fontSize, setFontSize: onFontSizeChange,
+    lineHeight, setLineHeight: onLineHeightChange,
+    theme: readerTheme, setTheme: onThemeChange,
+    fontFamily, setFontFamily: onFontFamilyChange,
+    scrollMode, setScrollMode: onScrollModeChange,
+    readingMode, setReadingMode: onReadingModeChange,
+    enableTokenHoverTts, setEnableTokenHoverTts: onEnableTokenHoverTtsChange,
+    analysisTtsLanguage: ttsLanguage, setAnalysisTtsLanguage: onTtsLanguageChange,
+  } = useReaderSettings();
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {

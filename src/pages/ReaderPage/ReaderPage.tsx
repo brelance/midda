@@ -13,7 +13,7 @@ import ReaderSettingsModal from "../../components/reader/ReaderSettingsModal";
 import ReaderTocSidebar from "../../components/reader/ReaderTocSidebar";
 import ReaderChatSidebar from "../../components/reader/ReaderChatSidebar";
 import { Book, Chapter, TokenData } from "../../types/types";
-import { ReadingMode, ScrollMode, ReaderTheme } from "../../types/reader";
+import { useReaderSettings } from "../../stores/readerSettingsStore";
 import type { ReaderContentHandle } from "../../components/reader/ReaderContent";
 import type { ReaderSentenceAnalysisItem } from "../../components/reader/StudyDoublePanel";
 import type {
@@ -420,47 +420,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
   const [currentChapterId, setCurrentChapterId] = useState(defaultChapterId);
   const [chapterProgress, setChapterProgress] = useState(0);
-  const [readingMode, setReadingMode] = useState<ReadingMode>(() => {
-    try {
-      const saved = window.localStorage.getItem("reader.readingMode");
-      if (saved === "double") return "double";
-    } catch { /* ignore */ }
-    return "single";
-  });
-  const [scrollMode, setScrollMode] = useState<ScrollMode>(() => {
-    try {
-      const saved = window.localStorage.getItem("reader.scrollMode");
-      if (saved === "page") return "page";
-    } catch { /* ignore */ }
-    return "scroll";
-  });
-  const [fontSize, setFontSize] = useState<number>(() => {
-    try {
-      const saved = window.localStorage.getItem("reader.fontSize");
-      if (saved) { const n = Number(saved); if (!Number.isNaN(n)) return n; }
-    } catch { /* ignore */ }
-    return 18;
-  });
-  const [lineHeight, setLineHeight] = useState<number>(() => {
-    try {
-      const saved = window.localStorage.getItem("reader.lineHeight");
-      if (saved) { const n = Number(saved); if (!Number.isNaN(n)) return n; }
-    } catch { /* ignore */ }
-    return 1.8;
-  });
-  const [readerTheme, setReaderTheme] = useState<ReaderTheme>(() => {
-    try {
-      const saved = window.localStorage.getItem("reader.theme") as ReaderTheme | null;
-      if (saved && ["light", "warm", "green", "dark"].includes(saved)) return saved;
-    } catch { /* ignore */ }
-    return "light";
-  });
-  const [fontFamily, setFontFamily] = useState<string>(() => {
-    try {
-      return window.localStorage.getItem("reader.fontFamily") ?? "";
-    } catch { /* ignore */ }
-    return "";
-  });
+  // ── Reader settings from Zustand store (persisted to localStorage) ──
+  const { readingMode, scrollMode } = useReaderSettings();
+
   // Page tracking state for footer display
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -521,59 +483,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [analysisTtsLanguage, setAnalysisTtsLanguage] =
-    useState<string>("ja-JP");
-  const [enableTokenHoverTts, setEnableTokenHoverTts] = useState<boolean>(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    try {
-      return window.localStorage.getItem("reader.enableTokenHoverTts") === "true";
-    } catch {
-      return false;
-    }
-  });
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(
-        "reader.enableTokenHoverTts",
-        String(enableTokenHoverTts)
-      );
-    } catch {
-      // ignore persistence errors
-    }
-  }, [enableTokenHoverTts]);
-
-  useEffect(() => {
-    try { window.localStorage.setItem("reader.scrollMode", scrollMode); }
-    catch { /* ignore */ }
-  }, [scrollMode]);
-
-  useEffect(() => {
-    try { window.localStorage.setItem("reader.readingMode", readingMode); }
-    catch { /* ignore */ }
-  }, [readingMode]);
-
-  useEffect(() => {
-    try { window.localStorage.setItem("reader.fontSize", String(fontSize)); }
-    catch { /* ignore */ }
-  }, [fontSize]);
-
-  useEffect(() => {
-    try { window.localStorage.setItem("reader.lineHeight", String(lineHeight)); }
-    catch { /* ignore */ }
-  }, [lineHeight]);
-
-  useEffect(() => {
-    try { window.localStorage.setItem("reader.theme", readerTheme); }
-    catch { /* ignore */ }
-  }, [readerTheme]);
-
-  useEffect(() => {
-    try { window.localStorage.setItem("reader.fontFamily", fontFamily); }
-    catch { /* ignore */ }
-  }, [fontFamily]);
 
 
 
@@ -947,12 +857,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     setIsSettingsModalOpen(false);
   }, []);
 
-  const handleTtsLanguageChange = useCallback(
-    (language: string) => {
-      setAnalysisTtsLanguage(language);
-    },
-    []
-  );
+
 
   const handleToggleSentenceAnalysisRunning = useCallback(() => {
     setIsSentenceAnalysisRunning((prev) => {
@@ -1362,8 +1267,6 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             onPageChange={handlePageChange}
             studyPanelSentences={readingMode === "study-double" ? sentenceItems : undefined}
             bookId={book.id}
-            enableTokenHoverTts={enableTokenHoverTts}
-            ttsLanguage={analysisTtsLanguage}
           />
         }
         footer={
@@ -1387,10 +1290,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             totalPages={totalPages}
           />
         }
-        fontSize={fontSize}
-        lineHeight={lineHeight}
-        fontFamily={fontFamily || undefined}
-        readerTheme={readerTheme}
+
         onMouseMove={handleMouseMove}
         onTouchStart={handleTouchStart}
       />
@@ -1420,23 +1320,7 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       <ReaderSettingsModal
         isOpen={isSettingsModalOpen}
         onClose={handleCloseSettings}
-        ttsLanguage={analysisTtsLanguage}
-        onTtsLanguageChange={handleTtsLanguageChange}
         ttsLanguageOptions={TTS_LANGUAGE_OPTIONS}
-        enableTokenHoverTts={enableTokenHoverTts}
-        onEnableTokenHoverTtsChange={setEnableTokenHoverTts}
-        scrollMode={scrollMode}
-        onScrollModeChange={setScrollMode}
-        readingMode={readingMode}
-        onReadingModeChange={setReadingMode}
-        fontSize={fontSize}
-        onFontSizeChange={setFontSize}
-        lineHeight={lineHeight}
-        onLineHeightChange={setLineHeight}
-        fontFamily={fontFamily}
-        onFontFamilyChange={setFontFamily}
-        readerTheme={readerTheme}
-        onThemeChange={setReaderTheme}
       />
     </>
   );

@@ -20,8 +20,6 @@ interface ReaderContentProps {
   /** Used in study-double mode: annotated sentences for the right column */
   studyPanelSentences?: ReaderSentenceAnalysisItem[];
   bookId?: string;
-  enableTokenHoverTts?: boolean;
-  ttsLanguage?: string;
 }
 
 /**
@@ -239,8 +237,6 @@ const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
       onPageChange,
       studyPanelSentences,
       bookId,
-      enableTokenHoverTts,
-      ttsLanguage,
     },
     ref
   ) => {
@@ -259,8 +255,6 @@ const ReaderContent = forwardRef<ReaderContentHandle, ReaderContentProps>(
           scopedCss={scopedCss || undefined}
           sentences={studyPanelSentences ?? []}
           bookId={bookId ?? ""}
-          enableTokenHoverTts={enableTokenHoverTts}
-          ttsLanguage={ttsLanguage}
           onScroll={onScroll}
         />
       );

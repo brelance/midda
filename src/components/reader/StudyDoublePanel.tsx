@@ -26,6 +26,7 @@ import {
   posChineseMap,
   speakJapanese,
 } from "../../utils/helper";
+import { useReaderSettings } from "../../stores/readerSettingsStore";
 
 interface StudyDoublePanelProps {
   chapterTitle: string;
@@ -35,8 +36,6 @@ interface StudyDoublePanelProps {
   scopedCss?: string;
   sentences: ReaderSentenceAnalysisItem[];
   bookId: string;
-  enableTokenHoverTts?: boolean;
-  ttsLanguage?: string;
   onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
 }
 
@@ -464,10 +463,9 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
   scopedCss,
   sentences,
   bookId,
-  enableTokenHoverTts = false,
-  ttsLanguage,
   onScroll,
 }) => {
+  const { enableTokenHoverTts, analysisTtsLanguage: ttsLanguage } = useReaderSettings();
   const [popover, setPopover] = useState<TokenPopoverState>(INITIAL_POPOVER);
   const [playingSentenceId, setPlayingSentenceId] = useState<string | null>(null);
   const [vocabSet, setVocabSet] = useState<Set<string>>(new Set());

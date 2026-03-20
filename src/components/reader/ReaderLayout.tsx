@@ -1,15 +1,11 @@
 import React from "react";
-import type { ReaderTheme } from "../../types/reader";
 import { READER_THEME_MAP } from "../../types/reader";
+import { useReaderSettings } from "../../stores/readerSettingsStore";
 
 interface ReaderLayoutProps {
   header: React.ReactNode;
   content: React.ReactNode;
   footer: React.ReactNode;
-  fontSize?: number;
-  lineHeight?: number;
-  fontFamily?: string;
-  readerTheme?: ReaderTheme;
   isHeaderVisible?: boolean;
   onMouseMove?: (event: React.MouseEvent<HTMLDivElement>) => void;
   onTouchStart?: (event: React.TouchEvent<HTMLDivElement>) => void;
@@ -19,14 +15,17 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({
   header,
   content,
   footer,
-  fontSize = 18,
-  lineHeight = 1.8,
-  fontFamily,
-  readerTheme = "light",
   isHeaderVisible = false,
   onMouseMove,
   onTouchStart,
 }) => {
+  const {
+    fontSize,
+    lineHeight,
+    fontFamily,
+    theme: readerTheme,
+  } = useReaderSettings();
+
   const theme = READER_THEME_MAP[readerTheme];
 
   return (
@@ -61,3 +60,4 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({
 };
 
 export default ReaderLayout;
+
