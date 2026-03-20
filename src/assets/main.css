@@ -697,6 +697,19 @@ body {
   box-sizing: border-box;
 }
 
+/* ── Left-pane sentence click-to-speak ─────────────────────────── */
+.study-sentence-clickable {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 150ms ease;
+}
+.study-sentence-clickable:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+.study-sentence-playing {
+  background-color: rgba(0, 0, 0, 0.10);
+}
+
 /* ── Sentence row (right cell content) ──────────────────────────── */
 .study-sentence-row {
   display: flex;

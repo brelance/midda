@@ -19,6 +19,7 @@
     "better-sqlite3": "^12.4.1",
     "dompurify": "^3.3.3",
     "dotenv": "^17.2.3",
+    "edge-tts-universal": "^1.4.0",
     "epub": "^2.1.1",
     "file-type": "^21.0.0",
     "jszip": "^3.10.1",

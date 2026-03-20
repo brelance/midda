@@ -374,6 +374,8 @@ interface ParagraphGroupProps {
   ) => void;
   enableHoverTts: boolean;
   ttsLanguage?: string;
+  onSentenceTtsClick: (item: ReaderSentenceAnalysisItem) => void;
+  playingSentenceId: string | null;
 }
 
 const ParagraphGroup: React.FC<ParagraphGroupProps> = ({
@@ -381,12 +383,12 @@ const ParagraphGroup: React.FC<ParagraphGroupProps> = ({
   onTokenClick,
   enableHoverTts,
   ttsLanguage,
+  onSentenceTtsClick,
+  playingSentenceId,
 }) => {
-  const plainText = items.map((s) => s.text).join("");
-
   return (
     <>
-      {/* Left cell: plain paragraph text */}
+      {/* Left cell: plain paragraph text — per-sentence clickable spans */}
       <div
         style={{
           padding: "0 2rem 0 0",
@@ -398,7 +400,18 @@ const ParagraphGroup: React.FC<ParagraphGroupProps> = ({
           wordBreak: "break-all",
         }}
       >
-        {plainText}
+        {items.map((item) => (
+          <span
+            key={item.id}
+            className={`study-sentence-clickable${
+              playingSentenceId === item.id ? " study-sentence-playing" : ""
+            }`}
+            onClick={() => onSentenceTtsClick(item)}
+            title="点击朗读"
+          >
+            {item.text}
+          </span>
+        ))}
       </div>
 
       {/* Center: the vertical divider */}
@@ -444,6 +457,37 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
   onScroll,
 }) => {
   const [popover, setPopover] = useState<TokenPopoverState>(INITIAL_POPOVER);
+  const [playingSentenceId, setPlayingSentenceId] = useState<string | null>(null);
+
+  // ── TTS state listener ──
+  useEffect(() => {
+    const unsubscribe = window.api.tts.onStateChange((state) => {
+      if (state.status === "playing" && state.currentSentenceId) {
+        setPlayingSentenceId(state.currentSentenceId);
+      } else {
+        setPlayingSentenceId(null);
+      }
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // ── Click sentence to TTS ──
+  const handleSentenceTts = useCallback(
+    (item: ReaderSentenceAnalysisItem) => {
+      if (playingSentenceId === item.id) {
+        // Click again → stop
+        window.api.tts.stop();
+        return;
+      }
+      window.api.tts.start(
+        [{ id: item.id, text: item.text }],
+        { language: ttsLanguage ?? "ja-JP" }
+      );
+    },
+    [playingSentenceId, ttsLanguage]
+  );
 
   // Group sentences by paragraphIndex, keeping document order
   const paragraphGroups = useMemo(() => {
@@ -624,8 +668,8 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
         <h1
           style={{
             padding: "0 2rem 0 0",
-            fontSize: "2rem",
-            fontWeight: 700,
+            fontSize: "1.4rem",
+            fontWeight: 600,
             lineHeight: 1.25,
             letterSpacing: "-0.01em",
             color: "var(--reader-text, #1d1d1f)",
@@ -638,8 +682,8 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
         <h1
           style={{
             padding: "0 0 0 2rem",
-            fontSize: "2rem",
-            fontWeight: 700,
+            fontSize: "1.4rem",
+            fontWeight: 600,
             lineHeight: 1.25,
             letterSpacing: "-0.01em",
             color: "var(--reader-text, #1d1d1f)",
@@ -674,6 +718,8 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
               onTokenClick={handleTokenClick}
               enableHoverTts={enableTokenHoverTts}
               ttsLanguage={ttsLanguage}
+              onSentenceTtsClick={handleSentenceTts}
+              playingSentenceId={playingSentenceId}
             />
           ))
         )}

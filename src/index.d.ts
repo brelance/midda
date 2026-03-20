@@ -2,9 +2,11 @@ import { ElectronAPI } from "@electron-toolkit/preload";
 import type { TokenData, WordDetail, SentenceAnalysisRecord, EpubBookData } from "./types/types";
 import type { LocalDictResult } from "./types/localDict";
 import type {
+  TtsEngine,
   TtsSentencePayload,
   TtsStartRequestOptions,
   TtsStateUpdate,
+  TtsVoiceInfo,
 } from "./types/tts";
 import type {
   LibraryBookRecord,
@@ -148,5 +150,7 @@ export interface IElectronAPI {
     jumpTo: (index: number) => Promise<TtsStateUpdate>;
     onStateChange: (callback: (state: TtsStateUpdate) => void) => () => void;
     cleanup: () => void;
+    listVoices: (language?: string) => Promise<TtsVoiceInfo[]>;
+    setEngine: (engine: TtsEngine) => Promise<void>;
   };
 }

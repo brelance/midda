@@ -2,9 +2,11 @@ import { electronAPI } from "@electron-toolkit/preload";
 import { contextBridge, ipcRenderer } from "electron";
 import type { TokenData, WordDetail } from "../src/types/types";
 import type {
+  TtsEngine,
   TtsSentencePayload,
   TtsStartRequestOptions,
   TtsStateUpdate,
+  TtsVoiceInfo,
 } from "../src/types/tts";
 import type {
   LibraryBookUpsertPayload,
@@ -188,6 +190,10 @@ const api = {
     cleanup: () => {
       ipcRenderer.removeAllListeners("tts:state");
     },
+    listVoices: (language?: string): Promise<TtsVoiceInfo[]> =>
+      ipcRenderer.invoke("tts:list-voices", language),
+    setEngine: (engine: TtsEngine): Promise<void> =>
+      ipcRenderer.invoke("tts:set-engine", engine),
   },
 
   localDict: {
