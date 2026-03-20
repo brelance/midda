@@ -14,6 +14,7 @@ import ReaderTocSidebar from "../../components/reader/ReaderTocSidebar";
 import ReaderChatSidebar from "../../components/reader/ReaderChatSidebar";
 import { Book, Chapter, TokenData } from "../../types/types";
 import { useReaderSettings } from "../../stores/readerSettingsStore";
+import { useTtsStateSync } from "../../stores/ttsStore";
 import type { ReaderContentHandle } from "../../components/reader/ReaderContent";
 import type { ReaderSentenceAnalysisItem } from "../../components/reader/StudyDoublePanel";
 import type {
@@ -422,6 +423,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [chapterProgress, setChapterProgress] = useState(0);
   // ── Reader settings from Zustand store (persisted to localStorage) ──
   const { readingMode, scrollMode } = useReaderSettings();
+
+  // Keep TTS Zustand store in sync with native playback events.
+  // Mounted here (reader-scoped) so the subscription survives reading-mode switches.
+  useTtsStateSync();
 
   // Page tracking state for footer display
   const [currentPage, setCurrentPage] = useState(0);

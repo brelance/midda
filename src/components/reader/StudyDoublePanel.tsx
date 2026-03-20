@@ -27,6 +27,7 @@ import {
   speakJapanese,
 } from "../../utils/helper";
 import { useReaderSettings } from "../../stores/readerSettingsStore";
+import { useTtsStore } from "../../stores/ttsStore";
 
 interface StudyDoublePanelProps {
   chapterTitle: string;
@@ -466,8 +467,9 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
   onScroll,
 }) => {
   const { enableTokenHoverTts, analysisTtsLanguage: ttsLanguage } = useReaderSettings();
+  const playingSentenceId = useTtsStore((s) => s.playingSentenceId);
+
   const [popover, setPopover] = useState<TokenPopoverState>(INITIAL_POPOVER);
-  const [playingSentenceId, setPlayingSentenceId] = useState<string | null>(null);
   const [vocabSet, setVocabSet] = useState<Set<string>>(new Set());
 
   // ── Load vocabulary base forms for visual cue ──
@@ -477,20 +479,6 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
       .then((arr: string[]) => setVocabSet(new Set(arr)))
       .catch(() => {/* ignore */});
   }, [bookId]);
-
-  // ── TTS state listener ──
-  useEffect(() => {
-    const unsubscribe = window.api.tts.onStateChange((state) => {
-      if (state.status === "playing" && state.currentSentenceId) {
-        setPlayingSentenceId(state.currentSentenceId);
-      } else {
-        setPlayingSentenceId(null);
-      }
-    });
-    return () => {
-      unsubscribe();
-    };
-  }, []);
 
   // ── Click sentence to TTS ──
   const handleSentenceTts = useCallback(
