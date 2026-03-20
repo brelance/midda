@@ -2,56 +2,41 @@ import React from "react";
 import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
 import VocabularyPage from "../../pages/VocabularyPage";
-import { Book, User, NavigationItem, EpubBookData } from "../../types/types";
+import type { User } from "../../types/types";
+import { useBookshelfStore, useSortBy } from "../../stores/bookshelfStore";
 
 interface LayoutProps {
-  books: Book[];
   user: User;
-  selectedBook: Book | null;
-  activeNav: NavigationItem;
-  searchQuery: string;
-  sortBy: "title" | "author" | "progress" | "addedDate";
-  isSidebarOpen: boolean;
-  isDetailsPaneOpen: boolean;
-  onSelectBook: (book: Book) => void;
-  onNavChange: (nav: NavigationItem) => void;
-  onSearch: (query: string) => void;
-  onSort: () => void;
-  toggleSidebar: () => void;
-  toggleDetailsPane: () => void;
-  closeSidebar: () => void;
-  closeDetailsPane: () => void;
-  onBookAdded?: (bookData: EpubBookData) => void;
-  onEnterReader?: (book: Book, chapterId?: string) => void;
-  onDeleteBook?: (book: Book) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({
-  books,
-  user,
-  selectedBook,
-  activeNav,
-  searchQuery,
-  sortBy,
-  isSidebarOpen,
-  onSelectBook,
-  onNavChange,
-  onSearch,
-  onSort,
-  toggleSidebar,
-  toggleDetailsPane,
-  closeSidebar,
-  onBookAdded,
-  onEnterReader,
-  onDeleteBook,
-}) => {
+const Layout: React.FC<LayoutProps> = ({ user }) => {
+  const {
+    books,
+    selectedBook,
+    activeNav,
+    searchQuery,
+    isSidebarOpen,
+    selectBook,
+    navChange,
+    setSearchQuery,
+    cycleSort,
+    toggleSidebar,
+    toggleDetailsPane,
+    closeSidebar,
+    addBook,
+    enterReader,
+    deleteBook,
+  } = useBookshelfStore();
+
+  const sortBy = useSortBy();
+
   return (
     <div className="h-screen bg-white text-[#333333] overflow-hidden">
       {/* Desktop layout: always show sidebar + main content */}
       <div className="flex h-full w-full">
         <Sidebar
           activeNav={activeNav}
-          onNavChange={onNavChange}
+          onNavChange={navChange}
           user={user}
           isMobile={false}
           isOpen={true}
@@ -65,14 +50,14 @@ const Layout: React.FC<LayoutProps> = ({
             selectedBook={selectedBook}
             searchQuery={searchQuery}
             sortBy={sortBy}
-            onSelectBook={onSelectBook}
-            onSearch={onSearch}
-            onSort={onSort}
+            onSelectBook={selectBook}
+            onSearch={setSearchQuery}
+            onSort={cycleSort}
             toggleSidebar={toggleSidebar}
             toggleDetailsPane={toggleDetailsPane}
-            onBookAdded={onBookAdded}
-            onEnterReader={onEnterReader}
-            onDeleteBook={onDeleteBook}
+            onBookAdded={addBook}
+            onEnterReader={enterReader}
+            onDeleteBook={deleteBook}
           />
         )}
       </div>
@@ -92,7 +77,7 @@ const Layout: React.FC<LayoutProps> = ({
           >
             <Sidebar
               activeNav={activeNav}
-              onNavChange={onNavChange}
+              onNavChange={navChange}
               user={user}
               isMobile={true}
               isOpen={isSidebarOpen}
