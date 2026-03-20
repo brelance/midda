@@ -78,8 +78,12 @@ const normalizeStartPayload = (payload: unknown): TtsStartPayload => {
     typeof candidate.language === "string" && candidate.language.trim().length > 0
       ? candidate.language.trim()
       : undefined;
+  const engine =
+    candidate.engine === "edge" || candidate.engine === "system"
+      ? candidate.engine
+      : undefined;
 
-  return { sentences, startIndex, voice, rate, language };
+  return { sentences, startIndex, voice, rate, language, engine };
 };
 
 const normalizeJumpPayload = (payload: unknown): number => {
@@ -171,7 +175,35 @@ export const setupTtsApiHandler = (): void => {
     }
   });
 
+  // ── Edge TTS specific ─────────────────────────────────────────────────
+
+  let _edgeEngine: import("./EdgeTtsEngine").EdgeTtsEngine | null = null;
+  const getEdgeEngine = async () => {
+    if (!_edgeEngine) {
+      const { EdgeTtsEngine } = await import("./EdgeTtsEngine");
+      _edgeEngine = new EdgeTtsEngine();
+    }
+    return _edgeEngine;
+  };
+
+  ipcMain.handle("tts:list-voices", async (_event, language?: string) => {
+    try {
+      const engine = await getEdgeEngine();
+      return await engine.listVoices(language);
+    } catch (error) {
+      console.error("[tts] listVoices failed:", error);
+      return [];
+    }
+  });
+
+  ipcMain.handle("tts:set-engine", async (_event, engine: string) => {
+    if (engine === "edge" || engine === "system") {
+      controller.setEngine(engine);
+    }
+  });
+
   app.on("before-quit", () => {
     controller.dispose();
   });
 };
+
