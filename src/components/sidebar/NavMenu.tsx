@@ -77,6 +77,23 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
           }
         />
       </div>
+
+      {/* ── 学习 ── */}
+      <div>
+        <div className="px-2 mb-1 text-[11px] font-semibold text-gray-400 tracking-wider uppercase select-none">
+          学习
+        </div>
+        <NavItem
+          label="生词本"
+          isActive={activeNav === 'vocabulary'}
+          onClick={() => onNavChange('vocabulary')}
+          icon={
+            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h7" />
+            </svg>
+          }
+        />
+      </div>
     </nav>
   );
 };

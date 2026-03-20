@@ -105,7 +105,19 @@ export interface IElectronAPI {
       getAll: () => Promise<VocabularyRecord[]>;
       getContexts: (vocabId: number) => Promise<VocabularyContextRecord[]>;
       getBaseForms: () => Promise<string[]>;
+      getDue: (limit?: number) => Promise<VocabularyRecord[]>;
       updateStatus: (id: number, status: VocabStatus) => Promise<boolean>;
+      updateReview: (
+        id: number,
+        update: {
+          status: VocabStatus;
+          reviewCount: number;
+          easeFactor: number;
+          intervalDays: number;
+          nextReviewAt: string;
+          lastReviewedAt: string;
+        }
+      ) => Promise<boolean>;
       delete: (id: number) => Promise<boolean>;
     };
   };

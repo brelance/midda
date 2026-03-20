@@ -140,8 +140,21 @@ const api = {
         ipcRenderer.invoke("db:vocabulary:getContexts", vocabId),
       getBaseForms: (): Promise<string[]> =>
         ipcRenderer.invoke("db:vocabulary:getBaseForms"),
+      getDue: (limit?: number) =>
+        ipcRenderer.invoke("db:vocabulary:getDue", limit),
       updateStatus: (id: number, status: VocabStatus) =>
         ipcRenderer.invoke("db:vocabulary:updateStatus", id, status),
+      updateReview: (
+        id: number,
+        update: {
+          status: VocabStatus;
+          reviewCount: number;
+          easeFactor: number;
+          intervalDays: number;
+          nextReviewAt: string;
+          lastReviewedAt: string;
+        }
+      ) => ipcRenderer.invoke("db:vocabulary:updateReview", id, update),
       delete: (id: number) =>
         ipcRenderer.invoke("db:vocabulary:delete", id),
     },

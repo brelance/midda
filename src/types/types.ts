@@ -130,7 +130,7 @@ export interface User {
   avatar?: string;
 }
 
-export type NavigationItem = 'bookshelf' | 'discover' | 'store' | 'profile';
+export type NavigationItem = 'bookshelf' | 'discover' | 'store' | 'profile' | 'vocabulary';
 
 export interface AppState {
   books: Book[];

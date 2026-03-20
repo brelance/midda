@@ -1,6 +1,7 @@
 import React from "react";
 import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
+import VocabularyPage from "../../pages/VocabularyPage";
 import { Book, User, NavigationItem, EpubBookData } from "../../types/types";
 
 interface LayoutProps {
@@ -56,20 +57,24 @@ const Layout: React.FC<LayoutProps> = ({
           isOpen={true}
           onClose={() => {}}
         />
-        <MainContent
-          books={books}
-          selectedBook={selectedBook}
-          searchQuery={searchQuery}
-          sortBy={sortBy}
-          onSelectBook={onSelectBook}
-          onSearch={onSearch}
-          onSort={onSort}
-          toggleSidebar={toggleSidebar}
-          toggleDetailsPane={toggleDetailsPane}
-          onBookAdded={onBookAdded}
-          onEnterReader={onEnterReader}
-          onDeleteBook={onDeleteBook}
-        />
+        {activeNav === "vocabulary" ? (
+          <VocabularyPage />
+        ) : (
+          <MainContent
+            books={books}
+            selectedBook={selectedBook}
+            searchQuery={searchQuery}
+            sortBy={sortBy}
+            onSelectBook={onSelectBook}
+            onSearch={onSearch}
+            onSort={onSort}
+            toggleSidebar={toggleSidebar}
+            toggleDetailsPane={toggleDetailsPane}
+            onBookAdded={onBookAdded}
+            onEnterReader={onEnterReader}
+            onDeleteBook={onDeleteBook}
+          />
+        )}
       </div>
 
       {/* Mobile sidebar drawer overlay */}

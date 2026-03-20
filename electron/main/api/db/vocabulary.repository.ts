@@ -181,6 +181,26 @@ export class VocabularyRepository {
     DELETE FROM vocabulary WHERE id = ?
   `);
 
+  private readonly getDueStmt = db.prepare(`
+    SELECT * FROM vocabulary
+    WHERE status != 'mastered'
+      AND (next_review_at IS NULL
+           OR datetime(next_review_at) <= datetime('now'))
+    ORDER BY next_review_at ASC
+    LIMIT @limit
+  `);
+
+  private readonly updateReviewStmt = db.prepare(`
+    UPDATE vocabulary SET
+      status = @status,
+      review_count = @reviewCount,
+      ease_factor = @easeFactor,
+      interval_days = @intervalDays,
+      next_review_at = @nextReviewAt,
+      last_reviewed_at = @lastReviewedAt
+    WHERE id = @id
+  `);
+
   // -- Context CRUD --
 
   private readonly insertContextStmt = db.prepare(`
@@ -271,6 +291,34 @@ export class VocabularyRepository {
 
   delete(id: number): boolean {
     const result = this.deleteVocabStmt.run(id);
+    return result.changes > 0;
+  }
+
+  getDueForReview(limit: number = 50): VocabularyRecord[] {
+    const rows = this.getDueStmt.all({ limit }) as VocabularyRow[];
+    return rows.map(mapVocabularyRow);
+  }
+
+  updateReview(
+    id: number,
+    update: {
+      status: VocabStatus;
+      reviewCount: number;
+      easeFactor: number;
+      intervalDays: number;
+      nextReviewAt: string;
+      lastReviewedAt: string;
+    }
+  ): boolean {
+    const result = this.updateReviewStmt.run({
+      id,
+      status: update.status,
+      reviewCount: update.reviewCount,
+      easeFactor: update.easeFactor,
+      intervalDays: update.intervalDays,
+      nextReviewAt: update.nextReviewAt,
+      lastReviewedAt: update.lastReviewedAt,
+    });
     return result.changes > 0;
   }
 }

@@ -219,4 +219,29 @@ export function registerDbHandlers(): void {
   ipcMain.handle("db:vocabulary:delete", (_event, id: number) => {
     return vocabularyRepository.delete(id);
   });
+
+  ipcMain.handle(
+    "db:vocabulary:getDue",
+    (_event, limit?: number) => {
+      return vocabularyRepository.getDueForReview(limit);
+    }
+  );
+
+  ipcMain.handle(
+    "db:vocabulary:updateReview",
+    (
+      _event,
+      id: number,
+      update: {
+        status: VocabStatus;
+        reviewCount: number;
+        easeFactor: number;
+        intervalDays: number;
+        nextReviewAt: string;
+        lastReviewedAt: string;
+      }
+    ) => {
+      return vocabularyRepository.updateReview(id, update);
+    }
+  );
 }
