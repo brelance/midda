@@ -15,12 +15,16 @@ import ReaderChatSidebar from "../../components/reader/ReaderChatSidebar";
 import { Book, Chapter, TokenData } from "../../types/types";
 import { useReaderSettings } from "../../stores/readerSettingsStore";
 import { useTtsStateSync } from "../../stores/ttsStore";
+import {
+  useRoleplayStore,
+  useChapterAnalysis,
+  useSelectedCharacter,
+  useChatMessages,
+  useChatError,
+  useRoleplayActions,
+} from "../../stores/roleplayStore";
 import type { ReaderContentHandle } from "../../components/reader/ReaderContent";
 import type { ReaderSentenceAnalysisItem } from "../../components/reader/StudyDoublePanel";
-import type {
-  RoleplayAnalysisState,
-  RoleplayChatHistoryMessage,
-} from "../../types/roleplay";
 import {
   findChapterIndex,
   getNextChapterId,
@@ -34,11 +38,7 @@ import {
 } from "../../utils/reader/progressUtils";
 import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
 import { useReaderShortcuts } from "../../hooks/useReaderShortcuts";
-import { queuedSendTokensRequest } from "../../services/apiQueue";
-import {
-  analyzeChapterForRoleplay,
-  sendRoleplayMessage,
-} from "../../services/interactiveRoleplay";
+import { queuedSendTokensRequest, clearQueue } from "../../services/apiQueue";
 import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
 import { splitIntoSentences } from "../../utils/lang/sentenceSegmenter";
 
@@ -352,6 +352,7 @@ const extractSentencesFromHtml = (
   flushInlineBuffer();
 
   if (sentences.length > 0) {
+    container.innerHTML = "";
     return sentences;
   }
 
@@ -371,6 +372,7 @@ const extractSentencesFromHtml = (
 
   const mergedFallbackSegments = mergeSegmentsByQuotes(fallbackSegments);
 
+  container.innerHTML = "";
   return mergedFallbackSegments.map((text, index) => ({
     id: `${chapterId}-0-${index}`,
     text,
@@ -432,21 +434,10 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isTocOpen, setIsTocOpen] = useState(false);
-  const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
-  const [roleplayAnalysisByChapter, setRoleplayAnalysisByChapter] = useState<
-    Record<string, RoleplayAnalysisState>
-  >({});
-  const [
-    selectedRoleplayCharacterByChapter,
-    setSelectedRoleplayCharacterByChapter,
-  ] = useState<Record<string, string | null>>({});
-  const [chatMessagesBySession, setChatMessagesBySession] = useState<
-    Record<string, RoleplayChatHistoryMessage[]>
-  >({});
-  const [chatErrorBySession, setChatErrorBySession] = useState<
-    Record<string, string | undefined>
-  >({});
-  const [isChatSending, setIsChatSending] = useState(false);
+  const isChatSidebarOpen = useRoleplayStore((s) => s.isChatSidebarOpen);
+  const isChatSending = useRoleplayStore((s) => s.isChatSending);
+  const { resetForBook, openChatSidebar, closeChatSidebar } = useRoleplayStore();
+  const roleplayActions = useRoleplayActions();
   const [isSentenceAnalysisRunning, setIsSentenceAnalysisRunning] =
     useState(false);
 
@@ -454,11 +445,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const sentenceItemsRef = useRef<ReaderSentenceAnalysisItem[]>([]);
   const sentenceItemsChapterRef = useRef<string | null>(null);
   const processingRef = useRef(false);
+  const chapterGenerationRef = useRef(0);
   const analysisRunningRef = useRef(isSentenceAnalysisRunning);
   const analysisLanguageRef = useRef<string | undefined>(undefined);
   const analysisLanguageDetectionPromiseRef =
     useRef<Promise<string | undefined> | null>(null);
-  const roleplayAnalysisRequestIdRef = useRef(0);
 
   const ensureAnalysisLanguageReady = useCallback(async () => {
     if (analysisLanguageRef.current || sentenceItemsRef.current.length === 0) {
@@ -497,14 +488,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   }, [defaultChapterId]);
 
   useEffect(() => {
-    setRoleplayAnalysisByChapter({});
-    setSelectedRoleplayCharacterByChapter({});
-    roleplayAnalysisRequestIdRef.current = 0;
-    setIsChatSidebarOpen(false);
-    setChatMessagesBySession({});
-    setChatErrorBySession({});
-    setIsChatSending(false);
-  }, [book.id]);
+    resetForBook();
+  }, [book.id, resetForBook]);
 
   const contentRef = useRef<ReaderContentHandle>(null);
 
@@ -526,28 +511,14 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     [chapterContentHtml]
   );
   const activeChapterId = currentChapter?.id ?? "";
-  const roleplayAnalysisState: RoleplayAnalysisState =
-    roleplayAnalysisByChapter[activeChapterId] ?? {
-      status: "idle",
-      characters: [],
-      error: undefined,
-    };
-  const selectedRoleplayCharacter =
-    selectedRoleplayCharacterByChapter[activeChapterId] ?? null;
+  const roleplayAnalysisState = useChapterAnalysis(activeChapterId);
+  const selectedRoleplayCharacter = useSelectedCharacter(activeChapterId);
   const chatSessionKey =
     activeChapterId && selectedRoleplayCharacter
       ? `${activeChapterId}::${selectedRoleplayCharacter}`
       : null;
-  const chatMessages: RoleplayChatHistoryMessage[] = useMemo(() => {
-    if (!chatSessionKey) {
-      return [];
-    }
-    return chatMessagesBySession[chatSessionKey] ?? [];
-  }, [chatMessagesBySession, chatSessionKey]);
-  const chatError = chatSessionKey ? chatErrorBySession[chatSessionKey] : undefined;
-  useEffect(() => {
-    setIsChatSending(false);
-  }, [chatSessionKey]);
+  const chatMessages = useChatMessages(chatSessionKey);
+  const chatError = useChatError(chatSessionKey);
   useEffect(() => {
     const node = contentRef.current;
     const bookId = book.id;
@@ -605,32 +576,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     onProgressChange?.(bookProgress);
   }, [bookProgress, onProgressChange]);
 
+  // Auto-select first character when analysis becomes ready
   useEffect(() => {
-    if (
-      roleplayAnalysisState.status !== "ready" ||
-      !activeChapterId ||
-      roleplayAnalysisState.characters.length === 0
-    ) {
-      return;
+    if (activeChapterId) {
+      useRoleplayStore.getState().autoSelectFirstCharacter(activeChapterId);
     }
-    if (
-      !selectedRoleplayCharacter ||
-      !roleplayAnalysisState.characters.some(
-        (item) => item.name === selectedRoleplayCharacter
-      )
-    ) {
-      setSelectedRoleplayCharacterByChapter((prev) => ({
-        ...prev,
-        [activeChapterId]:
-          roleplayAnalysisState.characters[0]?.name ?? selectedRoleplayCharacter,
-      }));
-    }
-  }, [
-    activeChapterId,
-    roleplayAnalysisState,
-    selectedRoleplayCharacter,
-    setSelectedRoleplayCharacterByChapter,
-  ]);
+  }, [activeChapterId, roleplayAnalysisState]);
 
   const {
     isHeaderVisible,
@@ -639,126 +590,46 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     showToolbarsTemporarily,
   } = useReaderToolbarVisibility();
 
-  const ensureRoleplayAnalysis = useCallback(
-    async (options?: { force?: boolean }) => {
-      if (!activeChapterId) {
-        return;
-      }
-
-      const existing = roleplayAnalysisByChapter[activeChapterId];
-      if (
-        !options?.force &&
-        existing &&
-        (existing.status === "loading" || existing.status === "ready")
-      ) {
-        return;
-      }
-
-      const requestId = ++roleplayAnalysisRequestIdRef.current;
-
-      setRoleplayAnalysisByChapter((prev) => ({
-        ...prev,
-        [activeChapterId]: {
-          status: "loading",
-          characters: existing?.characters ?? [],
-          error: undefined,
-        },
-      }));
-
-      try {
-        const characters = await analyzeChapterForRoleplay({
-          bookId: book.id,
-          bookTitle: book.title,
-          chapterId: activeChapterId,
-          chapterTitle,
-          bookContent: chapterPlainText,
-        });
-
-        if (roleplayAnalysisRequestIdRef.current !== requestId) {
-          return;
-        }
-
-        setRoleplayAnalysisByChapter((prev) => ({
-          ...prev,
-          [activeChapterId]: {
-            status: "ready",
-            characters,
-            error: undefined,
-          },
-        }));
-
-        setSelectedRoleplayCharacterByChapter((prev) => {
-          const current = prev[activeChapterId];
-          if (current && characters.some((item) => item.name === current)) {
-            return prev;
-          }
-          return { ...prev, [activeChapterId]: characters[0]?.name ?? null };
-        });
-      } catch (error) {
-        if (roleplayAnalysisRequestIdRef.current !== requestId) {
-          return;
-        }
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : "交互式聊天初始化失败，请稍后重试";
-
-        setRoleplayAnalysisByChapter((prev) => ({
-          ...prev,
-          [activeChapterId]: {
-            status: "error",
-            characters: [],
-            error: message,
-          },
-        }));
-      }
-    },
-    [
-      activeChapterId,
-      book.id,
-      book.title,
-      chapterPlainText,
+  const analysisParams = useMemo(
+    () => ({
+      chapterId: activeChapterId,
+      bookId: book.id,
+      bookTitle: book.title,
       chapterTitle,
-      roleplayAnalysisByChapter,
-    ]
+      chapterPlainText,
+    }),
+    [activeChapterId, book.id, book.title, chapterTitle, chapterPlainText]
   );
 
+  // Auto-trigger analysis when chat sidebar is open and chapter changes
   useEffect(() => {
-    if (!isChatSidebarOpen) {
-      return;
-    }
-    void ensureRoleplayAnalysis();
-  }, [activeChapterId, ensureRoleplayAnalysis, isChatSidebarOpen]);
+    if (!isChatSidebarOpen || !activeChapterId) return;
+    void roleplayActions.ensureAnalysis(analysisParams);
+  }, [activeChapterId, isChatSidebarOpen, roleplayActions, analysisParams]);
 
   const handleOpenChatSidebar = useCallback(() => {
-    setIsChatSidebarOpen(true);
+    openChatSidebar();
     setIsTocOpen(false);
     showToolbarsTemporarily(1800);
     onOpenChat?.();
-    void ensureRoleplayAnalysis();
-  }, [ensureRoleplayAnalysis, onOpenChat, showToolbarsTemporarily]);
+    void roleplayActions.ensureAnalysis(analysisParams);
+  }, [roleplayActions, analysisParams, openChatSidebar, onOpenChat, showToolbarsTemporarily]);
 
   const handleCloseChatSidebar = useCallback(() => {
-    setIsChatSidebarOpen(false);
-  }, []);
+    closeChatSidebar();
+  }, [closeChatSidebar]);
 
   const handleSelectRoleplayCharacter = useCallback(
     (name: string) => {
-      if (!activeChapterId) {
-        return;
-      }
-      setSelectedRoleplayCharacterByChapter((prev) => ({
-        ...prev,
-        [activeChapterId]: name,
-      }));
+      if (!activeChapterId) return;
+      roleplayActions.setSelectedCharacter(activeChapterId, name);
     },
-    [activeChapterId]
+    [activeChapterId, roleplayActions]
   );
 
   const handleRetryRoleplayAnalysis = useCallback(() => {
-    void ensureRoleplayAnalysis({ force: true });
-  }, [ensureRoleplayAnalysis]);
+    void roleplayActions.retryAnalysis(analysisParams);
+  }, [roleplayActions, analysisParams]);
 
   const handleSendChatMessage = useCallback(
     async (text: string) => {
@@ -769,77 +640,27 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
       ) {
         return;
       }
-
       const character = roleplayAnalysisState.characters.find(
-        (item) => item.name === selectedRoleplayCharacter
+        (c) => c.name === selectedRoleplayCharacter
       );
-
-      if (!character) {
-        setChatErrorBySession((prev) => ({
-          ...prev,
-          [chatSessionKey]: "未找到角色，请重新选择。",
-        }));
-        return;
-      }
-
-      const userMessage: RoleplayChatHistoryMessage = {
-        role: "user",
-        content: text,
-      };
-      const existingMessages = chatMessages;
-      const nextHistory = [...existingMessages, userMessage];
-
-      setChatMessagesBySession((prev) => ({
-        ...prev,
-        [chatSessionKey]: nextHistory,
-      }));
-      setChatErrorBySession((prev) => ({
-        ...prev,
-        [chatSessionKey]: undefined,
-      }));
-      setIsChatSending(true);
-
-      try {
-        const response = await sendRoleplayMessage({
-          character,
-          bookTitle: book.title,
-          chapterTitle,
-          chapterContentOrSummary: chapterPlainText,
-          targetLanguage: "ja-JP",
-          userProficiencyLevel: "B1 - Intermediate",
-          message: text,
-          history: existingMessages,
-        });
-
-        const assistantMessage: RoleplayChatHistoryMessage = {
-          role: "assistant",
-          content: response.reply,
-        };
-
-        setChatMessagesBySession((prev) => ({
-          ...prev,
-          [chatSessionKey]: [...nextHistory, assistantMessage],
-        }));
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "发送消息失败，请稍后重试";
-        setChatErrorBySession((prev) => ({
-          ...prev,
-          [chatSessionKey]: message,
-        }));
-      } finally {
-        setIsChatSending(false);
-      }
+      if (!character) return;
+      await roleplayActions.sendMessage({
+        chatSessionKey,
+        character,
+        bookTitle: book.title,
+        chapterTitle,
+        chapterPlainText,
+        text,
+      });
     },
     [
-      book.title,
-      chapterPlainText,
-      chapterTitle,
-      chatMessages,
+      selectedRoleplayCharacter,
       chatSessionKey,
       roleplayAnalysisState,
-      selectedRoleplayCharacter,
-      sendRoleplayMessage,
+      roleplayActions,
+      book.title,
+      chapterTitle,
+      chapterPlainText,
     ]
   );
 
@@ -895,6 +716,8 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
 
   useEffect(() => {
     analysisLanguageRef.current = undefined;
+    chapterGenerationRef.current++;
+    clearQueue();
   }, [activeChapterId]);
 
   const processPendingSentences = useCallback(async () => {
@@ -911,13 +734,15 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     }
 
     processingRef.current = true;
+    const myGeneration = chapterGenerationRef.current;
 
     try {
       await ensureAnalysisLanguageReady();
+      if (chapterGenerationRef.current !== myGeneration) return;
       const languageHint = analysisLanguageRef.current;
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        if (!analysisRunningRef.current) {
+        if (!analysisRunningRef.current || chapterGenerationRef.current !== myGeneration) {
           break;
         }
 
@@ -976,6 +801,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
             nextIdle.text,
             { language: languageHint }
           );
+
+          // Bail out if chapter changed while awaiting API response
+          if (chapterGenerationRef.current !== myGeneration) break;
 
           setSentenceItems((prev) => {
             const next = prev.map((entry) =>
@@ -1144,6 +972,16 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
         viewportHeight: capturedHeight,
       }).catch((err) => console.error("保存阅读位置失败:", err));
     }, 500);
+  }, [activeChapterId, book.id]);
+
+  // Cleanup scroll-save debounce timer on unmount or chapter/book change
+  useEffect(() => {
+    return () => {
+      if (scrollSaveTimerRef.current !== null) {
+        clearTimeout(scrollSaveTimerRef.current);
+        scrollSaveTimerRef.current = null;
+      }
+    };
   }, [activeChapterId, book.id]);
 
   const prevChapterId = useMemo(
