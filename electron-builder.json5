@@ -1,9 +1,9 @@
 // @see - https://www.electron.build/configuration/configuration
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "YourAppID",
+  "appId": "com.midda.app",
   "asar": true,
-  "productName": "YourAppName",
+  "productName": "Midda",
   "directories": {
     "output": "release/${version}"
   },
@@ -22,7 +22,13 @@
     "target": [
       "dmg"
     ],
-    "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
+    "artifactName": "${productName}-Mac-${version}-Installer.${ext}",
+    "protocols": [
+      {
+        "name": "Midda Auth",
+        "schemes": ["midda"]
+      }
+    ]
   },
   "win": {
     "target": [

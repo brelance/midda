@@ -2,14 +2,10 @@ import React from "react";
 import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
 import VocabularyPage from "../../pages/VocabularyPage";
-import type { User } from "../../types/types";
+import AccountPage from "../../pages/AccountPage";
 import { useBookshelfStore, useSortBy } from "../../stores/bookshelfStore";
 
-interface LayoutProps {
-  user: User;
-}
-
-const Layout: React.FC<LayoutProps> = ({ user }) => {
+const Layout: React.FC = () => {
   const {
     books,
     selectedBook,
@@ -37,12 +33,13 @@ const Layout: React.FC<LayoutProps> = ({ user }) => {
         <Sidebar
           activeNav={activeNav}
           onNavChange={navChange}
-          user={user}
           isMobile={false}
           isOpen={true}
           onClose={() => {}}
         />
-        {activeNav === "vocabulary" ? (
+        {activeNav === "profile" ? (
+          <AccountPage />
+        ) : activeNav === "vocabulary" ? (
           <VocabularyPage />
         ) : (
           <MainContent
@@ -78,7 +75,6 @@ const Layout: React.FC<LayoutProps> = ({ user }) => {
             <Sidebar
               activeNav={activeNav}
               onNavChange={navChange}
-              user={user}
               isMobile={true}
               isOpen={isSidebarOpen}
               onClose={closeSidebar}

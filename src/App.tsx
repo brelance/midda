@@ -1,18 +1,12 @@
 import { useEffect } from "react";
 import Layout from "./components/layout/Layout";
 import ReaderPage from "./pages/ReaderPage";
-import { User } from "./types/types";
 import {
   useBookshelfStore,
   useReaderBook,
   useReaderCallbacks,
 } from "./stores/bookshelfStore";
-
-const mockUser: User = {
-  id: "user1",
-  name: "我的账户",
-  email: "user@example.com",
-};
+import { initAuthListener, useAuthStore } from "./stores/authStore";
 
 export default function App() {
   const {
@@ -23,8 +17,15 @@ export default function App() {
   } = useBookshelfStore();
 
   const readerBook = useReaderBook();
-
   const { handleChapterChange, handleProgressChange } = useReaderCallbacks();
+
+  const loadSession = useAuthStore((s) => s.loadSession);
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initAuthListener();
+    void loadSession();
+  }, [loadSession]);
 
   // Load books on mount
   useEffect(() => {
@@ -56,5 +57,5 @@ export default function App() {
     );
   }
 
-  return <Layout user={mockUser} />;
+  return <Layout />;
 }

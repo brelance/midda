@@ -236,6 +236,35 @@ const api = {
     ): Promise<unknown> =>
       ipcRenderer.invoke("word-dict-examples", { entryId, limit }),
   },
+
+  auth: {
+    startOAuth: (provider: "google" | "apple"): Promise<void> =>
+      ipcRenderer.invoke("auth:start-oauth", provider),
+    getSession: (): Promise<{
+      user: { id: string; email: string; name: string; avatar?: string; provider: string } | null;
+      isAuthenticated: boolean;
+    }> => ipcRenderer.invoke("auth:get-session"),
+    restoreSession: (): Promise<{
+      id: string;
+      email: string;
+      name: string;
+      avatar?: string;
+      provider: string;
+    } | null> => ipcRenderer.invoke("auth:restore-session"),
+    refreshSession: (): Promise<unknown> =>
+      ipcRenderer.invoke("auth:refresh"),
+    logout: (): Promise<void> => ipcRenderer.invoke("auth:logout"),
+    onAuthStateChange: (
+      callback: (user: { id: string; email: string; name: string; avatar?: string; provider: string } | null) => void
+    ): (() => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        user: { id: string; email: string; name: string; avatar?: string; provider: string } | null
+      ) => callback(user);
+      ipcRenderer.on("auth:state-change", listener);
+      return () => ipcRenderer.removeListener("auth:state-change", listener);
+    },
+  },
 };
 
 if (process.contextIsolated) {

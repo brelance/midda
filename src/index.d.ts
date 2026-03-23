@@ -181,4 +181,26 @@ export interface IElectronAPI {
     listVoices: (language?: string) => Promise<TtsVoiceInfo[]>;
     setEngine: (engine: TtsEngine) => Promise<void>;
   };
+
+  auth: {
+    startOAuth: (provider: "google" | "apple") => Promise<void>;
+    getSession: () => Promise<{
+      user: AuthUser | null;
+      isAuthenticated: boolean;
+    }>;
+    restoreSession: () => Promise<AuthUser | null>;
+    refreshSession: () => Promise<AuthUser | null>;
+    logout: () => Promise<void>;
+    onAuthStateChange: (
+      callback: (user: AuthUser | null) => void
+    ) => () => void;
+  };
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  avatar?: string;
+  provider: string;
 }

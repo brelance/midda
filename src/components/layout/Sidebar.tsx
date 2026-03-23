@@ -1,12 +1,11 @@
 import React from "react";
 import NavMenu from "../sidebar/NavMenu";
 import UserProfile from "../sidebar/UserProfile";
-import { User, NavigationItem } from "../../types/types";
+import { NavigationItem } from "../../types/types";
 
 interface SidebarProps {
   activeNav: NavigationItem;
   onNavChange: (nav: NavigationItem) => void;
-  user: User;
   isMobile: boolean;
   isOpen: boolean;
   onClose: () => void;
@@ -17,7 +16,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({
   activeNav,
   onNavChange,
-  user,
   isMobile,
   onClose,
 }) => {
@@ -60,7 +58,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* User profile footer */}
       <div className="flex-shrink-0 px-3 py-3">
-        <UserProfile user={user} />
+        <UserProfile
+          onNavigateToProfile={() => onNavChange("profile")}
+        />
       </div>
     </aside>
   );

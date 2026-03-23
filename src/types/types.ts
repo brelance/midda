@@ -128,6 +128,8 @@ export interface User {
   name: string;
   email?: string;
   avatar?: string;
+  provider?: string;
+  isGuest?: boolean;
 }
 
 export type NavigationItem = 'bookshelf' | 'discover' | 'store' | 'profile' | 'vocabulary';
