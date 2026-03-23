@@ -151,6 +151,10 @@ export interface IElectronAPI {
       word: string,
       options?: { includeTags?: boolean }
     ) => Promise<LocalDictResult>;
+    lookupExamples: (
+      entryId: string,
+      limit?: number
+    ) => Promise<import("./types/localDict").DictExample[]>;
   };
 
   epub: {

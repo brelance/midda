@@ -230,6 +230,11 @@ const api = {
       options?: { includeTags?: boolean }
     ): Promise<unknown> =>
       ipcRenderer.invoke("word-dict-local", { word, ...options }),
+    lookupExamples: (
+      entryId: string,
+      limit?: number
+    ): Promise<unknown> =>
+      ipcRenderer.invoke("word-dict-examples", { entryId, limit }),
   },
 };
 

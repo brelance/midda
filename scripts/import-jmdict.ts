@@ -16,6 +16,7 @@ import Database from "better-sqlite3";
 const GITHUB_RELEASES_API =
   "https://api.github.com/repos/scriptin/jmdict-simplified/releases/latest";
 const ASSET_PREFIX = "jmdict-eng-common-";
+const EXAMPLES_ASSET_PREFIX = "jmdict-examples-eng-";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const RESOURCES_DIR = path.join(ROOT, "resources");
@@ -36,13 +37,18 @@ function unzip(zipPath: string, outDir: string) {
   execSync(`unzip -o "${zipPath}" -d "${outDir}"`, { stdio: "inherit" });
 }
 
-/**
- * Query the GitHub API for the latest release and find the
- * jmdict-eng-common ZIP asset download URL & filename.
- */
-async function resolveDownloadUrl(): Promise<{
+interface ReleaseAssetInfo {
   url: string;
   zipName: string;
+}
+
+/**
+ * Query the GitHub API for the latest release and find the
+ * jmdict-eng-common and jmdict-examples-eng ZIP asset download URLs.
+ */
+async function resolveDownloadUrls(): Promise<{
+  dict: ReleaseAssetInfo;
+  examples: ReleaseAssetInfo;
 }> {
   console.log("🔍 Querying GitHub for latest jmdict-simplified release …");
   const res = await fetch(GITHUB_RELEASES_API, {
@@ -58,16 +64,28 @@ async function resolveDownloadUrl(): Promise<{
 
   console.log(`   Latest release tag: ${release.tag_name}`);
 
-  const asset = release.assets.find(
+  const dictAsset = release.assets.find(
     (a) => a.name.startsWith(ASSET_PREFIX) && a.name.endsWith(".json.zip")
   );
-  if (!asset) {
+  if (!dictAsset) {
     throw new Error(
       `No asset matching "${ASSET_PREFIX}*.json.zip" found in release ${release.tag_name}`
     );
   }
 
-  return { url: asset.browser_download_url, zipName: asset.name };
+  const examplesAsset = release.assets.find(
+    (a) => a.name.startsWith(EXAMPLES_ASSET_PREFIX) && a.name.endsWith(".json.zip")
+  );
+  if (!examplesAsset) {
+    throw new Error(
+      `No asset matching "${EXAMPLES_ASSET_PREFIX}*.json.zip" found in release ${release.tag_name}`
+    );
+  }
+
+  return {
+    dict: { url: dictAsset.browser_download_url, zipName: dictAsset.name },
+    examples: { url: examplesAsset.browser_download_url, zipName: examplesAsset.name },
+  };
 }
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -125,6 +143,23 @@ function createSchema(db: Database.Database) {
   `);
 }
 
+function createExamplesSchema(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS examples (
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      entry_id  TEXT NOT NULL,
+      sense_idx INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS example_sentences (
+      example_id INTEGER NOT NULL,
+      lang       TEXT NOT NULL,
+      text       TEXT NOT NULL,
+      FOREIGN KEY (example_id) REFERENCES examples(id)
+    );
+  `);
+}
+
 function createIndices(db: Database.Database) {
   console.log("🔑 Creating indices …");
   db.exec(`
@@ -132,6 +167,8 @@ function createIndices(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_kana_text   ON kana(text);
     CREATE INDEX IF NOT EXISTS idx_senses_entry ON senses(entry_id);
     CREATE INDEX IF NOT EXISTS idx_glosses_sense ON glosses(sense_id);
+    CREATE INDEX IF NOT EXISTS idx_examples_entry ON examples(entry_id);
+    CREATE INDEX IF NOT EXISTS idx_example_sentences_example ON example_sentences(example_id);
   `);
 }
 
@@ -187,6 +224,21 @@ interface JMdictWord {
     info: string[];
     languageSource: unknown[];
     gloss: { lang: string; text: string; gender: string | null; type: string | null }[];
+  }[];
+}
+
+/** Entry structure in the jmdict-examples-eng JSON */
+interface JMdictExamplesWord {
+  id: string;
+  kanji: unknown[];
+  kana: unknown[];
+  sense: {
+    partOfSpeech: string[];
+    gloss: unknown[];
+    examples?: {
+      text: string;
+      sentences: { lang: string; text: string }[];
+    }[];
   }[];
 }
 
@@ -257,47 +309,109 @@ function importWords(db: Database.Database, words: JMdictWord[]) {
   importAll();
 }
 
+function importExamples(db: Database.Database, words: JMdictExamplesWord[]) {
+  const insertExample = db.prepare(
+    `INSERT INTO examples (entry_id, sense_idx) VALUES (?, ?)`
+  );
+  const insertExampleSentence = db.prepare(
+    `INSERT INTO example_sentences (example_id, lang, text) VALUES (?, ?, ?)`
+  );
+  // Only import examples for entries that exist in our (common) dict
+  const entryExists = db.prepare(
+    `SELECT 1 FROM entries WHERE id = ?`
+  );
+
+  const importAll = db.transaction(() => {
+    let exampleCount = 0;
+    let sentenceCount = 0;
+    let skipped = 0;
+
+    for (const word of words) {
+      // Skip entries not in our common dict
+      if (!entryExists.get(word.id)) {
+        skipped++;
+        continue;
+      }
+
+      for (let senseIdx = 0; senseIdx < word.sense.length; senseIdx++) {
+        const sense = word.sense[senseIdx];
+        if (!sense.examples || sense.examples.length === 0) continue;
+
+        for (const example of sense.examples) {
+          if (!example.sentences || example.sentences.length === 0) continue;
+
+          const { lastInsertRowid: exampleId } = insertExample.run(
+            word.id,
+            senseIdx
+          );
+          exampleCount++;
+
+          for (const sentence of example.sentences) {
+            insertExampleSentence.run(exampleId, sentence.lang, sentence.text);
+            sentenceCount++;
+          }
+        }
+      }
+    }
+
+    return { exampleCount, sentenceCount, skipped };
+  });
+
+  return importAll();
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 async function main() {
   console.log("🚀 JMdict import starting …\n");
 
   ensureDir(RESOURCES_DIR);
 
-  // 1. Resolve the latest release download URL
-  const { url: downloadUrl, zipName } = await resolveDownloadUrl();
-  const zipPath = path.join(RESOURCES_DIR, zipName);
+  // 1. Resolve the latest release download URLs
+  const { dict: dictAsset, examples: examplesAsset } = await resolveDownloadUrls();
+  const dictZipPath = path.join(RESOURCES_DIR, dictAsset.zipName);
+  const examplesZipPath = path.join(RESOURCES_DIR, examplesAsset.zipName);
 
-  // 2. Download if needed
-  if (!fs.existsSync(zipPath)) {
-    download(downloadUrl, zipPath);
+  // 2. Download dict if needed
+  if (!fs.existsSync(dictZipPath)) {
+    download(dictAsset.url, dictZipPath);
   } else {
-    console.log(`✅ ZIP already exists: ${zipPath}`);
+    console.log(`✅ Dict ZIP already exists: ${dictZipPath}`);
   }
 
-  // 3. Clean old JSON files to avoid reading stale data on upgrade
+  // 3. Download examples if needed
+  if (!fs.existsSync(examplesZipPath)) {
+    download(examplesAsset.url, examplesZipPath);
+  } else {
+    console.log(`✅ Examples ZIP already exists: ${examplesZipPath}`);
+  }
+
+  // 4. Clean old JSON files to avoid reading stale data on upgrade
   for (const f of fs.readdirSync(RESOURCES_DIR)) {
-    if (f.startsWith("jmdict-eng-common-") && f.endsWith(".json")) {
+    if (
+      (f.startsWith("jmdict-eng-common-") || f.startsWith("jmdict-examples-eng-")) &&
+      f.endsWith(".json")
+    ) {
       fs.unlinkSync(path.join(RESOURCES_DIR, f));
     }
   }
 
-  // 4. Unzip, then find the extracted JSON
-  unzip(zipPath, RESOURCES_DIR);
+  // 5. Unzip dict
+  unzip(dictZipPath, RESOURCES_DIR);
 
-  const jsonFile = fs.readdirSync(RESOURCES_DIR).find(
+  const dictJsonFile = fs.readdirSync(RESOURCES_DIR).find(
     (f) => f.startsWith("jmdict-eng-common-") && f.endsWith(".json")
   );
-  if (!jsonFile) {
+  if (!dictJsonFile) {
     throw new Error(
       `No jmdict-eng-common-*.json found in ${RESOURCES_DIR} after unzip`
     );
   }
-  const jsonPath = path.join(RESOURCES_DIR, jsonFile);
-  console.log(`   Extracted: ${jsonFile}`);
+  const dictJsonPath = path.join(RESOURCES_DIR, dictJsonFile);
+  console.log(`   Extracted dict: ${dictJsonFile}`);
 
-  // 4. Read JSON
-  console.log(`📖 Reading ${jsonFile} …`);
-  const raw = fs.readFileSync(jsonPath, "utf-8");
+  // 6. Read dict JSON
+  console.log(`📖 Reading ${dictJsonFile} …`);
+  const raw = fs.readFileSync(dictJsonPath, "utf-8");
   const data = JSON.parse(raw) as {
     version: string;
     dictDate: string;
@@ -309,7 +423,7 @@ async function main() {
   console.log(`   Words: ${data.words.length}`);
   console.log(`   Tags: ${Object.keys(data.tags).length}\n`);
 
-  // 4. Create / recreate DB
+  // 7. Create / recreate DB
   if (fs.existsSync(DB_PATH)) {
     fs.unlinkSync(DB_PATH);
     console.log("🗑  Removed existing jmdict.db");
@@ -317,19 +431,18 @@ async function main() {
 
   const db = new Database(DB_PATH);
   createSchema(db);
+  createExamplesSchema(db);
 
-  // 5. Store metadata
+  // 8. Store metadata
   const insertMeta = db.prepare(
     `INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)`
   );
   insertMeta.run("version", data.version);
   insertMeta.run("dictDate", data.dictDate);
   insertMeta.run("importedAt", new Date().toISOString());
-
-  // Store tags
   insertMeta.run("tags", JSON.stringify(data.tags));
 
-  // 6. Import words in batches
+  // 9. Import words in batches
   const BATCH_SIZE = 5000;
   const total = data.words.length;
   for (let i = 0; i < total; i += BATCH_SIZE) {
@@ -339,15 +452,60 @@ async function main() {
     console.log(`   Imported ${progress} / ${total} entries …`);
   }
 
-  // 7. Create indices & FTS
+  // 10. Unzip and import examples
+  console.log(`\n📖 Importing example sentences …`);
+  unzip(examplesZipPath, RESOURCES_DIR);
+
+  const examplesJsonFile = fs.readdirSync(RESOURCES_DIR).find(
+    (f) => f.startsWith("jmdict-examples-eng-") && f.endsWith(".json")
+  );
+  if (!examplesJsonFile) {
+    throw new Error(
+      `No jmdict-examples-eng-*.json found in ${RESOURCES_DIR} after unzip`
+    );
+  }
+  const examplesJsonPath = path.join(RESOURCES_DIR, examplesJsonFile);
+  console.log(`   Extracted examples: ${examplesJsonFile}`);
+
+  console.log(`📖 Reading ${examplesJsonFile} …`);
+  const examplesRaw = fs.readFileSync(examplesJsonPath, "utf-8");
+  const examplesData = JSON.parse(examplesRaw) as {
+    words: JMdictExamplesWord[];
+  };
+  console.log(`   Example entries to process: ${examplesData.words.length}`);
+
+  let totalExamples = 0;
+  let totalSentences = 0;
+  const exTotal = examplesData.words.length;
+  for (let i = 0; i < exTotal; i += BATCH_SIZE) {
+    const batch = examplesData.words.slice(i, i + BATCH_SIZE);
+    const { exampleCount, sentenceCount, skipped } = importExamples(db, batch);
+    totalExamples += exampleCount;
+    totalSentences += sentenceCount;
+    const progress = Math.min(i + BATCH_SIZE, exTotal);
+    console.log(`   Processed ${progress} / ${exTotal} example entries (skipped ${skipped} non-common) …`);
+  }
+  console.log(`   ✅ Examples: ${totalExamples}, Sentences: ${totalSentences}`);
+
+  // Clean up extracted JSON files to save space
+  try {
+    fs.unlinkSync(examplesJsonPath);
+    console.log(`   🗑  Cleaned up ${examplesJsonFile}`);
+  } catch { /* ignore */ }
+
+  insertMeta.run("examplesImportedAt", new Date().toISOString());
+  insertMeta.run("examplesCount", String(totalExamples));
+  insertMeta.run("sentencesCount", String(totalSentences));
+
+  // 11. Create indices & FTS
   createIndices(db);
   createFts(db);
 
-  // 8. Ensure DELETE journal mode (not WAL) for read-only deployment
+  // 12. Ensure DELETE journal mode (not WAL) for read-only deployment
   db.exec("PRAGMA journal_mode = DELETE");
   db.exec("VACUUM");
 
-  // 9. Stats
+  // 13. Stats
   const entryCount = (
     db.prepare("SELECT COUNT(*) as c FROM entries").get() as { c: number }
   ).c;
@@ -363,17 +521,25 @@ async function main() {
   const glossCount = (
     db.prepare("SELECT COUNT(*) as c FROM glosses").get() as { c: number }
   ).c;
+  const exampleRowCount = (
+    db.prepare("SELECT COUNT(*) as c FROM examples").get() as { c: number }
+  ).c;
+  const exSentenceCount = (
+    db.prepare("SELECT COUNT(*) as c FROM example_sentences").get() as { c: number }
+  ).c;
 
   const fileSizeMB = (fs.statSync(DB_PATH).size / (1024 * 1024)).toFixed(2);
 
   console.log(`\n✅ Import complete!`);
-  console.log(`   Entries: ${entryCount}`);
-  console.log(`   Kanji:   ${kanjiCount}`);
-  console.log(`   Kana:    ${kanaCount}`);
-  console.log(`   Senses:  ${senseCount}`);
-  console.log(`   Glosses: ${glossCount}`);
-  console.log(`   DB size: ${fileSizeMB} MB`);
-  console.log(`   Path:    ${DB_PATH}`);
+  console.log(`   Entries:    ${entryCount}`);
+  console.log(`   Kanji:      ${kanjiCount}`);
+  console.log(`   Kana:       ${kanaCount}`);
+  console.log(`   Senses:     ${senseCount}`);
+  console.log(`   Glosses:    ${glossCount}`);
+  console.log(`   Examples:   ${exampleRowCount}`);
+  console.log(`   Sentences:  ${exSentenceCount}`);
+  console.log(`   DB size:    ${fileSizeMB} MB`);
+  console.log(`   Path:       ${DB_PATH}`);
 
   db.close();
 }

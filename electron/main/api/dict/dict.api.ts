@@ -6,8 +6,14 @@
  * Output:  DictEntry[] | null
  */
 import { ipcMain } from "electron";
-import { isDictAvailable } from "./dictDatabase";
-import { lookupWord, getDictTags, type DictEntry } from "./dictRepository";
+import { isDictAvailable, isExamplesAvailable } from "./dictDatabase";
+import {
+  lookupWord,
+  getDictTags,
+  lookupExamples,
+  type DictEntry,
+  type DictExample,
+} from "./dictRepository";
 
 export interface LocalDictResult {
   found: boolean;
@@ -50,6 +56,27 @@ export function setupLocalDictApiHandler(): void {
       } catch (err) {
         console.error("[dict] Lookup error:", err);
         return { found: false, entries: [] };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    "word-dict-examples",
+    async (
+      _event,
+      payload: { entryId: string; limit?: number }
+    ): Promise<DictExample[]> => {
+      const entryId =
+        typeof payload.entryId === "string" ? payload.entryId.trim() : "";
+      if (!entryId) return [];
+
+      if (!isDictAvailable() || !isExamplesAvailable()) return [];
+
+      try {
+        return lookupExamples(entryId, payload.limit);
+      } catch (err) {
+        console.error("[dict] Examples lookup error:", err);
+        return [];
       }
     }
   );

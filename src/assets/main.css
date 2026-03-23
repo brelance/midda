@@ -1014,6 +1014,55 @@ body {
   padding: 8px 0 2px;
 }
 
+/* ── Example sentences ── */
+.study-popover-examples-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.study-popover-examples-label {
+  font-family: -apple-system, "Inter", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(100, 210, 180, 0.9);
+  letter-spacing: 0.05em;
+}
+
+.study-popover-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.study-popover-example-item {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.study-popover-example-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.study-popover-example-jpn {
+  font-family: -apple-system, "Hiragino Sans", sans-serif;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+}
+
+.study-popover-example-eng {
+  font-family: -apple-system, "Inter", sans-serif;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.42);
+  line-height: 1.45;
+  margin-top: 2px;
+  letter-spacing: 0.01em;
+}
+
 /* ── AI section ── */
 .study-popover-ai-section {
   display: flex;

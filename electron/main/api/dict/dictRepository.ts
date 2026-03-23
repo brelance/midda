@@ -252,3 +252,52 @@ export function getDictTags(): Record<string, string> {
     return {};
   }
 }
+
+// ── Example sentences ───────────────────────────────────────────────────────
+
+export interface ExampleSentence {
+  lang: string;
+  text: string;
+}
+
+export interface DictExample {
+  id: number;
+  senseIndex: number;
+  sentences: ExampleSentence[];
+}
+
+interface ExampleRow {
+  id: number;
+  sense_idx: number;
+}
+
+interface ExampleSentenceRow {
+  lang: string;
+  text: string;
+}
+
+/**
+ * Look up example sentences for a JMdict entry by entry_id.
+ * Returns up to `limit` examples, each with its associated sentences (jpn/eng).
+ */
+export function lookupExamples(entryId: string, limit = 5): DictExample[] {
+  const db = getDictDb();
+
+  const exampleRows = db
+    .prepare(`SELECT id, sense_idx FROM examples WHERE entry_id = ? LIMIT ?`)
+    .all(entryId, limit) as ExampleRow[];
+
+  if (exampleRows.length === 0) return [];
+
+  return exampleRows.map((row) => {
+    const sentenceRows = db
+      .prepare(`SELECT lang, text FROM example_sentences WHERE example_id = ?`)
+      .all(row.id) as ExampleSentenceRow[];
+
+    return {
+      id: row.id,
+      senseIndex: row.sense_idx,
+      sentences: sentenceRows.map((s) => ({ lang: s.lang, text: s.text })),
+    };
+  });
+}

@@ -114,3 +114,24 @@ export function formatDictResult(result: LocalDictResult): DictDisplayData {
     allEntries: result.entries,
   };
 }
+
+// ── Example sentences ───────────────────────────────────────────────────────
+
+import type { DictExample } from "../types/localDict";
+
+/**
+ * Look up example sentences for a JMdict entry.
+ * Returns `null` if the API is unavailable.
+ */
+export async function lookupExamples(
+  entryId: string,
+  limit?: number
+): Promise<DictExample[] | null> {
+  try {
+    if (!window.api?.localDict?.lookupExamples) return null;
+    return (await window.api.localDict.lookupExamples(entryId, limit)) as DictExample[];
+  } catch (err) {
+    console.warn("[localDictService] lookupExamples error:", err);
+    return null;
+  }
+}

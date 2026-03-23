@@ -58,3 +58,25 @@ export function isDictAvailable(): boolean {
     return false;
   }
 }
+
+/**
+ * Returns true if the examples tables exist in the dictionary database.
+ * A pre-change jmdict.db may lack these tables; this avoids "no such table"
+ * errors at runtime when the user hasn't reimported the dictionary.
+ */
+let _examplesAvailable: boolean | undefined;
+export function isExamplesAvailable(): boolean {
+  if (_examplesAvailable !== undefined) return _examplesAvailable;
+  try {
+    const db = getDictDb();
+    const row = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='examples'"
+      )
+      .get();
+    _examplesAvailable = !!row;
+  } catch {
+    _examplesAvailable = false;
+  }
+  return _examplesAvailable;
+}

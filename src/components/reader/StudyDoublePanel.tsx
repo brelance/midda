@@ -8,6 +8,7 @@ import React, {
 import {
   lookupDict,
   formatDictResult,
+  lookupExamples,
   type DictDisplayData,
 } from "../../services/localDictService";
 export interface ReaderSentenceAnalysisItem {
@@ -69,6 +70,9 @@ interface TokenPopoverState {
   // Local dict data
   dictLoading: boolean;
   dictData: DictDisplayData | null;
+  // Example sentences
+  examples: import("../../types/localDict").DictExample[];
+  examplesLoading: boolean;
   // AI (LLM) data — loaded on demand
   aiMeaning: string;
   aiLoading: boolean;
@@ -85,6 +89,8 @@ const INITIAL_POPOVER: TokenPopoverState = {
   baseForm: "",
   dictLoading: false,
   dictData: null,
+  examples: [],
+  examplesLoading: false,
   aiMeaning: "",
   aiLoading: false,
 };
@@ -339,6 +345,40 @@ const StudyPopover: React.FC<StudyPopoverProps> = ({
             </div>
           )}
 
+          {/* ── Example sentences ── */}
+          {state.examplesLoading && (
+            <>
+              <div className="study-popover-divider" />
+              <div className="study-popover-examples-section">
+                <span className="study-popover-examples-label">例句</span>
+                <span className="study-popover-loading">查询中…</span>
+              </div>
+            </>
+          )}
+          {state.examples.length > 0 && (
+            <>
+              <div className="study-popover-divider" />
+              <div className="study-popover-examples-section">
+                <span className="study-popover-examples-label">例句</span>
+              </div>
+              <div className="study-popover-examples">
+                {state.examples.slice(0, 3).map((ex) => {
+                  const jpn = ex.sentences.find((s) => s.lang === "jpn");
+                  const eng = ex.sentences.find((s) => s.lang === "eng");
+                  if (!jpn) return null;
+                  return (
+                    <div key={ex.id} className="study-popover-example-item">
+                      <div className="study-popover-example-jpn">{jpn.text}</div>
+                      {eng && (
+                        <div className="study-popover-example-eng">{eng.text}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
           {/* ── AI meaning (on demand) ── */}
           {state.aiLoading && (
             <>
@@ -510,6 +550,10 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
   // Keep a ref to the current sentence text for the AI callback
   const currentSentenceRef = useRef("");
 
+  // ── Staleness guard: each token click bumps the ID; async callbacks
+  //    skip state updates if the ID no longer matches. ──
+  const tokenRequestIdRef = useRef(0);
+
   const handleTokenClick = useCallback(
     async (
       e: React.MouseEvent<HTMLSpanElement>,
@@ -519,6 +563,7 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
     ) => {
       e.stopPropagation();
       currentSentenceRef.current = sentenceText;
+      const requestId = ++tokenRequestIdRef.current;
 
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const pw = 300;
@@ -541,6 +586,8 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
             : "",
         dictLoading: true,
         dictData: null,
+        examples: [],
+        examplesLoading: false,
         aiMeaning: "",
         aiLoading: false,
       };
@@ -562,6 +609,7 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
 
         if (!hasBaseForm) {
           // No lemma info → don't risk a false-positive surface match
+          if (tokenRequestIdRef.current !== requestId) return;
           setPopover((prev) => ({
             ...prev,
             dictLoading: false,
@@ -570,6 +618,7 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
         } else {
           // Query the baseForm (reliable lemma from LLM morphological analysis)
           const dictResult = await lookupDict(token.baseForm!);
+          if (tokenRequestIdRef.current !== requestId) return;
           let dictData = dictResult
             ? formatDictResult(dictResult)
             : emptyDict;
@@ -577,6 +626,7 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
           // If baseForm lookup missed and the surface IS the dict form, try it
           if (!dictData.found && isAlreadyDictForm) {
             const surfaceResult = await lookupDict(token.word);
+            if (tokenRequestIdRef.current !== requestId) return;
             dictData = surfaceResult
               ? formatDictResult(surfaceResult)
               : emptyDict;
@@ -587,6 +637,28 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
             dictLoading: false,
             dictData,
           }));
+
+          // Load example sentences if dict found an entry
+          if (dictData.found && dictData.allEntries.length > 0) {
+            const bestEntryId = dictData.allEntries[0].id;
+            setPopover((prev) => ({ ...prev, examplesLoading: true }));
+            lookupExamples(bestEntryId, 5)
+              .then((examples) => {
+                if (tokenRequestIdRef.current !== requestId) return;
+                setPopover((prev) => ({
+                  ...prev,
+                  examplesLoading: false,
+                  examples: examples ?? [],
+                }));
+              })
+              .catch(() => {
+                if (tokenRequestIdRef.current !== requestId) return;
+                setPopover((prev) => ({
+                  ...prev,
+                  examplesLoading: false,
+                }));
+              });
+          }
         }
       } catch {
         setPopover((prev) => ({

@@ -45,3 +45,14 @@ export interface LocalDictResult {
   entries: DictEntry[];
   tags?: Record<string, string>;
 }
+
+export interface ExampleSentence {
+  lang: string;
+  text: string;
+}
+
+export interface DictExample {
+  id: number;
+  senseIndex: number;
+  sentences: ExampleSentence[];
+}
