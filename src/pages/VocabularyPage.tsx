@@ -4,8 +4,15 @@ import type {
   VocabularyContextRecord,
   VocabStatus,
 } from "../types/database";
+import type { DictExample } from "../types/localDict";
 import { sm2 } from "../utils/sm2";
 import { posChineseMap } from "../utils/helper";
+import {
+  lookupDict,
+  formatDictResult,
+  lookupExamples,
+  type DictDisplayData,
+} from "../services/localDictService";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -14,6 +21,10 @@ type ViewMode = "list" | "review";
 interface VocabWithContexts extends VocabularyRecord {
   contexts?: VocabularyContextRecord[];
   expanded?: boolean;
+  // JMDict data (lazy-loaded on expand)
+  dictData?: DictDisplayData | null;
+  dictExamples?: DictExample[];
+  dictLoading?: boolean;
 }
 
 // ── Status badge ─────────────────────────────────────────────────────────────
@@ -48,6 +59,8 @@ const StatusBadge: React.FC<{ status: VocabStatus }> = ({ status }) => {
 interface FlashcardProps {
   item: VocabularyRecord;
   contexts: VocabularyContextRecord[];
+  dictData?: DictDisplayData | null;
+  dictExamples?: DictExample[];
   onGrade: (grade: number) => void;
   currentIndex: number;
   total: number;
@@ -56,6 +69,8 @@ interface FlashcardProps {
 const Flashcard: React.FC<FlashcardProps> = ({
   item,
   contexts,
+  dictData,
+  dictExamples,
   onGrade,
   currentIndex,
   total,
@@ -103,10 +118,13 @@ const Flashcard: React.FC<FlashcardProps> = ({
       {/* Card */}
       <div
         onClick={() => !flipped && setFlipped(true)}
+        className="vocab-scrollable-hide"
         style={{
           width: "100%",
           maxWidth: 480,
           minHeight: 300,
+          maxHeight: "60vh",
+          overflowY: "auto",
           borderRadius: 16,
           backgroundColor: "#fff",
           border: "1px solid rgba(0,0,0,0.06)",
@@ -116,7 +134,7 @@ const Flashcard: React.FC<FlashcardProps> = ({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: flipped ? "flex-start" : "center",
           gap: "1rem",
           transition: "box-shadow 0.2s",
         }}
@@ -165,72 +183,107 @@ const Flashcard: React.FC<FlashcardProps> = ({
           </div>
         )}
 
-        {/* Back: revealed on flip */}
-        {flipped && (
-          <div
-            style={{
-              marginTop: "1rem",
-              width: "100%",
-              borderTop: "1px solid rgba(0,0,0,0.06)",
-              paddingTop: "1rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-            }}
-          >
-            {item.glosses && item.glosses.length > 0 && (
-              <div style={{ fontSize: 16, color: "#1d1d1f", lineHeight: 1.6 }}>
-                {item.glosses.slice(0, 5).map((g, i) => (
-                  <div key={i}>• {g}</div>
-                ))}
-              </div>
-            )}
+          {flipped && (
+            <div
+              style={{
+                marginTop: "1rem",
+                width: "100%",
+                borderTop: "1px solid rgba(0,0,0,0.06)",
+                paddingTop: "1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              {/* JMDict glosses */}
+              {dictData?.found && dictData.glosses.length > 0 && (
+                <div style={{ fontSize: 16, color: "#1d1d1f", lineHeight: 1.6 }}>
+                  {dictData.glosses.slice(0, 5).map((g, i) => (
+                    <div key={i}>• {g}</div>
+                  ))}
+                </div>
+              )}
 
-            {item.aiMeaning && (
-              <div
-                style={{
-                  fontSize: 14,
-                  color: "rgba(0,0,0,0.5)",
-                  fontStyle: "italic",
-                }}
-              >
-                {item.aiMeaning}
-              </div>
-            )}
+              {/* Fallback to vocabulary record glosses if no dict */}
+              {(!dictData?.found) && item.glosses && item.glosses.length > 0 && (
+                <div style={{ fontSize: 16, color: "#1d1d1f", lineHeight: 1.6 }}>
+                  {item.glosses.slice(0, 5).map((g, i) => (
+                    <div key={i}>• {g}</div>
+                  ))}
+                </div>
+              )}
 
-            {contexts.length > 0 && (
-              <div
-                style={{
-                  marginTop: "0.5rem",
-                  padding: "0.75rem",
-                  borderRadius: 8,
-                  backgroundColor: "rgba(0,0,0,0.02)",
-                  fontSize: 14,
-                  color: "rgba(0,0,0,0.6)",
-                  lineHeight: 1.7,
-                }}
-              >
+              {item.aiMeaning && (
                 <div
                   style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: "rgba(0,0,0,0.3)",
-                    marginBottom: 4,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
+                    fontSize: 14,
+                    color: "rgba(0,0,0,0.5)",
+                    fontStyle: "italic",
                   }}
                 >
-                  例句
+                  {item.aiMeaning}
                 </div>
-                {contexts.slice(0, 2).map((ctx) => (
-                  <div key={ctx.id} style={{ marginBottom: 4 }}>
-                    「{ctx.sentenceText}」
+              )}
+
+              {/* Tatoeba examples */}
+              {dictExamples && dictExamples.length > 0 && (
+                <div
+                  style={{
+                    marginTop: "0.25rem",
+                    padding: "0.75rem",
+                    borderRadius: 8,
+                    backgroundColor: "rgba(100,210,180,0.04)",
+                    border: "1px solid rgba(100,210,180,0.1)",
+                  }}
+                >
+                  <div style={sectionLabelStyle}>
+                    Tatoeba 例句
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  {dictExamples.slice(0, 3).map((ex) => {
+                    const jpn = ex.sentences.find((s) => s.lang === "jpn");
+                    const eng = ex.sentences.find((s) => s.lang === "eng");
+                    if (!jpn) return null;
+                    return (
+                      <div key={ex.id} style={{ marginBottom: 6 }}>
+                        <div style={{ fontSize: 14, color: "#1d1d1f", lineHeight: 1.6 }}>
+                          {jpn.text}
+                        </div>
+                        {eng && (
+                          <div style={{ fontSize: 13, color: "rgba(0,0,0,0.42)", lineHeight: 1.5 }}>
+                            {eng.text}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Reading contexts */}
+              {contexts.length > 0 && (
+                <div
+                  style={{
+                    marginTop: "0.5rem",
+                    padding: "0.75rem",
+                    borderRadius: 8,
+                    backgroundColor: "rgba(0,0,0,0.02)",
+                    fontSize: 14,
+                    color: "rgba(0,0,0,0.6)",
+                    lineHeight: 1.7,
+                  }}
+                >
+                  <div style={sectionLabelStyle}>
+                    阅读例句
+                  </div>
+                  {contexts.slice(0, 2).map((ctx) => (
+                    <div key={ctx.id} style={{ marginBottom: 4 }}>
+                      「{ctx.sentenceText}」
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
       </div>
 
       {/* Grade buttons — visible only after flip */}
@@ -356,11 +409,37 @@ const VocabularyPage: React.FC = () => {
       if (!item) return;
 
       if (!item.expanded && !item.contexts) {
-        // Lazy load contexts
-        const ctxs = await window.api.db.vocabulary.getContexts(id);
+        // Lazy load contexts + JMDict data in parallel
         setVocabList((prev) =>
           prev.map((v) =>
-            v.id === id ? { ...v, contexts: ctxs, expanded: true } : v
+            v.id === id ? { ...v, expanded: true, dictLoading: true } : v
+          )
+        );
+
+        // Only query JMdict when a real lemma was stored (baseForm !== word).
+        // When no lemma info existed, baseForm is just the surface token,
+        // and ambiguous forms like した can resolve to unrelated homonyms.
+        const hasRealLemma = item.baseForm !== item.word;
+
+        const [ctxs, dictResult] = await Promise.all([
+          window.api.db.vocabulary.getContexts(id),
+          hasRealLemma ? lookupDict(item.baseForm) : Promise.resolve(null),
+        ]);
+
+        const dictData = dictResult ? formatDictResult(dictResult) : null;
+
+        // Load examples if dict found
+        let dictExamples: DictExample[] = [];
+        if (dictData?.found && dictData.allEntries.length > 0) {
+          const examples = await lookupExamples(dictData.allEntries[0].id, 5);
+          dictExamples = examples ?? [];
+        }
+
+        setVocabList((prev) =>
+          prev.map((v) =>
+            v.id === id
+              ? { ...v, contexts: ctxs, dictData, dictExamples, dictLoading: false }
+              : v
           )
         );
       } else {
@@ -390,21 +469,41 @@ const VocabularyPage: React.FC = () => {
     );
   }, []);
 
+  // Review dict data (preloaded)
+  const [reviewDictMap, setReviewDictMap] = useState<
+    Record<number, { dictData?: DictDisplayData | null; dictExamples?: DictExample[] }>
+  >({});
+
   // Start review
   const startReview = useCallback(async () => {
     const due = await window.api.db.vocabulary.getDue(50);
     if (due.length === 0) return;
 
-    // Pre-load contexts for all due items
+    // Pre-load contexts + dict data for all due items
     const ctxMap: Record<number, VocabularyContextRecord[]> = {};
+    const dictMap: Record<number, { dictData?: DictDisplayData | null; dictExamples?: DictExample[] }> = {};
+
     await Promise.all(
       due.map(async (item) => {
+        // Load contexts
         ctxMap[item.id] = await window.api.db.vocabulary.getContexts(item.id);
+
+        // Load JMDict data — skip when no real lemma was stored
+        const hasRealLemma = item.baseForm !== item.word;
+        const dictResult = hasRealLemma ? await lookupDict(item.baseForm) : null;
+        const dictData = dictResult ? formatDictResult(dictResult) : null;
+        let dictExamples: DictExample[] = [];
+        if (dictData?.found && dictData.allEntries.length > 0) {
+          const examples = await lookupExamples(dictData.allEntries[0].id, 5);
+          dictExamples = examples ?? [];
+        }
+        dictMap[item.id] = { dictData, dictExamples };
       })
     );
 
     setReviewQueue(due);
     setReviewContexts(ctxMap);
+    setReviewDictMap(dictMap);
     setReviewIndex(0);
     setReviewedCount(0);
     setViewMode("review");
@@ -482,6 +581,8 @@ const VocabularyPage: React.FC = () => {
         <Flashcard
           item={currentCard}
           contexts={reviewContexts[currentCard.id] ?? []}
+          dictData={reviewDictMap[currentCard.id]?.dictData}
+          dictExamples={reviewDictMap[currentCard.id]?.dictExamples}
           onGrade={handleGrade}
           currentIndex={reviewIndex}
           total={reviewQueue.length}
@@ -652,26 +753,90 @@ const VocabCard: React.FC<VocabCardProps> = ({
       {/* Expanded detail */}
       {item.expanded && (
         <div
+          className="vocab-scrollable-hide"
           style={{
             borderTop: "1px solid rgba(0,0,0,0.04)",
             padding: "0.75rem 1rem",
             fontSize: 13,
             color: "rgba(0,0,0,0.55)",
+            maxHeight: 300,
+            overflowY: "auto",
           }}
         >
+          {/* Dict loading indicator */}
+          {item.dictLoading && (
+            <div style={{ color: "rgba(0,0,0,0.3)", marginBottom: "0.75rem" }}>
+              查询词典中…
+            </div>
+          )}
+
+          {/* JMDict glosses */}
+          {item.dictData?.found && item.dictData.glosses.length > 0 && (
+            <div style={{ marginBottom: "0.75rem" }}>
+              <div style={sectionLabelStyle}>JMDict 释义</div>
+              {item.dictData.glosses.slice(0, 5).map((g, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: "2px 0",
+                    lineHeight: 1.6,
+                    color: "rgba(0,0,0,0.65)",
+                    display: "flex",
+                    gap: 6,
+                  }}
+                >
+                  <span style={{ color: "rgba(0,0,0,0.25)", flexShrink: 0, minWidth: "1.2em" }}>
+                    {i + 1}.
+                  </span>
+                  <span>{g}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tatoeba examples */}
+          {item.dictExamples && item.dictExamples.length > 0 && (
+            <div
+              style={{
+                marginBottom: "0.75rem",
+                padding: "0.6rem 0.75rem",
+                borderRadius: 8,
+                backgroundColor: "rgba(100,210,180,0.04)",
+                border: "1px solid rgba(100,210,180,0.1)",
+              }}
+            >
+              <div style={sectionLabelStyle}>Tatoeba 例句</div>
+              {item.dictExamples.slice(0, 3).map((ex) => {
+                const jpn = ex.sentences.find((s) => s.lang === "jpn");
+                const eng = ex.sentences.find((s) => s.lang === "eng");
+                if (!jpn) return null;
+                return (
+                  <div
+                    key={ex.id}
+                    style={{
+                      padding: "4px 0",
+                      borderBottom: "1px solid rgba(0,0,0,0.03)",
+                    }}
+                  >
+                    <div style={{ fontSize: 13, color: "#1d1d1f", lineHeight: 1.6 }}>
+                      {jpn.text}
+                    </div>
+                    {eng && (
+                      <div style={{ fontSize: 12, color: "rgba(0,0,0,0.42)", lineHeight: 1.5 }}>
+                        {eng.text}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Reading contexts */}
           {item.contexts && item.contexts.length > 0 ? (
             <div style={{ marginBottom: "0.75rem" }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "rgba(0,0,0,0.3)",
-                  marginBottom: 6,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                例句 ({item.contexts.length})
+              <div style={sectionLabelStyle}>
+                阅读例句 ({item.contexts.length})
               </div>
               {item.contexts.map((ctx) => (
                 <div
@@ -687,9 +852,11 @@ const VocabCard: React.FC<VocabCardProps> = ({
               ))}
             </div>
           ) : (
-            <div style={{ color: "rgba(0,0,0,0.25)", marginBottom: "0.75rem" }}>
-              暂无例句
-            </div>
+            !item.dictLoading && (
+              <div style={{ color: "rgba(0,0,0,0.25)", marginBottom: "0.75rem" }}>
+                暂无阅读例句
+              </div>
+            )
           )}
 
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
@@ -742,6 +909,15 @@ const StatPill: React.FC<{ label: string; count: number; color: string }> = ({
 );
 
 // ── Styles ───────────────────────────────────────────────────────────────────
+
+const sectionLabelStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: "rgba(0,0,0,0.3)",
+  marginBottom: 6,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
 
 const pageStyle: React.CSSProperties = {
   flex: 1,

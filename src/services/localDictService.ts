@@ -111,7 +111,7 @@ export function formatDictResult(result: LocalDictResult): DictDisplayData {
     pos,
     glosses,
     senses,
-    allEntries: result.entries,
+    allEntries: sorted,
   };
 }
 
