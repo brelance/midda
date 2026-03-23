@@ -134,7 +134,7 @@ export const useBookshelfStore = create<BookshelfState>()((set, get) => ({
   // ── Initial state ──
   books: [],
   selectedBook: null,
-  activeNav: "bookshelf" as NavigationItem,
+  activeNav: "home" as NavigationItem,
   searchQuery: "",
   sortByIndex: 0,
   isSidebarOpen: false,

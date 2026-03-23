@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
 import VocabularyPage from "../../pages/VocabularyPage";
 import AccountPage from "../../pages/AccountPage";
+import HomePage from "../../pages/HomePage";
 import { useBookshelfStore, useSortBy } from "../../stores/bookshelfStore";
 import { useCollectionStore } from "../../stores/collectionStore";
 import { isCollectionNav, getCollectionId } from "../../types/types";
@@ -103,7 +104,14 @@ const Layout: React.FC = () => {
           isOpen={true}
           onClose={() => {}}
         />
-        {activeNav === "profile" ? (
+        {activeNav === "home" ? (
+          <HomePage
+            books={books}
+            collections={collections}
+            onEnterReader={enterReader}
+            onNavChange={navChange}
+          />
+        ) : activeNav === "profile" ? (
           <AccountPage />
         ) : activeNav === "vocabulary" ? (
           <VocabularyPage />

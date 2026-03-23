@@ -133,6 +133,7 @@ export interface User {
 }
 
 export type NavigationItem =
+  | 'home'
   | 'bookshelf'
   | 'discover'
   | 'store'
