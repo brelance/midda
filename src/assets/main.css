@@ -579,8 +579,8 @@ body {
   left: 0;
   bottom: 0;
   width: 280px;
-  background-color: #f5f5dc;
-  border-right: 4px solid #3d2b1f;
+  background-color: rgba(249, 249, 249, 0.95);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
   z-index: 50;
   transform: translateX(-100%);
   transition: transform 0.3s ease-in-out;
@@ -596,8 +596,8 @@ body {
   right: 0;
   bottom: 0;
   width: 320px;
-  background-color: #f5f5dc;
-  border-left: 4px solid #3d2b1f;
+  background-color: rgba(249, 249, 249, 0.95);
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
   z-index: 50;
   transform: translateX(100%);
   transition: transform 0.3s ease-in-out;

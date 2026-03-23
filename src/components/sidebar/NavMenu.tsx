@@ -26,7 +26,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
 
       {/* ── 书库 ── */}
       <div>
-        <div className="px-2 mb-1 text-[11px] font-semibold text-gray-400 tracking-wider uppercase select-none">
+        <div className="px-2 mb-1 text-[12px] font-medium text-[#86868b] tracking-wide select-none">
           书库
         </div>
         <NavItem
@@ -63,7 +63,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
 
       {/* ── 我的藏书 ── */}
       <div>
-        <div className="px-2 mb-1 text-[11px] font-semibold text-gray-400 tracking-wider uppercase select-none">
+        <div className="px-2 mb-1 text-[12px] font-medium text-[#86868b] tracking-wide select-none">
           我的藏书
         </div>
         <NavItem
@@ -80,7 +80,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
 
       {/* ── 学习 ── */}
       <div>
-        <div className="px-2 mb-1 text-[11px] font-semibold text-gray-400 tracking-wider uppercase select-none">
+        <div className="px-2 mb-1 text-[12px] font-medium text-[#86868b] tracking-wide select-none">
           学习
         </div>
         <NavItem
