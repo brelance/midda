@@ -447,6 +447,21 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
   const processingRef = useRef(false);
   const chapterGenerationRef = useRef(0);
   const analysisRunningRef = useRef(isSentenceAnalysisRunning);
+  const flushTimerRef = useRef<number | null>(null);
+
+  /**
+   * Schedule a batched sync of sentenceItemsRef.current → React state.
+   * Collapses many rapid ref updates into a single setSentenceItems call
+   * per animation frame, preventing React's internal update queue from
+   * retaining hundreds of intermediate array copies.
+   */
+  const flushSentenceItemsToState = useCallback(() => {
+    if (flushTimerRef.current !== null) return; // already scheduled
+    flushTimerRef.current = requestAnimationFrame(() => {
+      flushTimerRef.current = null;
+      setSentenceItems(sentenceItemsRef.current);
+    });
+  }, []);
   const analysisLanguageRef = useRef<string | undefined>(undefined);
   const analysisLanguageDetectionPromiseRef =
     useRef<Promise<string | undefined> | null>(null);
@@ -706,9 +721,9 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     showToolbarsTemporarily(1800);
   }, [showToolbarsTemporarily]);
 
-  useEffect(() => {
-    sentenceItemsRef.current = sentenceItems;
-  }, [sentenceItems]);
+  // NOTE: sentenceItemsRef is now the source of truth.
+  // React state (sentenceItems) is synced FROM the ref via flushSentenceItemsToState.
+  // No reverse sync needed.
 
   useEffect(() => {
     analysisRunningRef.current = isSentenceAnalysisRunning;
@@ -718,6 +733,11 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
     analysisLanguageRef.current = undefined;
     chapterGenerationRef.current++;
     clearQueue();
+    // Cancel any pending rAF flush from the previous chapter
+    if (flushTimerRef.current !== null) {
+      cancelAnimationFrame(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
   }, [activeChapterId]);
 
   const processPendingSentences = useCallback(async () => {
@@ -754,19 +774,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           break;
         }
 
-        setSentenceItems((prev) => {
-          const next = prev.map((entry) =>
-            entry.id === nextIdle.id
-              ? {
-                  ...entry,
-                  status: "loading" as ReaderSentenceAnalysisItem["status"],
-                  error: undefined,
-                }
-              : entry
-          );
-          sentenceItemsRef.current = next;
-          return next;
-        });
+        // Mark as "loading" — ref-only (no React state update to avoid queue buildup)
+        sentenceItemsRef.current = sentenceItemsRef.current.map((entry) =>
+          entry.id === nextIdle.id
+            ? { ...entry, status: "loading" as const, error: undefined }
+            : entry
+        );
 
         try {
           const context = {
@@ -780,20 +793,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           );
 
           if (cached && cached.tokens && cached.tokens.length > 0) {
-            setSentenceItems((prev) => {
-              const next = prev.map((entry) =>
-                entry.id === nextIdle.id
-                  ? {
-                      ...entry,
-                      status: "loaded" as ReaderSentenceAnalysisItem["status"],
-                      tokens: cached.tokens,
-                      error: undefined,
-                    }
-                  : entry
-              );
-              sentenceItemsRef.current = next;
-              return next;
-            });
+            sentenceItemsRef.current = sentenceItemsRef.current.map((entry) =>
+              entry.id === nextIdle.id
+                ? { ...entry, status: "loaded" as const, tokens: cached.tokens, error: undefined }
+                : entry
+            );
+            flushSentenceItemsToState();
             continue;
           }
 
@@ -805,20 +810,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           // Bail out if chapter changed while awaiting API response
           if (chapterGenerationRef.current !== myGeneration) break;
 
-          setSentenceItems((prev) => {
-            const next = prev.map((entry) =>
-              entry.id === nextIdle.id
-                ? {
-                    ...entry,
-                    status: "loaded" as ReaderSentenceAnalysisItem["status"],
-                    tokens,
-                    error: undefined,
-                  }
-                : entry
-            );
-            sentenceItemsRef.current = next;
-            return next;
-          });
+          sentenceItemsRef.current = sentenceItemsRef.current.map((entry) =>
+            entry.id === nextIdle.id
+              ? { ...entry, status: "loaded" as const, tokens, error: undefined }
+              : entry
+          );
+          flushSentenceItemsToState();
 
           await window.api.db.sentenceAnalysis.upsert({
             bookId: book.id,
@@ -831,20 +828,12 @@ const ReaderPage: React.FC<ReaderPageProps> = ({
           const message =
             error instanceof Error ? error.message : "分析过程中出现未知错误";
 
-          setSentenceItems((prev) => {
-            const next = prev.map((entry) =>
-              entry.id === nextIdle.id
-                ? {
-                    ...entry,
-                    status: "error" as ReaderSentenceAnalysisItem["status"],
-                    error: message,
-                    tokens: undefined,
-                  }
-                : entry
-            );
-            sentenceItemsRef.current = next;
-            return next;
-          });
+          sentenceItemsRef.current = sentenceItemsRef.current.map((entry) =>
+            entry.id === nextIdle.id
+              ? { ...entry, status: "error" as const, error: message, tokens: undefined }
+              : entry
+          );
+          flushSentenceItemsToState();
         }
       }
     } finally {
