@@ -70,9 +70,16 @@ function createWindow() {
     minHeight: 600,
   });
 
+  // Nullify ref when the window is closed so we never touch a destroyed object
+  win.on("closed", () => {
+    win = null;
+  });
+
   // Test active push message to Renderer-process.
   win.webContents.on("did-finish-load", () => {
-    win?.webContents.send("main-process-message", new Date().toLocaleString());
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("main-process-message", new Date().toLocaleString());
+    }
   });
 
   if (VITE_DEV_SERVER_URL) {
