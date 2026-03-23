@@ -18,6 +18,7 @@ import {
   VocabStatus,
 } from "../../db/vocabulary.repository";
 import type { VocabularyUpsertPayload } from "../../db/vocabulary.repository";
+import { CollectionRepository } from "../../db/collection.repository";
 
 const bookRepository = new BookRepository();
 const chapterRepository = new ChapterRepository();
@@ -26,6 +27,7 @@ const sentenceAnalysisRepository = new SentenceAnalysisRepository();
 const sentenceAnalysisJobRepository = new SentenceAnalysisJobRepository();
 const userPreferencesRepository = new UserPreferencesRepository();
 const vocabularyRepository = new VocabularyRepository();
+const collectionRepository = new CollectionRepository();
 
 export function registerDbHandlers(): void {
   // --- Books ---
@@ -242,6 +244,60 @@ export function registerDbHandlers(): void {
       }
     ) => {
       return vocabularyRepository.updateReview(id, update);
+    }
+  );
+
+  // --- Collections ---
+  ipcMain.handle(
+    "db:collections:create",
+    (_event, name: string) => {
+      return collectionRepository.create({ name });
+    }
+  );
+
+  ipcMain.handle("db:collections:getAll", () => {
+    return collectionRepository.getAll();
+  });
+
+  ipcMain.handle(
+    "db:collections:rename",
+    (_event, id: string, name: string) => {
+      return collectionRepository.rename(id, name);
+    }
+  );
+
+  ipcMain.handle(
+    "db:collections:delete",
+    (_event, id: string) => {
+      return collectionRepository.delete(id);
+    }
+  );
+
+  ipcMain.handle(
+    "db:collections:reorder",
+    (_event, ids: string[]) => {
+      return collectionRepository.reorder(ids);
+    }
+  );
+
+  ipcMain.handle(
+    "db:collections:addBook",
+    (_event, collectionId: string, bookId: string) => {
+      return collectionRepository.addBook(collectionId, bookId);
+    }
+  );
+
+  ipcMain.handle(
+    "db:collections:removeBook",
+    (_event, collectionId: string, bookId: string) => {
+      return collectionRepository.removeBook(collectionId, bookId);
+    }
+  );
+
+  ipcMain.handle(
+    "db:collections:getBookIds",
+    (_event, collectionId: string) => {
+      return collectionRepository.getBookIds(collectionId);
     }
   );
 }

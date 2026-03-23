@@ -158,6 +158,23 @@ const api = {
       delete: (id: number) =>
         ipcRenderer.invoke("db:vocabulary:delete", id),
     },
+    collections: {
+      create: (name: string) =>
+        ipcRenderer.invoke("db:collections:create", name),
+      getAll: () => ipcRenderer.invoke("db:collections:getAll"),
+      rename: (id: string, name: string) =>
+        ipcRenderer.invoke("db:collections:rename", id, name),
+      delete: (id: string) =>
+        ipcRenderer.invoke("db:collections:delete", id),
+      reorder: (ids: string[]) =>
+        ipcRenderer.invoke("db:collections:reorder", ids),
+      addBook: (collectionId: string, bookId: string) =>
+        ipcRenderer.invoke("db:collections:addBook", collectionId, bookId),
+      removeBook: (collectionId: string, bookId: string) =>
+        ipcRenderer.invoke("db:collections:removeBook", collectionId, bookId),
+      getBookIds: (collectionId: string): Promise<string[]> =>
+        ipcRenderer.invoke("db:collections:getBookIds", collectionId),
+    },
   },
 
   epub: {

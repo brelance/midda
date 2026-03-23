@@ -126,6 +126,26 @@ function initializeSchema(database: DB): void {
       FOREIGN KEY (vocabulary_id) REFERENCES vocabulary(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS collections (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS collection_books (
+      collection_id TEXT NOT NULL,
+      book_id TEXT NOT NULL,
+      added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (collection_id, book_id),
+      FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_collection_books_book
+      ON collection_books(book_id);
+
     CREATE UNIQUE INDEX IF NOT EXISTS idx_vocabulary_base_form
       ON vocabulary(base_form);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_vocab_ctx_unique

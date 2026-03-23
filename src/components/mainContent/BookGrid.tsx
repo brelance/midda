@@ -11,6 +11,7 @@ interface BookGridProps {
   onAddBook?: (bookData: EpubBookData) => Promise<void> | void;
   /** Book currently being read (for "继续阅读" section) */
   readingBook?: Book | null;
+  collectionName?: string;
 }
 
 const BookGrid: React.FC<BookGridProps> = ({
@@ -21,6 +22,7 @@ const BookGrid: React.FC<BookGridProps> = ({
   onDeleteBook,
   onAddBook,
   readingBook,
+  collectionName,
 }) => {
   const currentlyReading = readingBook ?? books.find((b) => b.status === 'reading') ?? null;
 
@@ -81,7 +83,9 @@ const BookGrid: React.FC<BookGridProps> = ({
 
         {/* 书架网格 */}
         <section>
-          <h2 className="text-[20px] font-bold mb-6 text-[#1d1d1f]">全部书籍</h2>
+          <h2 className="text-[20px] font-bold mb-6 text-[#1d1d1f]">
+            {collectionName ?? '全部书籍'}
+          </h2>
           <div
             className="gap-x-5 gap-y-8"
             style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, 120px)" }}

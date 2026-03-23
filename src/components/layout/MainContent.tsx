@@ -16,6 +16,7 @@ interface MainContentProps {
   onBookAdded?: (bookData: EpubBookData) => Promise<void> | void;
   onEnterReader?: (book: Book, chapterId?: string) => void;
   onDeleteBook?: (book: Book) => void;
+  collectionName?: string;
 }
 
 const MainContent: React.FC<MainContentProps> = ({
@@ -31,6 +32,7 @@ const MainContent: React.FC<MainContentProps> = ({
   onBookAdded,
   onEnterReader,
   onDeleteBook,
+  collectionName,
 }) => {
   const filteredBooks = books.filter((book) =>
     book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -70,6 +72,7 @@ const MainContent: React.FC<MainContentProps> = ({
         onDeleteBook={onDeleteBook}
         onAddBook={onBookAdded}
         readingBook={readingBook}
+        collectionName={collectionName}
       />
     </main>
   );

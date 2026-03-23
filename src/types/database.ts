@@ -187,3 +187,18 @@ export interface VocabularyUpsertPayload {
   sentenceBookId?: string;
   sentenceChapterId?: string;
 }
+
+// ── Collections ─────────────────────────────────────────────────────────────
+
+export interface CollectionRecord {
+  id: string;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CollectionCreatePayload {
+  name: string;
+}
+

@@ -26,6 +26,7 @@ import type {
   VocabularyRecord,
   VocabularyContextRecord,
   VocabularyUpsertPayload,
+  CollectionRecord,
 } from "./types/database";
 import type {
   RoleplayAnalysisPayload,
@@ -119,6 +120,16 @@ export interface IElectronAPI {
         }
       ) => Promise<boolean>;
       delete: (id: number) => Promise<boolean>;
+    };
+    collections: {
+      create: (name: string) => Promise<CollectionRecord>;
+      getAll: () => Promise<CollectionRecord[]>;
+      rename: (id: string, name: string) => Promise<CollectionRecord>;
+      delete: (id: string) => Promise<boolean>;
+      reorder: (ids: string[]) => Promise<void>;
+      addBook: (collectionId: string, bookId: string) => Promise<void>;
+      removeBook: (collectionId: string, bookId: string) => Promise<boolean>;
+      getBookIds: (collectionId: string) => Promise<string[]>;
     };
   };
 

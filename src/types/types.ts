@@ -132,7 +132,21 @@ export interface User {
   isGuest?: boolean;
 }
 
-export type NavigationItem = 'bookshelf' | 'discover' | 'store' | 'profile' | 'vocabulary';
+export type NavigationItem =
+  | 'bookshelf'
+  | 'discover'
+  | 'store'
+  | 'profile'
+  | 'vocabulary'
+  | `collection:${string}`;
+
+export function isCollectionNav(nav: NavigationItem): nav is `collection:${string}` {
+  return nav.startsWith('collection:');
+}
+
+export function getCollectionId(nav: `collection:${string}`): string {
+  return nav.slice('collection:'.length);
+}
 
 export interface AppState {
   books: Book[];
