@@ -15,6 +15,8 @@ export interface VocabularyRecord {
   glosses?: string[];
   aiMeaning?: string;
   sourceBookId?: string;
+  /** Whether the morphological analyzer provided a real lemma for this token */
+  hasLemma: boolean;
   status: VocabStatus;
   reviewCount: number;
   easeFactor: number;
@@ -42,6 +44,8 @@ export interface VocabularyUpsertPayload {
   glosses?: string[];
   aiMeaning?: string;
   sourceBookId?: string;
+  /** Whether the morphological analyzer provided a real lemma for this token */
+  hasLemma?: boolean;
   /** Sentence context (written to vocabulary_contexts) */
   sentenceText?: string;
   sentenceBookId?: string;
@@ -60,6 +64,7 @@ interface VocabularyRow {
   glosses_json: string | null;
   ai_meaning: string | null;
   source_book_id: string | null;
+  has_lemma: number;
   status: VocabStatus;
   review_count: number;
   ease_factor: number;
@@ -105,6 +110,7 @@ function mapVocabularyRow(row: VocabularyRow): VocabularyRecord {
     glosses,
     aiMeaning: toNullable(row.ai_meaning),
     sourceBookId: toNullable(row.source_book_id),
+    hasLemma: row.has_lemma === 1,
     status: row.status,
     reviewCount: row.review_count,
     easeFactor: row.ease_factor,
@@ -146,10 +152,10 @@ export class VocabularyRepository {
   private readonly upsertVocabStmt = db.prepare(`
     INSERT INTO vocabulary (
       word, base_form, reading, romaji, pos,
-      glosses_json, ai_meaning, source_book_id
+      glosses_json, ai_meaning, source_book_id, has_lemma
     ) VALUES (
       @word, @baseForm, @reading, @romaji, @pos,
-      @glossesJson, @aiMeaning, @sourceBookId
+      @glossesJson, @aiMeaning, @sourceBookId, @hasLemma
     )
     ON CONFLICT(base_form) DO UPDATE SET
       word = excluded.word,
@@ -158,7 +164,8 @@ export class VocabularyRepository {
       pos = COALESCE(excluded.pos, vocabulary.pos),
       glosses_json = COALESCE(excluded.glosses_json, vocabulary.glosses_json),
       ai_meaning = COALESCE(excluded.ai_meaning, vocabulary.ai_meaning),
-      source_book_id = COALESCE(excluded.source_book_id, vocabulary.source_book_id)
+      source_book_id = COALESCE(excluded.source_book_id, vocabulary.source_book_id),
+      has_lemma = MAX(excluded.has_lemma, vocabulary.has_lemma)
   `);
 
   private readonly getVocabByBaseFormStmt = db.prepare(`
@@ -234,6 +241,7 @@ export class VocabularyRepository {
         glossesJson,
         aiMeaning: payload.aiMeaning ?? null,
         sourceBookId: payload.sourceBookId ?? null,
+        hasLemma: (payload.hasLemma ?? false) ? 1 : 0,
       });
 
       // Retrieve the row (could be newly inserted or existing)

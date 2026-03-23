@@ -1090,3 +1090,12 @@ body {
   overflow-y: auto;
 }
 
+/* ── Vocabulary page: hide scrollbar but keep scroll ── */
+.vocab-scrollable-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.vocab-scrollable-hide::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+

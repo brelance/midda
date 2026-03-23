@@ -156,6 +156,8 @@ function initializeSchema(database: DB): void {
   // but throws if the column already exists, so we wrap each one.
   const migrations: string[] = [
     `ALTER TABLE chapters ADD COLUMN css_content TEXT`,
+    `ALTER TABLE vocabulary ADD COLUMN has_lemma INTEGER NOT NULL DEFAULT 0`,
+    `UPDATE vocabulary SET has_lemma = 1 WHERE base_form != word`,
   ];
   for (const migration of migrations) {
     try {

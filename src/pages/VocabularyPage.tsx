@@ -416,10 +416,10 @@ const VocabularyPage: React.FC = () => {
           )
         );
 
-        // Only query JMdict when a real lemma was stored (baseForm !== word).
-        // When no lemma info existed, baseForm is just the surface token,
-        // and ambiguous forms like した can resolve to unrelated homonyms.
-        const hasRealLemma = item.baseForm !== item.word;
+        // Only query JMdict when the morphological analyzer provided a real
+        // lemma. Tokens without lemma info have baseForm set to the surface
+        // form, and ambiguous forms like した can resolve to wrong homonyms.
+        const hasRealLemma = item.hasLemma !== false;
 
         const [ctxs, dictResult] = await Promise.all([
           window.api.db.vocabulary.getContexts(id),
@@ -489,7 +489,7 @@ const VocabularyPage: React.FC = () => {
         ctxMap[item.id] = await window.api.db.vocabulary.getContexts(item.id);
 
         // Load JMDict data — skip when no real lemma was stored
-        const hasRealLemma = item.baseForm !== item.word;
+        const hasRealLemma = item.hasLemma !== false;
         const dictResult = hasRealLemma ? await lookupDict(item.baseForm) : null;
         const dictData = dictResult ? formatDictResult(dictResult) : null;
         let dictExamples: DictExample[] = [];

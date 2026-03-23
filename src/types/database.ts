@@ -152,6 +152,8 @@ export interface VocabularyRecord {
   glosses?: string[];
   aiMeaning?: string;
   sourceBookId?: string;
+  /** Whether the morphological analyzer provided a real lemma for this token */
+  hasLemma: boolean;
   status: VocabStatus;
   reviewCount: number;
   easeFactor: number;
@@ -179,6 +181,8 @@ export interface VocabularyUpsertPayload {
   glosses?: string[];
   aiMeaning?: string;
   sourceBookId?: string;
+  /** Whether the morphological analyzer provided a real lemma for this token */
+  hasLemma?: boolean;
   sentenceText?: string;
   sentenceBookId?: string;
   sentenceChapterId?: string;

@@ -674,6 +674,7 @@ const StudyDoublePanel: React.FC<StudyDoublePanelProps> = ({
         void window.api.db.vocabulary.upsert({
           word: token.word,
           baseForm: bf,
+          hasLemma: !!token.baseForm,
           reading: token.furigana,
           romaji: token.romaji,
           pos: token.pos,
