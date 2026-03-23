@@ -9,11 +9,31 @@ import { setupEpubApiHandler } from "./api/epub/epub.api";
 import { registerEpubImageScheme, setupEpubImageProtocol } from "./api/epub/epubProtocol";
 import { setupTtsApiHandler } from "./api/tts/tts.api";
 import { setupLocalDictApiHandler } from "./api/dict/dict.api";
+import { setupAuthApiHandler, setAuthMainWindow } from "./api/auth/auth.api";
+import { handleAuthCallback } from "./api/auth/auth.service";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import { app, BrowserWindow } from "electron";
 
 // Register epub-img:// scheme as privileged BEFORE app is ready
 registerEpubImageScheme();
+
+// Register midda:// custom protocol for OAuth callbacks
+if (process.defaultApp) {
+  // Dev mode: register via argv
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient("midda", process.execPath, [
+      path.resolve(process.argv[1]!),
+    ]);
+  }
+} else {
+  app.setAsDefaultProtocolClient("midda");
+}
+
+// Single instance lock — needed so OAuth redirect re-uses the running app
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,9 +83,35 @@ function createWindow() {
   }
 }
 
+// macOS: handle midda:// URL when app is already running
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  if (url.startsWith("midda://auth-callback")) {
+    void handleAuthCallback(url);
+    // Bring window to front
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  }
+});
+
+// Windows/Linux: handle midda:// URL via second-instance
+app.on("second-instance", (_event, argv) => {
+  const url = argv.find((arg) => arg.startsWith("midda://auth-callback"));
+  if (url) {
+    void handleAuthCallback(url);
+  }
+  // Bring window to front
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+});
+
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId("com.electron");
+  electronApp.setAppUserModelId("com.midda.app");
 
   registerDbHandlers();
 
@@ -76,30 +122,46 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  // ipcMain.on("ping", () => console.log("pong"));
-
-  // --- API Listener ---
+  // --- API Listeners ---
   setupTokensApiHandler();
   setupWordDetailApiHandler();
   setupWordDictApiHandler();
   setupInteractiveRoleplayApiHandler();
 
-  // 新增EPUB处理器
+  // EPUB
   setupEpubApiHandler();
   setupTtsApiHandler();
 
   // 本地词典
   setupLocalDictApiHandler();
 
+  // Auth (Supabase OAuth)
+  setupAuthApiHandler();
+
   // Setup epub-img:// protocol handler
   setupEpubImageProtocol();
 
   createWindow();
 
+  // Wire auth state change notifications to the main window
+  if (win) {
+    setAuthMainWindow(win);
+  }
+
+  // P3 fix: Windows/Linux cold launch — protocol URL arrives via process.argv
+  const protocolUrl = process.argv.find((arg) =>
+    arg.startsWith("midda://auth-callback")
+  );
+  if (protocolUrl) {
+    void handleAuthCallback(protocolUrl);
+  }
+
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    // P2 fix: re-register the new window for auth state notifications
+    if (win) setAuthMainWindow(win);
   });
 });
 
