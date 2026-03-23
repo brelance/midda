@@ -138,6 +138,8 @@ export type NavigationItem =
   | 'store'
   | 'profile'
   | 'vocabulary'
+  | 'want-to-read'
+  | 'completed'
   | `collection:${string}`;
 
 export function isCollectionNav(nav: NavigationItem): nav is `collection:${string}` {

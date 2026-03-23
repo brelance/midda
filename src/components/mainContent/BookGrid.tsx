@@ -101,6 +101,7 @@ const BookGrid: React.FC<BookGridProps> = ({
               />
             ))}
             {/* Add book cell */}
+            {onAddBook && (
             <div className="text-center">
               <div
                 className="
@@ -115,7 +116,6 @@ const BookGrid: React.FC<BookGridProps> = ({
                   border: "1.5px dashed rgba(0,0,0,0.15)",
                 }}
                 onClick={async () => {
-                  if (!onAddBook) return;
                   try {
                     const filePath = await window.api.epub.selectFile();
                     if (!filePath) return;
@@ -133,6 +133,7 @@ const BookGrid: React.FC<BookGridProps> = ({
                 <span className="text-[11px]">添加书籍</span>
               </div>
             </div>
+            )}
           </div>
         </section>
       </div>

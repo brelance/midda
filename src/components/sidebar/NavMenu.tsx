@@ -103,8 +103,8 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
         />
         <NavItem
           label="欲读清单"
-          isActive={false}
-          onClick={() => {}}
+          isActive={activeNav === 'want-to-read'}
+          onClick={() => onNavChange('want-to-read')}
           icon={
             <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -113,8 +113,8 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
         />
         <NavItem
           label="已读完"
-          isActive={false}
-          onClick={() => {}}
+          isActive={activeNav === 'completed'}
+          onClick={() => onNavChange('completed')}
           icon={
             <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -67,10 +67,16 @@ const Layout: React.FC = () => {
   }, [activeCollectionId, bookMembershipVersion]);
 
   const displayBooks = useMemo(() => {
+    if (activeNav === 'want-to-read') {
+      return books.filter((b) => b.status === 'not-started');
+    }
+    if (activeNav === 'completed') {
+      return books.filter((b) => b.status === 'completed');
+    }
     if (!collectionBookIds) return books;
     const idSet = new Set(collectionBookIds);
     return books.filter((b) => idSet.has(b.id));
-  }, [books, collectionBookIds]);
+  }, [books, collectionBookIds, activeNav]);
 
   // When adding a book in collection view, also add it to the collection
   const handleAddBook: typeof addBook = async (epubData) => {
@@ -112,10 +118,20 @@ const Layout: React.FC = () => {
             onSort={cycleSort}
             toggleSidebar={toggleSidebar}
             toggleDetailsPane={toggleDetailsPane}
-            onBookAdded={handleAddBook}
+            onBookAdded={
+              activeNav === 'want-to-read' || activeNav === 'completed'
+                ? undefined
+                : handleAddBook
+            }
             onEnterReader={enterReader}
             onDeleteBook={deleteBook}
-            collectionName={activeCollection?.name}
+            collectionName={
+              activeNav === 'want-to-read'
+                ? '欲读清单'
+                : activeNav === 'completed'
+                  ? '已读完'
+                  : activeCollection?.name
+            }
           />
         )}
       </div>
