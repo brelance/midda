@@ -92,7 +92,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
           书库
         </div>
         <NavItem
-          label="全部"
+          label="图书"
           isActive={activeNav === 'bookshelf'}
           onClick={() => onNavChange('bookshelf')}
           icon={

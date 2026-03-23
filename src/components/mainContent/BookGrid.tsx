@@ -84,7 +84,7 @@ const BookGrid: React.FC<BookGridProps> = ({
         {/* 书架网格 */}
         <section>
           <h2 className="text-[20px] font-bold mb-6 text-[#1d1d1f]">
-            {collectionName ?? '全部书籍'}
+            {collectionName ?? '图书'}
           </h2>
           <div
             className="gap-x-5 gap-y-8"

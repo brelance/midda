@@ -243,8 +243,34 @@ const HomePage: React.FC<HomePageProps> = ({
               <h2 className="text-[22px] font-bold mb-4 text-[#1d1d1f]">
                 我的藏书
               </h2>
-              {collections.length > 0 ? (
+              {collections.length > 0 || books.length > 0 ? (
                 <div className="flex gap-4 flex-wrap">
+                  {/* 图书 — special "all books" category, always first */}
+                  <div
+                    className="
+                      w-[140px] cursor-pointer group
+                      rounded-[12px] border border-black/[0.06]
+                      bg-[#fafafa] hover:bg-[#f0f0f0]
+                      p-3 transition-all duration-200
+                      hover:shadow-md hover:scale-[1.02]
+                    "
+                    onClick={() => onNavChange("bookshelf")}
+                  >
+                    <div className="grid grid-cols-2 gap-1 mb-2.5 aspect-square rounded-[6px] overflow-hidden bg-gray-100">
+                      {[0, 1, 2, 3].map((i) => {
+                        const cover = books.filter((b) => b.cover)[i]?.cover;
+                        return cover ? (
+                          <img key={i} src={cover} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div key={i} className="w-full h-full bg-gray-200/60" />
+                        );
+                      })}
+                    </div>
+                    <p className="text-[13px] font-semibold text-[#1d1d1f] truncate">图书</p>
+                    <p className="text-[11px] text-gray-500">{books.length} 本</p>
+                  </div>
+
+                  {/* User-created collections */}
                   {collections.map((col) => {
                     const covers = collectionCovers[col.id] ?? [];
                     const count = collectionBookCounts[col.id] ?? 0;
