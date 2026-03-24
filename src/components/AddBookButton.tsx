@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { EpubBookData } from "../types/types";
+import { ImportedBookData } from "../types/types";
 
 interface AddBookButtonProps {
-  onBookAdded: (bookData: EpubBookData) => Promise<void> | void;
+  onBookAdded: (bookData: ImportedBookData) => Promise<void> | void;
 }
 
 const AddBookButton: React.FC<AddBookButtonProps> = ({ onBookAdded }) => {
@@ -12,9 +12,22 @@ const AddBookButton: React.FC<AddBookButtonProps> = ({ onBookAdded }) => {
   const handleSelectFile = async () => {
     try {
       setIsLoading(true);
-      const filePath = await window.api.epub.selectFile();
+
+      // Try generic book API first (supports cbz/cbr/pdf + more)
+      const filePath = await window.api.book.selectFile();
       if (!filePath) { setIsLoading(false); return; }
-      const bookData = await window.api.epub.parseFile(filePath);
+
+      let bookData: ImportedBookData;
+
+      if (filePath.toLowerCase().endsWith('.epub')) {
+        // EPUB uses dedicated parser
+        const epubData = await window.api.epub.parseFile(filePath);
+        bookData = { ...epubData, format: 'epub' };
+      } else {
+        // CBZ/CBR/PDF use generic parser
+        bookData = await window.api.book.parseFile(filePath);
+      }
+
       await onBookAdded(bookData);
       setIsModalOpen(false);
     } catch (error) {
@@ -58,8 +71,8 @@ const AddBookButton: React.FC<AddBookButtonProps> = ({ onBookAdded }) => {
             className="w-full max-w-sm rounded-2xl bg-white/95 backdrop-blur-xl p-6 shadow-2xl border border-gray-100"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-[17px] font-semibold text-[#1d1d1f] mb-1">选择 EPUB 文件</h2>
-            <p className="text-[13px] text-gray-500 mb-6">请选择要导入的 EPUB 文件，系统会自动解析书籍信息。</p>
+            <h2 className="text-[17px] font-semibold text-[#1d1d1f] mb-1">选择书籍文件</h2>
+            <p className="text-[13px] text-gray-500 mb-6">支持 EPUB、CBZ、CBR、PDF 格式的书籍文件。</p>
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => { if (!isLoading) setIsModalOpen(false); }}

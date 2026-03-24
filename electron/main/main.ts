@@ -7,6 +7,8 @@ import { setupTokensApiHandler } from "./api/llm/tokens.api";
 import { setupInteractiveRoleplayApiHandler } from "./api/llm/interactive_roleplay/interactiveRoleplay.api";
 import { setupEpubApiHandler } from "./api/epub/epub.api";
 import { registerEpubImageScheme, setupEpubImageProtocol } from "./api/epub/epubProtocol";
+import { setupBookApiHandlers } from "./api/book/book.api";
+import { setupOcrApiHandlers } from "./api/ocr/ocr.api";
 import { setupTtsApiHandler } from "./api/tts/tts.api";
 import { setupLocalDictApiHandler } from "./api/dict/dict.api";
 import { setupAuthApiHandler, setAuthMainWindow } from "./api/auth/auth.api";
@@ -137,6 +139,10 @@ app.whenReady().then(() => {
 
   // EPUB
   setupEpubApiHandler();
+  // Generic book import (CBZ/CBR/PDF)
+  setupBookApiHandlers();
+  // OCR
+  setupOcrApiHandlers();
   setupTtsApiHandler();
 
   // 本地词典

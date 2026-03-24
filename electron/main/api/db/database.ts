@@ -178,6 +178,8 @@ function initializeSchema(database: DB): void {
     `ALTER TABLE chapters ADD COLUMN css_content TEXT`,
     `ALTER TABLE vocabulary ADD COLUMN has_lemma INTEGER NOT NULL DEFAULT 0`,
     `UPDATE vocabulary SET has_lemma = 1 WHERE base_form != word`,
+    `ALTER TABLE books ADD COLUMN format TEXT NOT NULL DEFAULT 'epub'`,
+    `ALTER TABLE books ADD COLUMN total_pages INTEGER`,
   ];
   for (const migration of migrations) {
     try {

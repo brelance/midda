@@ -1,6 +1,6 @@
 import React from 'react';
 import BookItem from './BookItem';
-import { Book, EpubBookData } from '../../types/types';
+import { Book, ImportedBookData } from '../../types/types';
 
 interface BookGridProps {
   books: Book[];
@@ -8,7 +8,7 @@ interface BookGridProps {
   onSelectBook: (book: Book) => void;
   onEnterReader?: (book: Book, chapterId?: string) => void;
   onDeleteBook?: (book: Book) => void;
-  onAddBook?: (bookData: EpubBookData) => Promise<void> | void;
+  onAddBook?: (bookData: ImportedBookData) => Promise<void> | void;
   /** Book currently being read (for "继续阅读" section) */
   readingBook?: Book | null;
   collectionName?: string;
@@ -117,9 +117,17 @@ const BookGrid: React.FC<BookGridProps> = ({
                 }}
                 onClick={async () => {
                   try {
-                    const filePath = await window.api.epub.selectFile();
+                    const filePath = await window.api.book.selectFile();
                     if (!filePath) return;
-                    const bookData = await window.api.epub.parseFile(filePath);
+
+                    let bookData: ImportedBookData;
+                    if (filePath.toLowerCase().endsWith('.epub')) {
+                      const epubData = await window.api.epub.parseFile(filePath);
+                      bookData = { ...epubData, format: 'epub' };
+                    } else {
+                      bookData = await window.api.book.parseFile(filePath);
+                    }
+
                     await onAddBook(bookData);
                   } catch (error) {
                     console.error("添加书籍失败:", error);

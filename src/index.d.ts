@@ -178,6 +178,45 @@ export interface IElectronAPI {
     cleanupEpubListeners: () => void;
   };
 
+  book: {
+    selectFile: () => Promise<string | null>;
+    parseFile: (filePath: string) => Promise<import("./types/types").ImportedBookData>;
+    getPage: (
+      bookId: string,
+      filePath: string,
+      format: string,
+      pageNumber: number
+    ) => Promise<{ dataUrl: string; width: number; height: number }>;
+    removeFromLibrary: (bookId: string, format: string) => Promise<boolean>;
+    readPdfBytes: (filePath: string) => Promise<Uint8Array>;
+  };
+
+  ocr: {
+    recognizeText: (
+      imageInput: string,
+      languageHint?: string
+    ) => Promise<{
+      text: string;
+      blocks: Array<{
+        text: string;
+        confidence: number;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+      language?: string;
+    }>;
+    isAvailable: () => Promise<boolean>;
+    mangaRecognize: (imageInput: string) => Promise<{ text: string; confidence: number }>;
+    mangaStatus: () => Promise<{ ready: boolean; downloaded: string[]; missing: string[] }>;
+    mangaIsReady: () => Promise<boolean>;
+    mangaDownload: () => Promise<{ success: boolean }>;
+    onMangaDownloadProgress: (
+      callback: (data: { file: string; current: number; total: number }) => void
+    ) => () => void;
+  };
+
   tts: {
     start: (
       sentences: TtsSentencePayload[],

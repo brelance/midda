@@ -4,7 +4,8 @@ import type {
   Book,
   Chapter,
   NavigationItem,
-  EpubBookData,
+  ImportedBookData,
+  BookFormat,
 } from "../types/types";
 import type {
   LibraryBookRecord,
@@ -35,6 +36,7 @@ const mapDbBookToBook = (record: LibraryBookRecord): Book => {
     title: record.title,
     author: record.author ?? "未知作者",
     cover: record.coverPath ?? undefined,
+    format: (record.format ?? 'epub') as BookFormat,
     progress: record.progress,
     status: record.status,
     description: record.description ?? undefined,
@@ -44,6 +46,7 @@ const mapDbBookToBook = (record: LibraryBookRecord): Book => {
     addedDate,
     lastReadDate,
     filePath: record.filePath,
+    totalPages: record.totalPages ?? undefined,
     metadata: {
       title: record.title,
       creator: record.author ?? "未知作者",
@@ -115,7 +118,7 @@ export interface BookshelfState {
   // ── Async / DB actions ──
   loadBooks: () => Promise<void>;
   ensureBookChapters: (bookId: string) => Promise<Chapter[] | undefined>;
-  addBook: (epubData: EpubBookData) => Promise<void>;
+  addBook: (bookData: ImportedBookData) => Promise<void>;
   deleteBook: (book: Book) => Promise<void>;
 
   // ── Reader actions ──
@@ -233,8 +236,8 @@ export const useBookshelfStore = create<BookshelfState>()((set, get) => ({
     }
   },
 
-  addBook: async (epubData) => {
-    const chapterSummaries = epubData.chapters.map((ch) => ({
+  addBook: async (bookData) => {
+    const chapterSummaries = (bookData.chapters ?? []).map((ch) => ({
       id: ch.id,
       title: ch.title,
       pageNumber: 0,
@@ -245,56 +248,63 @@ export const useBookshelfStore = create<BookshelfState>()((set, get) => ({
     }));
 
     const newBook: Book = {
-      id: epubData.id,
-      title: epubData.title,
-      author: epubData.author,
-      cover: epubData.cover,
-      progress: epubData.progress,
-      status: epubData.status,
-      description: epubData.metadata.description,
-      chapters: chapterSummaries,
-      addedDate: epubData.addedDate,
+      id: bookData.id,
+      title: bookData.title,
+      author: bookData.author,
+      cover: bookData.cover,
+      format: bookData.format,
+      progress: bookData.progress,
+      status: bookData.status,
+      description: bookData.metadata.description,
+      chapters: chapterSummaries.length > 0 ? chapterSummaries : undefined,
+      addedDate: bookData.addedDate,
       lastReadDate: undefined,
-      filePath: epubData.filePath,
-      metadata: epubData.metadata,
+      filePath: bookData.filePath,
+      metadata: bookData.metadata,
+      totalPages: bookData.totalPages,
     };
 
-    const firstChapterId = epubData.chapters[0]?.id;
+    const firstChapterId = bookData.chapters?.[0]?.id;
 
     // Persist to database
     try {
       if (window?.api?.db?.books?.upsert) {
         const bookPayload: LibraryBookUpsertPayload = {
-          id: epubData.id,
-          title: epubData.title,
-          author: epubData.author,
-          description: epubData.metadata.description,
-          coverPath: epubData.cover,
-          filePath: epubData.filePath,
-          sourcePath: epubData.metadata.sourcePath,
-          status: epubData.status,
-          progress: epubData.progress,
+          id: bookData.id,
+          title: bookData.title,
+          author: bookData.author,
+          description: bookData.metadata.description,
+          coverPath: bookData.cover,
+          filePath: bookData.filePath,
+          sourcePath: bookData.metadata.sourcePath,
+          format: bookData.format,
+          status: bookData.status,
+          progress: bookData.progress,
           currentChapterId: firstChapterId,
           lastReadChapterId: firstChapterId,
-          metadataLanguage: epubData.metadata.language,
-          metadataPublisher: epubData.metadata.publisher,
-          metadataIdentifier: epubData.metadata.identifier,
+          totalPages: bookData.totalPages,
+          metadataLanguage: bookData.metadata.language,
+          metadataPublisher: bookData.metadata.publisher,
+          metadataIdentifier: bookData.metadata.identifier,
         };
         await window.api.db.books.upsert(bookPayload);
 
-        const chapterPayloads: LibraryChapterUpsertPayload[] =
-          epubData.chapters.map((ch) => ({
-            bookId: epubData.id,
-            chapterId: ch.id,
-            title: ch.title,
-            href: ch.href,
-            orderIndex: ch.order,
-            contentHtml: ch.content,
-            cssContent: ch.cssContent ?? undefined,
-          }));
+        // Only persist chapters for EPUB format
+        if (bookData.chapters && bookData.chapters.length > 0) {
+          const chapterPayloads: LibraryChapterUpsertPayload[] =
+            bookData.chapters.map((ch) => ({
+              bookId: bookData.id,
+              chapterId: ch.id,
+              title: ch.title,
+              href: ch.href,
+              orderIndex: ch.order,
+              contentHtml: ch.content,
+              cssContent: ch.cssContent ?? undefined,
+            }));
 
-        if (chapterPayloads.length > 0) {
-          await window.api.db.chapters.bulkUpsert(chapterPayloads);
+          if (chapterPayloads.length > 0) {
+            await window.api.db.chapters.bulkUpsert(chapterPayloads);
+          }
         }
       } else {
         console.warn("window.api.db 未定义，跳过书籍落库。");

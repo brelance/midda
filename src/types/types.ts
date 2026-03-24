@@ -61,12 +61,24 @@ export interface ChatCompletionsMessage {
   role: string;
 }
 
+// ── 格式定义 ──────────────────────────────────────────
+export type BookFormat = 'epub' | 'pdf' | 'cbz' | 'cbr';
+
+// ── 图片页数据（PDF/CBZ/CBR）──────────────────────────
+export interface ImagePageData {
+  pageNumber: number;
+  imageDataUrl: string;
+  width: number;
+  height: number;
+}
+
 // 阅读器应用接口定义
 export interface Book {
   id: string;
   title: string;
   author: string;
   cover?: string;
+  format: BookFormat;
   progress: number; // 阅读进度百分比 (0-100)
   status: 'not-started' | 'reading' | 'completed';
   description?: string;
@@ -75,8 +87,9 @@ export interface Book {
   addedDate: Date;
   lastReadDate?: Date;
   lastReadChapterId?: string;
-  filePath?: string; // EPUB文件路径
-  metadata?: EpubMetadata; // EPUB元数据
+  filePath?: string; // 书籍文件路径
+  metadata?: EpubMetadata; // 元数据
+  totalPages?: number; // PDF/CBZ/CBR 总页数
 }
 
 export interface Chapter {
@@ -121,6 +134,24 @@ export interface EpubBookData {
   addedDate: Date;
   progress: number;
   status: 'not-started' | 'reading' | 'completed';
+}
+
+/** Generic imported book data for all formats */
+export interface ImportedBookData {
+  id: string;
+  title: string;
+  author: string;
+  cover?: string;
+  format: BookFormat;
+  filePath: string;
+  addedDate: Date;
+  progress: number;
+  status: 'not-started' | 'reading' | 'completed';
+  metadata: EpubMetadata;
+  /** EPUB-only: chapter list with HTML content */
+  chapters?: EpubChapter[];
+  /** CBZ/CBR/PDF: total number of pages */
+  totalPages?: number;
 }
 
 export interface User {

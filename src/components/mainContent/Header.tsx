@@ -1,6 +1,6 @@
 import React from "react";
 import SearchInput from "../ui/SearchInput";
-import { Book, EpubBookData } from "../../types/types";
+import { Book, ImportedBookData } from "../../types/types";
 import AddBookButton from "../AddBookButton";
 
 interface HeaderProps {
@@ -10,7 +10,7 @@ interface HeaderProps {
   toggleSidebar: () => void;
   toggleDetailsPane: () => void;
   selectedBook: Book | null;
-  onBookAdded?: (bookData: EpubBookData) => Promise<void> | void;
+  onBookAdded?: (bookData: ImportedBookData) => Promise<void> | void;
 }
 
 const Header: React.FC<HeaderProps> = ({

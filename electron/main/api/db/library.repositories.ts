@@ -16,10 +16,12 @@ export interface BookRecord {
   coverPath?: string;
   filePath: string;
   sourcePath?: string;
+  format: string;
   status: ReadingStatus;
   progress: number;
   currentChapterId?: string;
   lastReadChapterId?: string;
+  totalPages?: number;
   metadataLanguage?: string;
   metadataPublisher?: string;
   metadataIdentifier?: string;
@@ -35,10 +37,12 @@ export interface BookUpsertPayload {
   coverPath?: string;
   filePath: string;
   sourcePath?: string;
+  format?: string;
   status?: ReadingStatus;
   progress?: number;
   currentChapterId?: string;
   lastReadChapterId?: string;
+  totalPages?: number;
   metadataLanguage?: string;
   metadataPublisher?: string;
   metadataIdentifier?: string;
@@ -48,13 +52,13 @@ export class BookRepository {
   private readonly upsertStmt = db.prepare(`
     INSERT INTO books (
       id, title, author, description, cover_path, file_path, source_path,
-      status, progress, current_chapter_id, last_read_chapter_id,
-      metadata_language, metadata_publisher, metadata_identifier
+      format, status, progress, current_chapter_id, last_read_chapter_id,
+      total_pages, metadata_language, metadata_publisher, metadata_identifier
     )
     VALUES (
       @id, @title, @author, @description, @coverPath, @filePath, @sourcePath,
-      @status, @progress, @currentChapterId, @lastReadChapterId,
-      @metadataLanguage, @metadataPublisher, @metadataIdentifier
+      @format, @status, @progress, @currentChapterId, @lastReadChapterId,
+      @totalPages, @metadataLanguage, @metadataPublisher, @metadataIdentifier
     )
     ON CONFLICT(id) DO UPDATE SET
       title = excluded.title,
@@ -63,10 +67,12 @@ export class BookRepository {
       cover_path = COALESCE(excluded.cover_path, books.cover_path),
       file_path = excluded.file_path,
       source_path = COALESCE(excluded.source_path, books.source_path),
+      format = excluded.format,
       status = excluded.status,
       progress = excluded.progress,
       current_chapter_id = COALESCE(excluded.current_chapter_id, books.current_chapter_id),
       last_read_chapter_id = COALESCE(excluded.last_read_chapter_id, books.last_read_chapter_id),
+      total_pages = COALESCE(excluded.total_pages, books.total_pages),
       metadata_language = COALESCE(excluded.metadata_language, books.metadata_language),
       metadata_publisher = COALESCE(excluded.metadata_publisher, books.metadata_publisher),
       metadata_identifier = COALESCE(excluded.metadata_identifier, books.metadata_identifier),
@@ -75,44 +81,20 @@ export class BookRepository {
 
   private readonly getStmt = db.prepare(`
     SELECT
-      id,
-      title,
-      author,
-      description,
-      cover_path,
-      file_path,
-      source_path,
-      status,
-      progress,
-      current_chapter_id,
-      last_read_chapter_id,
-      metadata_language,
-      metadata_publisher,
-      metadata_identifier,
-      added_at,
-      updated_at
+      id, title, author, description, cover_path, file_path, source_path,
+      format, status, progress, current_chapter_id, last_read_chapter_id,
+      total_pages, metadata_language, metadata_publisher, metadata_identifier,
+      added_at, updated_at
     FROM books
     WHERE id = ?
   `);
 
   private readonly allStmt = db.prepare(`
     SELECT
-      id,
-      title,
-      author,
-      description,
-      cover_path,
-      file_path,
-      source_path,
-      status,
-      progress,
-      current_chapter_id,
-      last_read_chapter_id,
-      metadata_language,
-      metadata_publisher,
-      metadata_identifier,
-      added_at,
-      updated_at
+      id, title, author, description, cover_path, file_path, source_path,
+      format, status, progress, current_chapter_id, last_read_chapter_id,
+      total_pages, metadata_language, metadata_publisher, metadata_identifier,
+      added_at, updated_at
     FROM books
     ORDER BY updated_at DESC
   `);
@@ -132,8 +114,10 @@ export class BookRepository {
       description: payload.description ?? null,
       coverPath: payload.coverPath ?? null,
       sourcePath: payload.sourcePath ?? null,
+      format: payload.format ?? 'epub',
       currentChapterId: payload.currentChapterId ?? null,
       lastReadChapterId: payload.lastReadChapterId ?? null,
+      totalPages: payload.totalPages ?? null,
       metadataLanguage: payload.metadataLanguage ?? null,
       metadataPublisher: payload.metadataPublisher ?? null,
       metadataIdentifier: payload.metadataIdentifier ?? null,
@@ -175,10 +159,12 @@ interface BookRow {
   cover_path: string | null;
   file_path: string;
   source_path: string | null;
+  format: string;
   status: ReadingStatus;
   progress: number;
   current_chapter_id: string | null;
   last_read_chapter_id: string | null;
+  total_pages: number | null;
   metadata_language: string | null;
   metadata_publisher: string | null;
   metadata_identifier: string | null;
@@ -195,10 +181,12 @@ function mapBookRow(row: BookRow): BookRecord {
     coverPath: toNullable(row.cover_path),
     filePath: row.file_path,
     sourcePath: toNullable(row.source_path),
+    format: row.format ?? 'epub',
     status: row.status,
     progress: row.progress,
     currentChapterId: toNullable(row.current_chapter_id),
     lastReadChapterId: toNullable(row.last_read_chapter_id),
+    totalPages: toNullable(row.total_pages),
     metadataLanguage: toNullable(row.metadata_language),
     metadataPublisher: toNullable(row.metadata_publisher),
     metadataIdentifier: toNullable(row.metadata_identifier),

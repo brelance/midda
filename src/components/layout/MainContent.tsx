@@ -1,7 +1,7 @@
 import React from 'react';
 import Header from '../mainContent/Header';
 import BookGrid from '../mainContent/BookGrid';
-import { Book, EpubBookData } from '../../types/types';
+import { Book, ImportedBookData } from '../../types/types';
 
 interface MainContentProps {
   books: Book[];
@@ -13,7 +13,7 @@ interface MainContentProps {
   onSelectBook: (book: Book) => void;
   onSearch: (query: string) => void;
   onSort: () => void;
-  onBookAdded?: (bookData: EpubBookData) => Promise<void> | void;
+  onBookAdded?: (bookData: ImportedBookData) => Promise<void> | void;
   onEnterReader?: (book: Book, chapterId?: string) => void;
   onDeleteBook?: (book: Book) => void;
   collectionName?: string;

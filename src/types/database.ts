@@ -10,10 +10,12 @@ export interface LibraryBookRecord {
   coverPath?: string;
   filePath: string;
   sourcePath?: string;
+  format: string;
   status: LibraryReadingStatus;
   progress: number;
   currentChapterId?: string;
   lastReadChapterId?: string;
+  totalPages?: number;
   metadataLanguage?: string;
   metadataPublisher?: string;
   metadataIdentifier?: string;
@@ -29,10 +31,12 @@ export interface LibraryBookUpsertPayload {
   coverPath?: string;
   filePath: string;
   sourcePath?: string;
+  format?: string;
   status?: LibraryReadingStatus;
   progress?: number;
   currentChapterId?: string;
   lastReadChapterId?: string;
+  totalPages?: number;
   metadataLanguage?: string;
   metadataPublisher?: string;
   metadataIdentifier?: string;
