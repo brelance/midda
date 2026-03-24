@@ -33,7 +33,7 @@ export function setupBookApiHandlers(): void {
       filters: [
         {
           name: "书籍文件",
-          extensions: ["epub", "cbz", "cbr", "pdf"],
+          extensions: ["epub", "cbz", "cbr", "pdf", "zip"],
         },
       ],
     });

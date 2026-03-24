@@ -82,6 +82,7 @@ export function detectBookFormat(filePath: string): BookFormat | null {
   const ext = path.extname(filePath).toLowerCase();
   switch (ext) {
     case ".cbz": return "cbz";
+    case ".zip": return "cbz";
     case ".cbr": return "cbr";
     case ".pdf": return "pdf";
     case ".epub": return "epub";
