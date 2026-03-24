@@ -6,7 +6,10 @@
  * - Supports keyboard navigation (left/right arrows)
  * - Click-to-turn-page zones (left 30% / right 30%)
  * - Preloads adjacent pages for smooth transitions
- * - Fit-width scaling by default
+ * - Zoom: ⌘+/−, trackpad pinch, preset modes (fit-width/fit-page/actual)
+ * - Drag-to-pan when zoomed beyond container
+ * - Interactive progress slider (draggable)
+ * - Click-to-edit page number input
  */
 
 import {
@@ -20,6 +23,9 @@ import {
 } from "react";
 import OcrTextOverlay from "./OcrTextOverlay";
 import type { OcrEngine } from "../../pages/ImageReaderPage/ImageReaderPage";
+import { useImageReaderZoom } from "../../hooks/useImageReaderZoom";
+import type { ZoomMode } from "../../hooks/useImageReaderZoom";
+import "./ImagePageViewer.css";
 
 export interface ImagePageViewerHandle {
   goToNextPage: () => boolean;
@@ -28,6 +34,11 @@ export interface ImagePageViewerHandle {
   currentPage: number;
   totalPages: number;
   pageProgress: number;
+  zoomLevel: number;
+  zoomMode: ZoomMode;
+  setZoomMode: (mode: "fit-width" | "fit-page" | "actual") => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
 }
 
 interface ImagePageViewerProps {
@@ -37,6 +48,7 @@ interface ImagePageViewerProps {
   totalPages: number;
   initialPage?: number;
   onPageChange?: (page: number, total: number, progress: number) => void;
+  onZoomChange?: (level: number, mode: ZoomMode) => void;
   ocrEnabled?: boolean;
   ocrEngine?: OcrEngine;
 }
@@ -56,6 +68,7 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
       totalPages,
       initialPage = 1,
       onPageChange,
+      onZoomChange,
       ocrEnabled = false,
       ocrEngine = "native",
     },
@@ -68,6 +81,10 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
     const pageCacheRef = useRef<Map<number, PageCache>>(new Map());
     const onPageChangeRef = useRef(onPageChange);
     const imageElRef = useRef<HTMLImageElement | null>(null);
+
+    // ── Page jump input state ─────────────────────────────────────────
+    const [isPageInputVisible, setIsPageInputVisible] = useState(false);
+    const [pageInputValue, setPageInputValue] = useState("");
 
     useEffect(() => {
       onPageChangeRef.current = onPageChange;
@@ -92,6 +109,25 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
     // ── PDF document cache (for client-side rendering) ────────────────────
     const pdfDocRef = useRef<any>(null);
     const pdfBytesLoadedRef = useRef<string | null>(null);
+
+    // ── Zoom hook ─────────────────────────────────────────────────────────
+    const {
+      zoomLevel,
+      zoomMode,
+      fittedZoom,
+      containerRef,
+      setZoomMode,
+      zoomIn,
+      zoomOut,
+      resetPan,
+      handleWheel,
+      panHandlers,
+      imageTransformStyle,
+    } = useImageReaderZoom({
+      imageWidth: currentImage?.width ?? 0,
+      imageHeight: currentImage?.height ?? 0,
+      onZoomChange,
+    });
 
     // ── Load page image ──────────────────────────────────────────────────
     const loadPage = useCallback(
@@ -206,21 +242,24 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
     const goToNextPage = useCallback((): boolean => {
       if (currentPage >= totalPages) return false;
       setCurrentPage((p) => p + 1);
+      resetPan();
       return true;
-    }, [currentPage, totalPages]);
+    }, [currentPage, totalPages, resetPan]);
 
     const goToPrevPage = useCallback((): boolean => {
       if (currentPage <= 1) return false;
       setCurrentPage((p) => p - 1);
+      resetPan();
       return true;
-    }, [currentPage]);
+    }, [currentPage, resetPan]);
 
     const goToPage = useCallback(
       (page: number) => {
         const clamped = Math.max(1, Math.min(totalPages, page));
         setCurrentPage(clamped);
+        resetPan();
       },
-      [totalPages]
+      [totalPages, resetPan]
     );
 
     // Notify parent of page changes
@@ -231,6 +270,11 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
     // ── Keyboard navigation ──────────────────────────────────────────────
     useEffect(() => {
       const handler = (e: KeyboardEvent) => {
+        // Don't intercept when page input is active
+        if (isPageInputVisible) return;
+        // Don't intercept zoom shortcuts (handled by useImageReaderZoom)
+        if (e.metaKey || e.ctrlKey) return;
+
         if (e.key === "ArrowRight" || e.key === " ") {
           e.preventDefault();
           goToNextPage();
@@ -241,7 +285,42 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
       };
       window.addEventListener("keydown", handler);
       return () => window.removeEventListener("keydown", handler);
-    }, [goToNextPage, goToPrevPage]);
+    }, [goToNextPage, goToPrevPage, isPageInputVisible]);
+
+    // ── Page jump handlers ───────────────────────────────────────────────
+    const handlePageIndicatorClick = useCallback(() => {
+      setPageInputValue(String(currentPage));
+      setIsPageInputVisible(true);
+    }, [currentPage]);
+
+    const handlePageInputConfirm = useCallback(() => {
+      const parsed = parseInt(pageInputValue, 10);
+      if (!isNaN(parsed)) {
+        goToPage(parsed);
+      }
+      setIsPageInputVisible(false);
+    }, [pageInputValue, goToPage]);
+
+    const handlePageInputKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handlePageInputConfirm();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setIsPageInputVisible(false);
+        }
+      },
+      [handlePageInputConfirm]
+    );
+
+    // ── Slider handler ───────────────────────────────────────────────────
+    const handleSliderChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        goToPage(Number(e.target.value));
+      },
+      [goToPage]
+    );
 
     // ── Imperative handle ────────────────────────────────────────────────
     useImperativeHandle(
@@ -253,14 +332,27 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
         currentPage,
         totalPages,
         pageProgress,
+        zoomLevel,
+        zoomMode,
+        setZoomMode,
+        zoomIn,
+        zoomOut,
       }),
-      [goToNextPage, goToPrevPage, goToPage, currentPage, totalPages, pageProgress]
+      [goToNextPage, goToPrevPage, goToPage, currentPage, totalPages, pageProgress, zoomLevel, zoomMode, setZoomMode, zoomIn, zoomOut]
     );
+
+    // Whether zoomed in enough to enable panning
+    const isPannable = zoomLevel > fittedZoom;
 
     return (
       <div className="relative h-full w-full flex flex-col items-center bg-[#1a1a1a] overflow-hidden select-none">
-        {/* Page image */}
-        <div className="flex-1 flex items-center justify-center w-full overflow-auto">
+        {/* Page image area */}
+        <div
+          ref={containerRef}
+          className={`flex-1 flex items-center justify-center w-full ${isPannable ? 'overflow-auto' : 'overflow-hidden'}`}
+          onWheel={handleWheel}
+          {...(isPannable ? panHandlers : {})}
+        >
           {isLoading && (
             <div className="flex flex-col items-center gap-3 text-gray-400">
               <div className="w-8 h-8 border-2 border-gray-600 border-t-white rounded-full animate-spin" />
@@ -279,13 +371,12 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
           )}
 
           {!isLoading && !error && currentImage && (
-            <div className="relative">
+            <div className="relative" style={imageTransformStyle}>
               <img
                 ref={imageElRef}
                 src={currentImage.dataUrl}
                 alt={`Page ${currentPage}`}
-                className="max-h-full w-auto object-contain"
-                style={{ maxWidth: "100%" }}
+                className="w-full h-full object-contain"
                 draggable={false}
               />
               {ocrEnabled && (
@@ -301,46 +392,80 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
             </div>
           )}
 
-          {/* Click-to-turn zones */}
-          <div
-            className="absolute left-0 top-0 bottom-0 w-[30%] cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
-            onClick={goToPrevPage}
-          >
-            <div className="h-full flex items-center justify-start pl-4">
-              <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+          {/* Click-to-turn zones (only when not panning) */}
+          {!isPannable && (
+            <>
+              <div
+                className="absolute left-0 top-0 bottom-0 w-[30%] cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
+                onClick={goToPrevPage}
+              >
+                <div className="h-full flex items-center justify-start pl-4">
+                  <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div
-            className="absolute right-0 top-0 bottom-0 w-[30%] cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
-            onClick={goToNextPage}
-          >
-            <div className="h-full flex items-center justify-end pr-4">
-              <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+              <div
+                className="absolute right-0 top-0 bottom-0 w-[30%] cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
+                onClick={goToNextPage}
+              >
+                <div className="h-full flex items-center justify-end pr-4">
+                  <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
-        {/* Bottom bar: page indicator + progress */}
-        <div className="flex-shrink-0 w-full px-6 py-3 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-between">
-          <span className="text-white/70 text-sm font-mono">
-            {currentPage} / {totalPages}
-          </span>
-          <div className="flex-1 mx-4 h-1 bg-white/20 rounded-full">
-            <div
-              className="h-full bg-white/70 rounded-full transition-all duration-200"
-              style={{ width: `${pageProgress}%` }}
+        {/* Bottom bar: page indicator + interactive slider + zoom info */}
+        <div className="flex-shrink-0 w-full px-6 py-3 bg-gradient-to-t from-black/60 to-transparent flex items-center gap-3">
+          {/* Page indicator / jump input */}
+          {isPageInputVisible ? (
+            <input
+              autoFocus
+              type="number"
+              min={1}
+              max={totalPages}
+              value={pageInputValue}
+              onChange={(e) => setPageInputValue(e.target.value)}
+              onKeyDown={handlePageInputKeyDown}
+              onBlur={handlePageInputConfirm}
+              className="w-16 bg-white/15 text-white text-sm text-center rounded-md px-1.5 py-1 border border-white/20 outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
-          </div>
-          <span className="text-white/70 text-sm">{pageProgress}%</span>
+          ) : (
+            <button
+              onClick={handlePageIndicatorClick}
+              className="text-white/70 hover:text-white text-sm tabular-nums transition-colors cursor-pointer whitespace-nowrap"
+              title="点击跳转页码"
+            >
+              {currentPage} / {totalPages}
+            </button>
+          )}
+
+          {/* Interactive range slider */}
+          <input
+            type="range"
+            min={1}
+            max={totalPages}
+            value={currentPage}
+            onChange={handleSliderChange}
+            className="image-reader-slider flex-1 h-1 cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, rgba(255,255,255,0.7) ${pageProgress}%, rgba(255,255,255,0.2) ${pageProgress}%)`,
+            }}
+          />
+
+          {/* Progress percentage */}
+          <span className="text-white/70 text-sm tabular-nums whitespace-nowrap">
+            {pageProgress}%
+          </span>
         </div>
       </div>
     );

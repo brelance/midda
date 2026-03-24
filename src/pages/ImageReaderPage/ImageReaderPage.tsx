@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ImagePageViewer, {
   type ImagePageViewerHandle,
 } from "../../components/reader/ImagePageViewer";
+import type { ZoomMode } from "../../hooks/useImageReaderZoom";
 
 export type OcrEngine = "native" | "manga";
 
@@ -39,6 +40,10 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   const [mangaDownloading, setMangaDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState("");
   const hideTimerRef = useRef<number | null>(null);
+
+  // Zoom state (synced from viewer)
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomMode, setZoomMode] = useState<ZoomMode>("fit-page");
 
   // Check OCR availability
   useEffect(() => {
@@ -110,6 +115,14 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     [onProgressChange]
   );
 
+  const handleZoomChange = useCallback(
+    (level: number, mode: ZoomMode) => {
+      setZoomLevel(level);
+      setZoomMode(mode);
+    },
+    []
+  );
+
   if (!book.filePath || !book.totalPages) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#1a1a1a] text-white">
@@ -161,6 +174,61 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           className="flex items-center gap-1.5"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
+          {/* ── Zoom controls ── */}
+          <div className="flex items-center gap-0.5 rounded-md bg-white/10 border border-white/10 overflow-hidden">
+            <button
+              onClick={() => viewerRef.current?.zoomOut()}
+              className="px-1.5 py-1 text-white/60 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
+              title="缩小 (⌘−)"
+            >
+              −
+            </button>
+            <span className="px-1.5 py-1 text-[10px] text-white/70 tabular-nums min-w-[36px] text-center">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+            <button
+              onClick={() => viewerRef.current?.zoomIn()}
+              className="px-1.5 py-1 text-white/60 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
+              title="放大 (⌘+)"
+            >
+              +
+            </button>
+          </div>
+
+          {/* Zoom preset buttons */}
+          <div className="flex items-center rounded-md bg-white/10 border border-white/10 overflow-hidden">
+            <button
+              onClick={() => viewerRef.current?.setZoomMode("fit-page")}
+              className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                zoomMode === "fit-page" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
+              }`}
+              title="适应页面 (⌘0)"
+            >
+              适应页面
+            </button>
+            <button
+              onClick={() => viewerRef.current?.setZoomMode("fit-width")}
+              className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                zoomMode === "fit-width" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
+              }`}
+              title="适应宽度"
+            >
+              适应宽度
+            </button>
+            <button
+              onClick={() => viewerRef.current?.setZoomMode("actual")}
+              className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                zoomMode === "actual" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
+              }`}
+              title="实际大小"
+            >
+              实际
+            </button>
+          </div>
+
+          {/* Divider between zoom and OCR */}
+          <div className="h-4 w-px bg-white/15 mx-0.5" />
+
           {/* OCR toggle — always visible, manga engine works on all platforms */}
           <button
             onClick={() => setOcrEnabled((v) => !v)}
@@ -248,6 +316,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
             : 1
         }
         onPageChange={handlePageChange}
+        onZoomChange={handleZoomChange}
         ocrEnabled={ocrEnabled}
         ocrEngine={ocrEngine}
       />
