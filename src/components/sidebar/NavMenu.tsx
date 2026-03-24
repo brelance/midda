@@ -235,6 +235,7 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
           className="fixed z-50 bg-white rounded-lg shadow-xl border border-black/[0.08] py-1 min-w-[120px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           <button
             type="button"
