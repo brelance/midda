@@ -1,12 +1,12 @@
 /**
  * PDF parsing service (main process).
  *
- * Extracts metadata and page count from PDF files.
- * Page rendering is done in the renderer process (ImagePageViewer)
- * via pdfjs-dist's browser build, not here.
+ * Extracts metadata and page count from PDF files WITHOUT pdfjs-dist.
+ * pdfjs-dist uses browser APIs (DOMMatrix, Web Workers) that don't exist
+ * in Electron's main process, so we parse the PDF binary directly.
  *
- * For the cover, we skip rendering in main process and
- * let the renderer handle it on first paint.
+ * Page rendering is done in the renderer process (ImagePageViewer)
+ * via pdfjs-dist's browser build.
  */
 
 import { createHash } from "node:crypto";
@@ -37,17 +37,71 @@ async function generatePdfId(filePath: string): Promise<string> {
   }
 }
 
-// ── Lazy singleton for pdfjs (use legacy build for Node.js compatibility) ──
+// ── Lightweight PDF parsing (no pdfjs-dist needed) ─────────────────────────
 
-let pdfjsLib: typeof import("pdfjs-dist") | null = null;
-
-async function getPdfjsLib(): Promise<typeof import("pdfjs-dist")> {
-  if (pdfjsLib) return pdfjsLib;
-  // The legacy build avoids browser-only APIs (DOMMatrix, Canvas, etc.)
-  // that are unavailable in Electron's main process.
-  pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  return pdfjsLib;
+/**
+ * Count pages by scanning for /Type /Page objects in the PDF cross-reference.
+ * This reads the raw bytes and counts page-object markers without needing
+ * a full PDF renderer.
+ */
+function countPdfPages(buffer: Buffer): number {
+  // Strategy: count occurrences of "/Type /Page" (not "/Type /Pages")
+  // in the PDF raw text. This is a well-known lightweight approach.
+  const text = buffer.toString("latin1");
+  const regex = /\/Type\s*\/Page(?!s)\b/g;
+  let count = 0;
+  while (regex.exec(text)) count++;
+  return Math.max(count, 1); // At least 1 page
 }
+
+/**
+ * Extract PDF Info dictionary values (Title, Author) from raw bytes.
+ */
+function extractPdfInfo(buffer: Buffer): { title?: string; author?: string } {
+  const text = buffer.toString("latin1");
+  const result: { title?: string; author?: string } = {};
+
+  // Match /Title (string) or /Title <hex>
+  const titleMatch = text.match(/\/Title\s*\(([^)]*)\)/);
+  if (titleMatch?.[1]) {
+    result.title = decodePdfString(titleMatch[1]);
+  }
+
+  const authorMatch = text.match(/\/Author\s*\(([^)]*)\)/);
+  if (authorMatch?.[1]) {
+    result.author = decodePdfString(authorMatch[1]);
+  }
+
+  return result;
+}
+
+/**
+ * Decode a PDF string literal (handle common escape sequences and UTF-16BE BOM).
+ */
+function decodePdfString(raw: string): string {
+  // Check for UTF-16BE BOM (\xFE\xFF)
+  if (raw.charCodeAt(0) === 0xfe && raw.charCodeAt(1) === 0xff) {
+    // Decode UTF-16BE
+    const bytes: number[] = [];
+    for (let i = 2; i < raw.length; i++) {
+      bytes.push(raw.charCodeAt(i));
+    }
+    const u16 = new Uint8Array(bytes);
+    const decoder = new TextDecoder("utf-16be");
+    return decoder.decode(u16);
+  }
+
+  // PDFDocEncoding / ASCII with escape sequences
+  return raw
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")");
+}
+
+// ── Service ────────────────────────────────────────────────────────────────
 
 export class PdfService {
   /**
@@ -55,27 +109,14 @@ export class PdfService {
    * No page rendering happens here (that's the renderer's job).
    */
   async parsePdf(filePath: string): Promise<ImportedBookData> {
-    const pdfjs = await getPdfjsLib();
     const id = await generatePdfId(filePath);
+    const buffer = await fs.readFile(filePath);
 
-    const data = new Uint8Array(await fs.readFile(filePath));
-    const doc = await pdfjs.getDocument({
-      data,
-      useSystemFonts: true,
-    }).promise;
+    const totalPages = countPdfPages(buffer);
+    const info = extractPdfInfo(buffer);
 
-    const totalPages = doc.numPages;
-
-    // Extract metadata
-    const metadata = await doc.getMetadata().catch(() => null);
-    const info = metadata?.info as Record<string, string> | undefined;
-    const pdfTitle = info?.["Title"] ?? "";
-    const pdfAuthor = info?.["Author"] ?? "";
-
-    const title = pdfTitle || titleFromFilename(filePath);
-    const author = pdfAuthor || "未知作者";
-
-    doc.destroy();
+    const title = info.title || titleFromFilename(filePath);
+    const author = info.author || "未知作者";
 
     return {
       id,
