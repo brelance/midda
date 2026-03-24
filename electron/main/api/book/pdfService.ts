@@ -37,13 +37,15 @@ async function generatePdfId(filePath: string): Promise<string> {
   }
 }
 
-// ── Lazy singleton for pdfjs ───────────────────────────────────────────────
+// ── Lazy singleton for pdfjs (use legacy build for Node.js compatibility) ──
 
 let pdfjsLib: typeof import("pdfjs-dist") | null = null;
 
 async function getPdfjsLib(): Promise<typeof import("pdfjs-dist")> {
   if (pdfjsLib) return pdfjsLib;
-  pdfjsLib = await import("pdfjs-dist");
+  // The legacy build avoids browser-only APIs (DOMMatrix, Canvas, etc.)
+  // that are unavailable in Electron's main process.
+  pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
   return pdfjsLib;
 }
 
