@@ -9,7 +9,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ImagePageViewer, {
   type ImagePageViewerHandle,
 } from "../../components/reader/ImagePageViewer";
+import ImageScrollViewer, {
+  type ImageScrollViewerHandle,
+} from "../../components/reader/ImageScrollViewer";
+import ImageThumbnailSidebar from "../../components/reader/ImageThumbnailSidebar";
 import type { ZoomMode } from "../../hooks/useImageReaderZoom";
+import "../../components/reader/ImagePageViewer.css";
 
 export type OcrEngine = "native" | "manga";
 
@@ -32,6 +37,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   onProgressChange,
 }) => {
   const viewerRef = useRef<ImagePageViewerHandle>(null);
+  const scrollViewerRef = useRef<ImageScrollViewerHandle>(null);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const [ocrEnabled, setOcrEnabled] = useState(false);
   const [ocrEngine, setOcrEngine] = useState<OcrEngine>("manga");
@@ -44,6 +50,26 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   // Zoom state (synced from viewer)
   const [zoomLevel, setZoomLevel] = useState(1);
   const [zoomMode, setZoomMode] = useState<ZoomMode>("fit-page");
+
+  // Thumbnail sidebar
+  const [isThumbnailOpen, setIsThumbnailOpen] = useState(false);
+
+  // Current page (synced from viewer)
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // View mode: single-page or continuous scroll
+  const [viewMode, setViewMode] = useState<"page" | "scroll">(() => {
+    try { return (localStorage.getItem("midda-reader-viewMode") as "page" | "scroll") || "page"; }
+    catch { return "page"; }
+  });
+
+  const toggleViewMode = useCallback(() => {
+    setViewMode((prev) => {
+      const next = prev === "page" ? "scroll" : "page";
+      try { localStorage.setItem("midda-reader-viewMode", next); } catch {}
+      return next;
+    });
+  }, []);
 
   // Check OCR availability
   useEffect(() => {
@@ -96,6 +122,11 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onExitReader();
+      // ⌘⇧D toggle thumbnail sidebar
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        setIsThumbnailOpen((v) => !v);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -109,7 +140,8 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   }, [scheduleHideToolbar]);
 
   const handlePageChange = useCallback(
-    (_page: number, _total: number, progress: number) => {
+    (page: number, _total: number, progress: number) => {
+      setCurrentPage(page);
       onProgressChange?.(progress);
     },
     [onProgressChange]
@@ -139,6 +171,30 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     );
   }
 
+  // Computed initial page (shared by both viewers) — Fix #12
+  const initialPage =
+    book.progress && book.totalPages
+      ? Math.max(1, Math.round((book.progress / 100) * book.totalPages))
+      : 1;
+
+  // Sidebar callbacks — Fix #11
+  const handleSidebarPageSelect = (page: number) => {
+    if (viewMode === "scroll") {
+      scrollViewerRef.current?.goToPage(page);
+    } else {
+      viewerRef.current?.goToPage(page);
+    }
+  };
+
+  const handleSidebarClose = () => setIsThumbnailOpen(false);
+
+  const handleSidebarLoadThumbnail = async (page: number) => {
+    if (viewMode === "scroll") {
+      return scrollViewerRef.current?.loadThumbnail(page) ?? null;
+    }
+    return viewerRef.current?.loadThumbnail(page) ?? null;
+  };
+
   return (
     <div
       className="h-screen w-screen bg-[#1a1a1a] flex flex-col"
@@ -148,23 +204,44 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
       <div
         className={`
           absolute top-0 left-0 right-0 z-50
-          flex items-center justify-between px-6 py-3
-          bg-gradient-to-b from-black/70 to-transparent
+          flex items-center justify-between px-6 h-[52px]
+          bg-[rgba(30,30,30,0.75)] backdrop-blur-[20px] backdrop-saturate-[180%]
+          border-b border-white/[0.08]
           transition-all duration-300
           ${isToolbarVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"}
         `}
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       >
-        <button
-          onClick={onExitReader}
-          className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="text-sm font-medium">返回</span>
-        </button>
+        <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          {/* Back button */}
+          <button
+            onClick={onExitReader}
+            className="flex items-center gap-1.5 text-white/70 hover:text-white hover:bg-white/[0.1] rounded-md px-2 py-1.5 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="text-[13px] font-medium">返回</span>
+          </button>
+
+          {/* Divider */}
+          <div className="h-4 w-px bg-white/15" />
+
+          {/* Thumbnail sidebar toggle */}
+          <button
+            onClick={() => setIsThumbnailOpen((v) => !v)}
+            className={`p-1.5 rounded-md transition-colors ${
+              isThumbnailOpen
+                ? "bg-white/20 text-white"
+                : "text-white/60 hover:text-white hover:bg-white/[0.1]"
+            }`}
+            title="缩略图 (⌘⇧D)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+            </svg>
+          </button>
+        </div>
 
         <h1 className="text-white/90 text-sm font-medium truncate max-w-[40%]">
           {book.title}
@@ -177,7 +254,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           {/* ── Zoom controls ── */}
           <div className="flex items-center gap-0.5 rounded-md bg-white/10 border border-white/10 overflow-hidden">
             <button
-              onClick={() => viewerRef.current?.zoomOut()}
+              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.zoomOut()}
               className="px-1.5 py-1 text-white/60 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
               title="缩小 (⌘−)"
             >
@@ -187,7 +264,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
               {Math.round(zoomLevel * 100)}%
             </span>
             <button
-              onClick={() => viewerRef.current?.zoomIn()}
+              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.zoomIn()}
               className="px-1.5 py-1 text-white/60 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
               title="放大 (⌘+)"
             >
@@ -198,7 +275,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           {/* Zoom preset buttons */}
           <div className="flex items-center rounded-md bg-white/10 border border-white/10 overflow-hidden">
             <button
-              onClick={() => viewerRef.current?.setZoomMode("fit-page")}
+              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.setZoomMode("fit-page")}
               className={`px-2 py-1 text-[10px] font-medium transition-all ${
                 zoomMode === "fit-page" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
               }`}
@@ -207,7 +284,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
               适应页面
             </button>
             <button
-              onClick={() => viewerRef.current?.setZoomMode("fit-width")}
+              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.setZoomMode("fit-width")}
               className={`px-2 py-1 text-[10px] font-medium transition-all ${
                 zoomMode === "fit-width" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
               }`}
@@ -216,7 +293,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
               适应宽度
             </button>
             <button
-              onClick={() => viewerRef.current?.setZoomMode("actual")}
+              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.setZoomMode("actual")}
               className={`px-2 py-1 text-[10px] font-medium transition-all ${
                 zoomMode === "actual" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
               }`}
@@ -226,7 +303,32 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
             </button>
           </div>
 
-          {/* Divider between zoom and OCR */}
+          {/* Divider */}
+          <div className="h-4 w-px bg-white/15 mx-0.5" />
+
+          {/* View mode toggle */}
+          <div className="flex items-center rounded-md bg-white/10 border border-white/10 overflow-hidden">
+            <button
+              onClick={() => { if (viewMode !== "page") toggleViewMode(); }}
+              className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                viewMode === "page" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
+              }`}
+              title="单页模式"
+            >
+              单页
+            </button>
+            <button
+              onClick={() => { if (viewMode !== "scroll") toggleViewMode(); }}
+              className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                viewMode === "scroll" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
+              }`}
+              title="连续滚动"
+            >
+              滚动
+            </button>
+          </div>
+
+          {/* Divider between view mode and OCR */}
           <div className="h-4 w-px bg-white/15 mx-0.5" />
 
           {/* OCR toggle — always visible, manga engine works on all platforms */}
@@ -303,27 +405,46 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
         </div>
       )}
 
-      {/* Image viewer */}
-      <ImagePageViewer
-        ref={viewerRef}
-        bookId={book.id}
-        filePath={book.filePath}
-        format={book.format}
+      {/* Viewer: single-page or continuous scroll */}
+      {viewMode === "scroll" ? (
+        <ImageScrollViewer
+          ref={scrollViewerRef}
+          bookId={book.id}
+          filePath={book.filePath}
+          format={book.format}
+          totalPages={book.totalPages}
+          initialPage={initialPage}
+          onPageChange={handlePageChange}
+          onZoomChange={handleZoomChange}
+          ocrEnabled={ocrEnabled}
+          ocrEngine={ocrEngine}
+        />
+      ) : (
+        <ImagePageViewer
+          ref={viewerRef}
+          bookId={book.id}
+          filePath={book.filePath}
+          format={book.format}
+          totalPages={book.totalPages}
+          initialPage={initialPage}
+          onPageChange={handlePageChange}
+          onZoomChange={handleZoomChange}
+          ocrEnabled={ocrEnabled}
+          ocrEngine={ocrEngine}
+        />
+      )}
+
+      {/* Thumbnail sidebar */}
+      <ImageThumbnailSidebar
+        isOpen={isThumbnailOpen}
+        currentPage={currentPage}
         totalPages={book.totalPages}
-        initialPage={
-          book.progress && book.totalPages
-            ? Math.max(1, Math.round((book.progress / 100) * book.totalPages))
-            : 1
-        }
-        onPageChange={handlePageChange}
-        onZoomChange={handleZoomChange}
-        ocrEnabled={ocrEnabled}
-        ocrEngine={ocrEngine}
+        onPageSelect={handleSidebarPageSelect}
+        onClose={handleSidebarClose}
+        loadThumbnail={handleSidebarLoadThumbnail}
       />
     </div>
   );
 };
 
 export default ImageReaderPage;
-
-

@@ -36,14 +36,18 @@ interface UseImageReaderZoomOptions {
   imageHeight: number;
   /** Called when zoom changes so parent can re-render */
   onZoomChange?: (level: number, mode: ZoomMode) => void;
+  /** Optional external container ref (e.g. from a scroll viewer) */
+  externalContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function useImageReaderZoom({
   imageWidth,
   imageHeight,
   onZoomChange,
+  externalContainerRef,
 }: UseImageReaderZoomOptions) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const internalContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = externalContainerRef ?? internalContainerRef;
   const hasAutoFittedRef = useRef(false);
   const fittedZoomRef = useRef(1);
 

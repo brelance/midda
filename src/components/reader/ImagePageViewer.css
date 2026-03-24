@@ -25,3 +25,33 @@
 .image-reader-slider::-webkit-slider-thumb:active {
   transform: scale(1.1);
 }
+
+/* ── Page turn animations ── */
+.page-enter-right {
+  animation: slideInRight 250ms ease-out;
+}
+.page-enter-left {
+  animation: slideInLeft 250ms ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

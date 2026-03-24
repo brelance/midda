@@ -39,6 +39,7 @@ export interface ImagePageViewerHandle {
   setZoomMode: (mode: "fit-width" | "fit-page" | "actual") => void;
   zoomIn: () => void;
   zoomOut: () => void;
+  loadThumbnail: (page: number) => Promise<string | null>;
 }
 
 interface ImagePageViewerProps {
@@ -85,6 +86,10 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
     // ── Page jump input state ─────────────────────────────────────────
     const [isPageInputVisible, setIsPageInputVisible] = useState(false);
     const [pageInputValue, setPageInputValue] = useState("");
+
+    // ── Page turn animation state ───────────────────────────────
+    const [pageTransitionDir, setPageTransitionDir] = useState<"left" | "right" | null>(null);
+    const transitionKeyRef = useRef(0);
 
     useEffect(() => {
       onPageChangeRef.current = onPageChange;
@@ -241,6 +246,8 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
     // ── Navigation ───────────────────────────────────────────────────────
     const goToNextPage = useCallback((): boolean => {
       if (currentPage >= totalPages) return false;
+      setPageTransitionDir("right");
+      transitionKeyRef.current += 1;
       setCurrentPage((p) => p + 1);
       resetPan();
       return true;
@@ -248,6 +255,8 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
 
     const goToPrevPage = useCallback((): boolean => {
       if (currentPage <= 1) return false;
+      setPageTransitionDir("left");
+      transitionKeyRef.current += 1;
       setCurrentPage((p) => p - 1);
       resetPan();
       return true;
@@ -322,7 +331,16 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
       [goToPage]
     );
 
-    // ── Imperative handle ────────────────────────────────────────────────
+    // ── Thumbnail loader (for sidebar) ─────────────────────────────
+    const loadThumbnailFn = useCallback(
+      async (page: number): Promise<string | null> => {
+        const data = await loadPage(page);
+        return data?.dataUrl ?? null;
+      },
+      [loadPage]
+    );
+
+    // ── Imperative handle ────────────────────────────────────────────
     useImperativeHandle(
       ref,
       () => ({
@@ -337,8 +355,9 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
         setZoomMode,
         zoomIn,
         zoomOut,
+        loadThumbnail: loadThumbnailFn,
       }),
-      [goToNextPage, goToPrevPage, goToPage, currentPage, totalPages, pageProgress, zoomLevel, zoomMode, setZoomMode, zoomIn, zoomOut]
+      [goToNextPage, goToPrevPage, goToPage, currentPage, totalPages, pageProgress, zoomLevel, zoomMode, setZoomMode, zoomIn, zoomOut, loadThumbnailFn]
     );
 
     // Whether zoomed in enough to enable panning
@@ -371,7 +390,15 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
           )}
 
           {!isLoading && !error && currentImage && (
-            <div className="relative" style={imageTransformStyle}>
+            <div
+              key={transitionKeyRef.current}
+              className={`relative ${
+                pageTransitionDir === "right" ? "page-enter-right" :
+                pageTransitionDir === "left" ? "page-enter-left" : ""
+              }`}
+              style={imageTransformStyle}
+              onAnimationEnd={() => setPageTransitionDir(null)}
+            >
               <img
                 ref={imageElRef}
                 src={currentImage.dataUrl}
@@ -425,7 +452,7 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
         </div>
 
         {/* Bottom bar: page indicator + interactive slider + zoom info */}
-        <div className="flex-shrink-0 w-full px-6 py-3 bg-gradient-to-t from-black/60 to-transparent flex items-center gap-3">
+        <div className="flex-shrink-0 w-full px-6 py-3 bg-[rgba(30,30,30,0.75)] backdrop-blur-[20px] backdrop-saturate-[180%] border-t border-white/[0.08] flex items-center gap-3">
           {/* Page indicator / jump input */}
           {isPageInputVisible ? (
             <input
