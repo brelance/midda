@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import Layout from "./components/layout/Layout";
 import ReaderPage from "./pages/ReaderPage";
+import ImageReaderPage from "./pages/ImageReaderPage/ImageReaderPage";
 import {
   useBookshelfStore,
   useReaderBook,
@@ -33,9 +34,15 @@ export default function App() {
   }, [loadBooks]);
 
   // Eagerly load chapters when a reader book is selected but has none
+  // Skip for image-based formats (CBZ/CBR/PDF) which never have chapters
   useEffect(() => {
+    const isImageFormat =
+      readerBook?.format === "cbz" ||
+      readerBook?.format === "cbr" ||
+      readerBook?.format === "pdf";
     if (
       readerBook &&
+      !isImageFormat &&
       (!readerBook.chapters || readerBook.chapters.length === 0)
     ) {
       void ensureBookChapters(readerBook.id);
@@ -43,6 +50,22 @@ export default function App() {
   }, [readerBook, ensureBookChapters]);
 
   if (readerBook) {
+    // Image-based formats use a lightweight reader
+    const isImageFormat =
+      readerBook.format === 'cbz' ||
+      readerBook.format === 'cbr' ||
+      readerBook.format === 'pdf';
+
+    if (isImageFormat) {
+      return (
+        <ImageReaderPage
+          book={readerBook}
+          onExitReader={exitReader}
+          onProgressChange={handleProgressChange}
+        />
+      );
+    }
+
     return (
       <ReaderPage
         book={readerBook}

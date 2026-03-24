@@ -1,0 +1,351 @@
+/**
+ * ImagePageViewer – image-based page reader for CBZ/CBR/PDF formats.
+ *
+ * Features:
+ * - Displays one page at a time from image-based book formats
+ * - Supports keyboard navigation (left/right arrows)
+ * - Click-to-turn-page zones (left 30% / right 30%)
+ * - Preloads adjacent pages for smooth transitions
+ * - Fit-width scaling by default
+ */
+
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
+import OcrTextOverlay from "./OcrTextOverlay";
+import type { OcrEngine } from "../../pages/ImageReaderPage/ImageReaderPage";
+
+export interface ImagePageViewerHandle {
+  goToNextPage: () => boolean;
+  goToPrevPage: () => boolean;
+  goToPage: (page: number) => void;
+  currentPage: number;
+  totalPages: number;
+  pageProgress: number;
+}
+
+interface ImagePageViewerProps {
+  bookId: string;
+  filePath: string;
+  format: string;
+  totalPages: number;
+  initialPage?: number;
+  onPageChange?: (page: number, total: number, progress: number) => void;
+  ocrEnabled?: boolean;
+  ocrEngine?: OcrEngine;
+}
+
+interface PageCache {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
+  (
+    {
+      bookId,
+      filePath,
+      format,
+      totalPages,
+      initialPage = 1,
+      onPageChange,
+      ocrEnabled = false,
+      ocrEngine = "native",
+    },
+    ref
+  ) => {
+    const [currentPage, setCurrentPage] = useState(initialPage);
+    const [currentImage, setCurrentImage] = useState<PageCache | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const pageCacheRef = useRef<Map<number, PageCache>>(new Map());
+    const onPageChangeRef = useRef(onPageChange);
+    const imageElRef = useRef<HTMLImageElement | null>(null);
+
+    useEffect(() => {
+      onPageChangeRef.current = onPageChange;
+    }, [onPageChange]);
+
+    // Cleanup PDF document on unmount
+    useEffect(() => {
+      return () => {
+        if (pdfDocRef.current) {
+          pdfDocRef.current.destroy();
+          pdfDocRef.current = null;
+          pdfBytesLoadedRef.current = null;
+        }
+      };
+    }, []);
+
+    const pageProgress = useMemo(
+      () => (totalPages > 0 ? Math.round((currentPage / totalPages) * 100) : 0),
+      [currentPage, totalPages]
+    );
+
+    // ── PDF document cache (for client-side rendering) ────────────────────
+    const pdfDocRef = useRef<any>(null);
+    const pdfBytesLoadedRef = useRef<string | null>(null);
+
+    // ── Load page image ──────────────────────────────────────────────────
+    const loadPage = useCallback(
+      async (page: number): Promise<PageCache | null> => {
+        const cached = pageCacheRef.current.get(page);
+        if (cached) return cached;
+
+        try {
+          let pageData: PageCache;
+
+          if (format === "pdf") {
+            // Client-side PDF rendering with pdfjs-dist
+            const pdfjs = await import("pdfjs-dist");
+
+            // Configure worker (once) for off-main-thread parsing
+            if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+              pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+                "pdfjs-dist/build/pdf.worker.mjs",
+                import.meta.url
+              ).href;
+            }
+            // Load PDF document once
+            if (!pdfDocRef.current || pdfBytesLoadedRef.current !== filePath) {
+              if (pdfDocRef.current) pdfDocRef.current.destroy();
+              const bytes = await window.api.book.readPdfBytes(filePath);
+              pdfDocRef.current = await pdfjs.getDocument({ data: bytes }).promise;
+              pdfBytesLoadedRef.current = filePath;
+            }
+
+            const pdfPage = await pdfDocRef.current.getPage(page);
+            const scale = 2.0; // Retina
+            const viewport = pdfPage.getViewport({ scale });
+
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(viewport.width);
+            canvas.height = Math.round(viewport.height);
+            const ctx = canvas.getContext("2d")!;
+
+            await pdfPage.render({ canvasContext: ctx, viewport }).promise;
+
+            pageData = {
+              dataUrl: canvas.toDataURL("image/png"),
+              width: canvas.width,
+              height: canvas.height,
+            };
+
+            pdfPage.cleanup();
+          } else {
+            // CBZ/CBR: use main-process IPC
+            const result = await window.api.book.getPage(
+              bookId,
+              filePath,
+              format,
+              page
+            );
+            pageData = {
+              dataUrl: result.dataUrl,
+              width: result.width,
+              height: result.height,
+            };
+          }
+
+          pageCacheRef.current.set(page, pageData);
+
+          // Evict old cache entries (keep max 5 pages)
+          if (pageCacheRef.current.size > 5) {
+            const keysToDelete: number[] = [];
+            for (const key of pageCacheRef.current.keys()) {
+              if (Math.abs(key - page) > 2) keysToDelete.push(key);
+            }
+            keysToDelete.forEach((k) => pageCacheRef.current.delete(k));
+          }
+
+          return pageData;
+        } catch (err) {
+          console.error(`Failed to load page ${page}:`, err);
+          return null;
+        }
+      },
+      [bookId, filePath, format]
+    );
+
+    // ── Load current page + preload adjacent ─────────────────────────────
+    useEffect(() => {
+      let cancelled = false;
+      setIsLoading(true);
+      setError(null);
+
+      (async () => {
+        const data = await loadPage(currentPage);
+        if (cancelled) return;
+
+        if (data) {
+          setCurrentImage(data);
+          setIsLoading(false);
+        } else {
+          setError(`无法加载第 ${currentPage} 页`);
+          setIsLoading(false);
+        }
+
+        // Preload adjacent pages
+        if (currentPage > 1) void loadPage(currentPage - 1);
+        if (currentPage < totalPages) void loadPage(currentPage + 1);
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [currentPage, loadPage, totalPages]);
+
+    // ── Navigation ───────────────────────────────────────────────────────
+    const goToNextPage = useCallback((): boolean => {
+      if (currentPage >= totalPages) return false;
+      setCurrentPage((p) => p + 1);
+      return true;
+    }, [currentPage, totalPages]);
+
+    const goToPrevPage = useCallback((): boolean => {
+      if (currentPage <= 1) return false;
+      setCurrentPage((p) => p - 1);
+      return true;
+    }, [currentPage]);
+
+    const goToPage = useCallback(
+      (page: number) => {
+        const clamped = Math.max(1, Math.min(totalPages, page));
+        setCurrentPage(clamped);
+      },
+      [totalPages]
+    );
+
+    // Notify parent of page changes
+    useEffect(() => {
+      onPageChangeRef.current?.(currentPage, totalPages, pageProgress);
+    }, [currentPage, totalPages, pageProgress]);
+
+    // ── Keyboard navigation ──────────────────────────────────────────────
+    useEffect(() => {
+      const handler = (e: KeyboardEvent) => {
+        if (e.key === "ArrowRight" || e.key === " ") {
+          e.preventDefault();
+          goToNextPage();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          goToPrevPage();
+        }
+      };
+      window.addEventListener("keydown", handler);
+      return () => window.removeEventListener("keydown", handler);
+    }, [goToNextPage, goToPrevPage]);
+
+    // ── Imperative handle ────────────────────────────────────────────────
+    useImperativeHandle(
+      ref,
+      () => ({
+        goToNextPage,
+        goToPrevPage,
+        goToPage,
+        currentPage,
+        totalPages,
+        pageProgress,
+      }),
+      [goToNextPage, goToPrevPage, goToPage, currentPage, totalPages, pageProgress]
+    );
+
+    return (
+      <div className="relative h-full w-full flex flex-col items-center bg-[#1a1a1a] overflow-hidden select-none">
+        {/* Page image */}
+        <div className="flex-1 flex items-center justify-center w-full overflow-auto">
+          {isLoading && (
+            <div className="flex flex-col items-center gap-3 text-gray-400">
+              <div className="w-8 h-8 border-2 border-gray-600 border-t-white rounded-full animate-spin" />
+              <span className="text-sm">加载中...</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex flex-col items-center gap-3 text-red-400">
+              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="text-sm">{error}</span>
+            </div>
+          )}
+
+          {!isLoading && !error && currentImage && (
+            <div className="relative">
+              <img
+                ref={imageElRef}
+                src={currentImage.dataUrl}
+                alt={`Page ${currentPage}`}
+                className="max-h-full w-auto object-contain"
+                style={{ maxWidth: "100%" }}
+                draggable={false}
+              />
+              {ocrEnabled && (
+                <OcrTextOverlay
+                  imageRef={imageElRef}
+                  imageWidth={currentImage.width}
+                  imageHeight={currentImage.height}
+                  imageSource={currentImage.dataUrl}
+                  enabled={ocrEnabled}
+                  ocrEngine={ocrEngine}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Click-to-turn zones */}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-[30%] cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
+            onClick={goToPrevPage}
+          >
+            <div className="h-full flex items-center justify-start pl-4">
+              <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="absolute right-0 top-0 bottom-0 w-[30%] cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
+            onClick={goToNextPage}
+          >
+            <div className="h-full flex items-center justify-end pr-4">
+              <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom bar: page indicator + progress */}
+        <div className="flex-shrink-0 w-full px-6 py-3 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-between">
+          <span className="text-white/70 text-sm font-mono">
+            {currentPage} / {totalPages}
+          </span>
+          <div className="flex-1 mx-4 h-1 bg-white/20 rounded-full">
+            <div
+              className="h-full bg-white/70 rounded-full transition-all duration-200"
+              style={{ width: `${pageProgress}%` }}
+            />
+          </div>
+          <span className="text-white/70 text-sm">{pageProgress}%</span>
+        </div>
+      </div>
+    );
+  }
+);
+
+ImagePageViewer.displayName = "ImagePageViewer";
+export default ImagePageViewer;

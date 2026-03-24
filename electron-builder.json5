@@ -16,6 +16,10 @@
       "from": "resources/",
       "to": ".",
       "filter": ["jmdict.db"]
+    },
+    {
+      "from": "resources/ocr_vision",
+      "to": "ocr_vision"
     }
   ],
   "mac": {
