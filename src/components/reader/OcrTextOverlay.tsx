@@ -4,7 +4,9 @@
  *
  * Supports two engines:
  * - "native": OS-level OCR (Vision/WinRT) — returns positioned text blocks
- * - "manga": manga-ocr ONNX — returns full-page text (displayed as copytable overlay)
+ * - "manga": PaddleOCR-VL 1.5 via vLLM — returns positioned text blocks
+ *
+ * Both engines now return the same block format, sharing the same render path.
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -39,7 +41,6 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
   ocrEngine = "native",
 }) => {
   const [blocks, setBlocks] = useState<OcrBlock[]>([]);
-  const [mangaText, setMangaText] = useState("");
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [overlayStyle, setOverlayStyle] = useState<React.CSSProperties>({});
   const lastSourceRef = useRef<string>("");
@@ -86,19 +87,18 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
     let cancelled = false;
     setIsRecognizing(true);
     setBlocks([]);
-    setMangaText("");
 
     (async () => {
       try {
         if (ocrEngine === "manga") {
-          // Manga OCR
+          // PaddleOCR-VL 1.5 via vLLM
           if (!window?.api?.ocr?.mangaRecognize) {
-            console.warn("Manga OCR API not available");
+            console.warn("PaddleOCR API not available");
             return;
           }
           const result = await window.api.ocr.mangaRecognize(imageSource);
-          if (!cancelled && result?.text) {
-            setMangaText(result.text);
+          if (!cancelled && result?.blocks) {
+            setBlocks(result.blocks);
           }
         } else {
           // Native OCR
@@ -127,13 +127,12 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
   useEffect(() => {
     if (!enabled) {
       setBlocks([]);
-      setMangaText("");
       lastSourceRef.current = "";
       lastEngineRef.current = "";
     }
   }, [enabled]);
 
-  const hasContent = ocrEngine === "manga" ? mangaText.length > 0 : blocks.length > 0;
+  const hasContent = blocks.length > 0;
   if (!enabled || (!hasContent && !isRecognizing)) return null;
 
   const scaleX =
@@ -157,51 +156,35 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
         </div>
       )}
 
-      {/* Manga OCR: full-text overlay at bottom */}
-      {ocrEngine === "manga" && mangaText && (
+      {/* Positioned text blocks (same for both engines) */}
+      {blocks.map((block, i) => (
         <div
-          className="absolute bottom-2 left-2 right-2 p-2 rounded bg-black/60 backdrop-blur-sm"
-          style={{ pointerEvents: "auto" }}
+          key={i}
+          className="absolute cursor-text"
+          style={{
+            left: block.x * scaleX,
+            top: block.y * scaleY,
+            width: block.width * scaleX,
+            height: block.height * scaleY,
+            pointerEvents: "auto",
+          }}
         >
-          <p
-            className="text-white/90 text-sm leading-relaxed select-text"
-            style={{ userSelect: "text", WebkitUserSelect: "text" }}
-          >
-            {mangaText}
-          </p>
-        </div>
-      )}
-
-      {/* Native OCR: positioned text blocks */}
-      {ocrEngine === "native" &&
-        blocks.map((block, i) => (
-          <div
-            key={i}
-            className="absolute cursor-text"
+          <span
+            className="block w-full h-full select-text"
             style={{
-              left: block.x * scaleX,
-              top: block.y * scaleY,
-              width: block.width * scaleX,
-              height: block.height * scaleY,
-              pointerEvents: "auto",
+              fontSize: Math.max(8, block.height * scaleY * 0.8),
+              lineHeight: `${block.height * scaleY}px`,
+              color: "transparent",
+              whiteSpace: "pre-wrap",
+              overflow: "hidden",
+              userSelect: "text",
+              WebkitUserSelect: "text",
             }}
           >
-            <span
-              className="block w-full h-full select-text"
-              style={{
-                fontSize: Math.max(8, block.height * scaleY * 0.8),
-                lineHeight: `${block.height * scaleY}px`,
-                color: "transparent",
-                whiteSpace: "pre-wrap",
-                overflow: "hidden",
-                userSelect: "text",
-                WebkitUserSelect: "text",
-              }}
-            >
-              {block.text}
-            </span>
-          </div>
-        ))}
+            {block.text}
+          </span>
+        </div>
+      ))}
     </div>
   );
 };

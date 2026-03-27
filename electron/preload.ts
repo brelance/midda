@@ -226,19 +226,14 @@ const api = {
       ipcRenderer.invoke("ocr:recognize-text", imageInput, languageHint),
     isAvailable: (): Promise<boolean> =>
       ipcRenderer.invoke("ocr:is-available"),
-    mangaRecognize: (imageInput: string): Promise<{ text: string; confidence: number }> =>
+    mangaRecognize: (imageInput: string): Promise<{
+      text: string;
+      confidence: number;
+      blocks: Array<{ text: string; confidence: number; x: number; y: number; width: number; height: number }>;
+    }> =>
       ipcRenderer.invoke("ocr:manga-recognize", imageInput),
-    mangaStatus: (): Promise<{ ready: boolean; downloaded: string[]; missing: string[] }> =>
-      ipcRenderer.invoke("ocr:manga-status"),
     mangaIsReady: (): Promise<boolean> =>
       ipcRenderer.invoke("ocr:manga-is-ready"),
-    mangaDownload: (): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke("ocr:manga-download"),
-    onMangaDownloadProgress: (callback: (data: { file: string; current: number; total: number }) => void) => {
-      const handler = (_event: any, data: any) => callback(data);
-      ipcRenderer.on("ocr:manga-download-progress", handler);
-      return () => ipcRenderer.removeListener("ocr:manga-download-progress", handler);
-    },
   },
 
   tts: {

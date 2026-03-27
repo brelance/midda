@@ -4,19 +4,13 @@
  * Channels:
  *   ocr:recognize-text     → native OS OCR
  *   ocr:is-available       → check native OCR availability
- *   ocr:manga-recognize    → manga-ocr ONNX inference
- *   ocr:manga-status       → check model download status
- *   ocr:manga-download     → download manga-ocr models
+ *   ocr:manga-recognize    → PaddleOCR-VL 1.5 via vLLM
+ *   ocr:manga-is-ready     → check PaddleOCR service health
  */
 
-import { ipcMain, BrowserWindow } from "electron";
+import { ipcMain } from "electron";
 import { recognizeText, isNativeOcrAvailable } from "./nativeOcr";
-import {
-  recognizeMangaText,
-  getMangaOcrStatus,
-  downloadMangaOcrModels,
-  isMangaOcrReady,
-} from "./mangaOcr";
+import { recognizeWithPaddleOcr, checkPaddleOcrHealth } from "./paddleOcr";
 
 export function setupOcrApiHandlers(): void {
   // ── Native OCR ────────────────────────────────────────────────────────
@@ -36,12 +30,12 @@ export function setupOcrApiHandlers(): void {
     return isNativeOcrAvailable();
   });
 
-  // ── Manga OCR ─────────────────────────────────────────────────────────
+  // ── PaddleOCR-VL (replaces manga-ocr) ─────────────────────────────────
   ipcMain.handle(
     "ocr:manga-recognize",
     async (_event, imageInput: string) => {
       try {
-        return await recognizeMangaText(imageInput);
+        return await recognizeWithPaddleOcr(imageInput);
       } catch (error: any) {
         console.error("[ocr:manga-recognize]", error);
         throw error;
@@ -49,29 +43,7 @@ export function setupOcrApiHandlers(): void {
     }
   );
 
-  ipcMain.handle("ocr:manga-status", async () => {
-    return await getMangaOcrStatus();
-  });
-
   ipcMain.handle("ocr:manga-is-ready", async () => {
-    return await isMangaOcrReady();
-  });
-
-  ipcMain.handle("ocr:manga-download", async (event) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      await downloadMangaOcrModels((file, current, total) => {
-        // Send progress to renderer
-        win?.webContents.send("ocr:manga-download-progress", {
-          file,
-          current,
-          total,
-        });
-      });
-      return { success: true };
-    } catch (error: any) {
-      console.error("[ocr:manga-download]", error);
-      throw error;
-    }
+    return await checkPaddleOcrHealth();
   });
 }

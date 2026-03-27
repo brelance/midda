@@ -43,8 +43,6 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   const [ocrEngine, setOcrEngine] = useState<OcrEngine>("manga");
   const [ocrAvailable, setOcrAvailable] = useState(false);
   const [mangaReady, setMangaReady] = useState(false);
-  const [mangaDownloading, setMangaDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState("");
   const hideTimerRef = useRef<number | null>(null);
 
   // Zoom state (synced from viewer)
@@ -81,23 +79,11 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
       .catch(() => {});
   }, []);
 
-  const handleDownloadManga = useCallback(async () => {
-    setMangaDownloading(true);
-    setDownloadProgress("准备下载...");
-    const unsub = window.api.ocr.onMangaDownloadProgress((data) => {
-      setDownloadProgress(`下载中: ${data.file} (${data.current}/${data.total})`);
-    });
-    try {
-      await window.api.ocr.mangaDownload();
-      setMangaReady(true);
-      setDownloadProgress("");
-    } catch (err) {
-      console.error("模型下载失败:", err);
-      setDownloadProgress("下载失败");
-    } finally {
-      setMangaDownloading(false);
-      unsub();
-    }
+  // Re-check health when OCR engine switches to manga
+  const recheckMangaHealth = useCallback(() => {
+    window?.api?.ocr?.mangaIsReady?.()
+      .then((ready) => setMangaReady(ready))
+      .catch(() => setMangaReady(false));
   }, []);
 
   const scheduleHideToolbar = useCallback(() => {
@@ -364,9 +350,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
               <button
                 onClick={() => {
                   setOcrEngine("manga");
-                  if (!mangaReady && !mangaDownloading) {
-                    // Don't auto-download, user will see the download prompt
-                  }
+                  recheckMangaHealth();
                 }}
                 className={`px-2 py-1 text-[10px] font-medium transition-all ${
                   ocrEngine === "manga"
@@ -381,27 +365,12 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
         </div>
       </div>
 
-      {/* Manga model download banner */}
+      {/* PaddleOCR service unavailable banner */}
       {ocrEnabled && ocrEngine === "manga" && !mangaReady && (
         <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-black/80 backdrop-blur-md rounded-lg px-4 py-3 text-center border border-white/10 max-w-sm">
-          {mangaDownloading ? (
-            <div className="flex items-center gap-2 text-white/80 text-xs">
-              <div className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />
-              <span>{downloadProgress}</span>
-            </div>
-          ) : (
-            <>
-              <p className="text-white/80 text-xs mb-2">
-                漫画 OCR 需要下载模型文件（约 140 MB）
-              </p>
-              <button
-                onClick={handleDownloadManga}
-                className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-white text-xs font-medium transition-colors"
-              >
-                下载模型
-              </button>
-            </>
-          )}
+          <p className="text-white/80 text-xs">
+            PaddleOCR 服务不可用，请检查服务器连接
+          </p>
         </div>
       )}
 

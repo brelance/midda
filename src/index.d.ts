@@ -208,13 +208,19 @@ export interface IElectronAPI {
       language?: string;
     }>;
     isAvailable: () => Promise<boolean>;
-    mangaRecognize: (imageInput: string) => Promise<{ text: string; confidence: number }>;
-    mangaStatus: () => Promise<{ ready: boolean; downloaded: string[]; missing: string[] }>;
+    mangaRecognize: (imageInput: string) => Promise<{
+      text: string;
+      confidence: number;
+      blocks: Array<{
+        text: string;
+        confidence: number;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+    }>;
     mangaIsReady: () => Promise<boolean>;
-    mangaDownload: () => Promise<{ success: boolean }>;
-    onMangaDownloadProgress: (
-      callback: (data: { file: string; current: number; total: number }) => void
-    ) => () => void;
   };
 
   tts: {
