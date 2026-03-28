@@ -469,6 +469,7 @@ export function useReaderCallbacks() {
             id: readerBookId,
             title: bookTarget.title,
             filePath: bookTarget.filePath ?? "",
+            format: bookTarget.format,
             currentChapterId: chapterId,
             lastReadChapterId: chapterId,
             status: bookTarget.status,
@@ -506,6 +507,7 @@ export function useReaderCallbacks() {
           id: readerBookId,
           title: bookTarget.title,
           filePath: bookTarget.filePath ?? "",
+          format: bookTarget.format,
           progress: normalized,
           status: nextStatus,
         })

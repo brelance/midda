@@ -67,7 +67,7 @@ export class BookRepository {
       cover_path = COALESCE(excluded.cover_path, books.cover_path),
       file_path = excluded.file_path,
       source_path = COALESCE(excluded.source_path, books.source_path),
-      format = COALESCE(excluded.format, books.format),
+      format = COALESCE(@format, books.format),
       status = excluded.status,
       progress = excluded.progress,
       current_chapter_id = COALESCE(excluded.current_chapter_id, books.current_chapter_id),
