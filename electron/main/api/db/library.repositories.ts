@@ -57,7 +57,7 @@ export class BookRepository {
     )
     VALUES (
       @id, @title, @author, @description, @coverPath, @filePath, @sourcePath,
-      @format, @status, @progress, @currentChapterId, @lastReadChapterId,
+      COALESCE(@format, 'epub'), @status, @progress, @currentChapterId, @lastReadChapterId,
       @totalPages, @metadataLanguage, @metadataPublisher, @metadataIdentifier
     )
     ON CONFLICT(id) DO UPDATE SET
@@ -67,7 +67,7 @@ export class BookRepository {
       cover_path = COALESCE(excluded.cover_path, books.cover_path),
       file_path = excluded.file_path,
       source_path = COALESCE(excluded.source_path, books.source_path),
-      format = excluded.format,
+      format = COALESCE(excluded.format, books.format),
       status = excluded.status,
       progress = excluded.progress,
       current_chapter_id = COALESCE(excluded.current_chapter_id, books.current_chapter_id),
@@ -114,7 +114,7 @@ export class BookRepository {
       description: payload.description ?? null,
       coverPath: payload.coverPath ?? null,
       sourcePath: payload.sourcePath ?? null,
-      format: payload.format ?? 'epub',
+      format: payload.format ?? null,
       currentChapterId: payload.currentChapterId ?? null,
       lastReadChapterId: payload.lastReadChapterId ?? null,
       totalPages: payload.totalPages ?? null,

@@ -265,6 +265,7 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
               const pageData = loadedPages.get(page);
               const displayWidth = pageData ? (pageData.width / dpr) * zoomLevel : undefined;
               const displayHeight = pageData ? (pageData.height / dpr) * zoomLevel : undefined;
+              const isOcrWindowPage = ocrEnabled && Math.abs(page - currentPage) <= 1;
 
               return (
                 <div
@@ -290,13 +291,13 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
                         className="w-full h-full object-contain"
                         draggable={false}
                       />
-                      {ocrEnabled && (
+                      {isOcrWindowPage && (
                         <OcrTextOverlay
                           imageRef={{ current: imageElRefsMap.current.get(page) ?? null }}
                           imageWidth={pageData.width}
                           imageHeight={pageData.height}
                           imageSource={pageData.dataUrl}
-                          enabled={ocrEnabled}
+                          enabled={isOcrWindowPage}
                           ocrEngine={ocrEngine}
                         />
                       )}

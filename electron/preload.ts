@@ -21,6 +21,12 @@ import type {
   VocabStatus,
 } from "../src/types/database";
 import type { RoleplayAnalysisPayload } from "../src/types/roleplay";
+import type {
+  MangaOcrRequest,
+  MangaOcrResult,
+  NativeOcrResult,
+} from "../src/types/ocr";
+
 const api = {
   ai: {
     sendTokensRequest: (payload: {
@@ -222,16 +228,14 @@ const api = {
     recognizeText: (
       imageInput: string,
       languageHint?: string
-    ): Promise<{ text: string; blocks: any[]; language?: string }> =>
+    ): Promise<NativeOcrResult> =>
       ipcRenderer.invoke("ocr:recognize-text", imageInput, languageHint),
     isAvailable: (): Promise<boolean> =>
       ipcRenderer.invoke("ocr:is-available"),
-    mangaRecognize: (imageInput: string): Promise<{
-      text: string;
-      confidence: number;
-      blocks: Array<{ text: string; confidence: number; x: number; y: number; width: number; height: number }>;
-    }> =>
-      ipcRenderer.invoke("ocr:manga-recognize", imageInput),
+    mangaRecognize: (request: MangaOcrRequest): Promise<MangaOcrResult> =>
+      ipcRenderer.invoke("ocr:manga-recognize", request),
+    cancelMangaRecognize: (requestId: string): Promise<boolean> =>
+      ipcRenderer.invoke("ocr:manga-cancel", requestId),
     mangaIsReady: (): Promise<boolean> =>
       ipcRenderer.invoke("ocr:manga-is-ready"),
   },

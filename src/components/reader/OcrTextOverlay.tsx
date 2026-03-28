@@ -4,21 +4,116 @@
  *
  * Supports two engines:
  * - "native": OS-level OCR (Vision/WinRT) — returns positioned text blocks
- * - "manga": PaddleOCR-VL 1.5 via vLLM — returns positioned text blocks
+ * - "manga": PaddleOCR-VL 1.5 — returns text (positioned blocks or full-page text)
  *
- * Both engines now return the same block format, sharing the same render path.
+ * When blocks have valid coordinates, they are rendered at their positions.
+ * When blocks have zero dimensions (e.g. from PaddleOCR official API),
+ * text is shown as a selectable overlay at the bottom of the image.
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { OcrEngine } from "../../pages/ImageReaderPage/ImageReaderPage";
+import type { MangaOcrResult, PositionedOcrBlock } from "../../types/ocr";
+import { getOcrBlockTextStyle } from "./ocrOverlayUtils";
 
-export interface OcrBlock {
-  text: string;
-  confidence: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+type OcrBlock = PositionedOcrBlock;
+
+interface PendingMangaOcrEntry {
+  cancel: () => void;
+  consumers: number;
+  promise: Promise<MangaOcrResult>;
+  requestId: string;
+}
+
+const MANGA_OCR_DEBOUNCE_MS = 200;
+const mangaOcrResultCache = new Map<string, MangaOcrResult>();
+const pendingMangaOcrRequests = new Map<string, PendingMangaOcrEntry>();
+let mangaOcrRequestSeq = 0;
+
+function isOcrCancelledError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" ||
+      error.name === "PaddleOcrCancelledError" ||
+      error.message === "cancelled" ||
+      error.message.includes("已取消"))
+  );
+}
+
+function createPendingMangaOcrRequest(
+  sourceKey: string,
+  imageSource: string
+): PendingMangaOcrEntry {
+  const existing = pendingMangaOcrRequests.get(sourceKey);
+  if (existing) return existing;
+
+  const requestId = `manga-ocr-${++mangaOcrRequestSeq}`;
+  let timeoutId: number | undefined;
+  let rejectPromise: ((reason?: unknown) => void) | undefined;
+  let settled = false;
+  let requestStarted = false;
+
+  const promise = new Promise<MangaOcrResult>((resolve, reject) => {
+    rejectPromise = reject;
+    timeoutId = window.setTimeout(async () => {
+      timeoutId = undefined;
+      requestStarted = true;
+
+      try {
+        const result = await window.api.ocr.mangaRecognize({
+          requestId,
+          imageInput: imageSource,
+        });
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    }, MANGA_OCR_DEBOUNCE_MS);
+  })
+    .then((result) => {
+      mangaOcrResultCache.set(sourceKey, result);
+      return result;
+    })
+    .finally(() => {
+      settled = true;
+      const current = pendingMangaOcrRequests.get(sourceKey);
+      if (current?.requestId === requestId) {
+        pendingMangaOcrRequests.delete(sourceKey);
+      }
+    });
+
+  const entry: PendingMangaOcrEntry = {
+    requestId,
+    consumers: 0,
+    promise,
+    cancel: () => {
+      if (settled) return;
+
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+        timeoutId = undefined;
+        rejectPromise?.(new Error("cancelled"));
+        return;
+      }
+
+      if (requestStarted) {
+        void window.api.ocr.cancelMangaRecognize(requestId);
+      }
+    },
+  };
+
+  pendingMangaOcrRequests.set(sourceKey, entry);
+  return entry;
+}
+
+function releasePendingMangaOcrRequest(sourceKey: string, requestId: string): void {
+  const entry = pendingMangaOcrRequests.get(sourceKey);
+  if (!entry || entry.requestId !== requestId) return;
+
+  entry.consumers -= 1;
+  if (entry.consumers <= 0) {
+    entry.cancel();
+  }
 }
 
 interface OcrTextOverlayProps {
@@ -42,6 +137,9 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
 }) => {
   const [blocks, setBlocks] = useState<OcrBlock[]>([]);
   const [isRecognizing, setIsRecognizing] = useState(false);
+  // Source dimensions from PaddleOCR (the coordinate space bbox values are relative to)
+  const [ocrSourceWidth, setOcrSourceWidth] = useState<number | undefined>();
+  const [ocrSourceHeight, setOcrSourceHeight] = useState<number | undefined>();
   const [overlayStyle, setOverlayStyle] = useState<React.CSSProperties>({});
   const lastSourceRef = useRef<string>("");
   const lastEngineRef = useRef<string>("");
@@ -85,20 +183,39 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
     lastEngineRef.current = ocrEngine;
 
     let cancelled = false;
+    let pendingRequestId: string | null = null;
     setIsRecognizing(true);
     setBlocks([]);
+    setOcrSourceWidth(undefined);
+    setOcrSourceHeight(undefined);
 
     (async () => {
       try {
         if (ocrEngine === "manga") {
-          // PaddleOCR-VL 1.5 via vLLM
           if (!window?.api?.ocr?.mangaRecognize) {
             console.warn("PaddleOCR API not available");
             return;
           }
-          const result = await window.api.ocr.mangaRecognize(imageSource);
+
+          const cachedResult = mangaOcrResultCache.get(sourceKey);
+          if (cachedResult) {
+            if (!cancelled) {
+              setBlocks(cachedResult.blocks);
+              setOcrSourceWidth(cachedResult.sourceWidth);
+              setOcrSourceHeight(cachedResult.sourceHeight);
+            }
+            return;
+          }
+
+          const pendingRequest = createPendingMangaOcrRequest(sourceKey, imageSource);
+          pendingRequest.consumers += 1;
+          pendingRequestId = pendingRequest.requestId;
+
+          const result = await pendingRequest.promise;
           if (!cancelled && result?.blocks) {
             setBlocks(result.blocks);
+            setOcrSourceWidth(result.sourceWidth);
+            setOcrSourceHeight(result.sourceHeight);
           }
         } else {
           // Native OCR
@@ -112,7 +229,9 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
           }
         }
       } catch (error) {
-        console.error("OCR failed:", error);
+        if (!isOcrCancelledError(error)) {
+          console.error("OCR failed:", error);
+        }
       } finally {
         if (!cancelled) setIsRecognizing(false);
       }
@@ -120,6 +239,9 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
 
     return () => {
       cancelled = true;
+      if (ocrEngine === "manga" && pendingRequestId) {
+        releasePendingMangaOcrRequest(sourceKey, pendingRequestId);
+      }
     };
   }, [imageSource, enabled, languageHint, ocrEngine]);
 
@@ -135,13 +257,23 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
   const hasContent = blocks.length > 0;
   if (!enabled || (!hasContent && !isRecognizing)) return null;
 
+  // Split blocks into positioned (have coordinates) and text-only (no coordinates)
+  const positionedBlocks = blocks.filter((b) => b.width > 0 && b.height > 0);
+  const textOnlyBlocks = blocks.filter((b) => b.width === 0 || b.height === 0);
+  const textOnlyContent = textOnlyBlocks.map((b) => b.text).join("\n");
+
+  // Use PaddleOCR's source dimensions (the coordinate space of the bboxes)
+  // when available, otherwise fall back to the original image dimensions
+  const refWidth = ocrSourceWidth || imageWidth;
+  const refHeight = ocrSourceHeight || imageHeight;
+
   const scaleX =
-    overlayStyle.width && imageWidth
-      ? (overlayStyle.width as number) / imageWidth
+    overlayStyle.width && refWidth
+      ? (overlayStyle.width as number) / refWidth
       : 1;
   const scaleY =
-    overlayStyle.height && imageHeight
-      ? (overlayStyle.height as number) / imageHeight
+    overlayStyle.height && refHeight
+      ? (overlayStyle.height as number) / refHeight
       : 1;
 
   return (
@@ -156,35 +288,44 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
         </div>
       )}
 
-      {/* Positioned text blocks (same for both engines) */}
-      {blocks.map((block, i) => (
-        <div
-          key={i}
-          className="absolute cursor-text"
-          style={{
-            left: block.x * scaleX,
-            top: block.y * scaleY,
-            width: block.width * scaleX,
-            height: block.height * scaleY,
-            pointerEvents: "auto",
-          }}
-        >
-          <span
-            className="block w-full h-full select-text"
+      {/* Positioned text blocks (blocks with valid coordinates) */}
+      {positionedBlocks.map((block, i) => {
+        return (
+          <div
+            key={i}
+            className="absolute cursor-text"
             style={{
-              fontSize: Math.max(8, block.height * scaleY * 0.8),
-              lineHeight: `${block.height * scaleY}px`,
-              color: "transparent",
-              whiteSpace: "pre-wrap",
-              overflow: "hidden",
-              userSelect: "text",
-              WebkitUserSelect: "text",
+              left: block.x * scaleX,
+              top: block.y * scaleY,
+              width: block.width * scaleX,
+              height: block.height * scaleY,
+              pointerEvents: "auto",
             }}
           >
-            {block.text}
-          </span>
+            <span
+              className="block w-full h-full select-text"
+              style={getOcrBlockTextStyle(block, scaleX, scaleY)}
+            >
+              {block.text}
+            </span>
+          </div>
+        );
+      })}
+
+      {/* Text-only fallback (blocks without coordinates — e.g. from PaddleOCR official API) */}
+      {textOnlyContent && (
+        <div
+          className="absolute bottom-2 left-2 right-2 max-h-[40%] overflow-y-auto p-2 rounded bg-black/60 backdrop-blur-sm"
+          style={{ pointerEvents: "auto" }}
+        >
+          <p
+            className="text-white/90 text-sm leading-relaxed select-text whitespace-pre-wrap"
+            style={{ userSelect: "text", WebkitUserSelect: "text" }}
+          >
+            {textOnlyContent}
+          </p>
         </div>
-      ))}
+      )}
     </div>
   );
 };

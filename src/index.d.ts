@@ -33,6 +33,11 @@ import type {
   RoleplayChatRequest,
   RoleplayChatResponse,
 } from "./types/roleplay";
+import type {
+  MangaOcrRequest,
+  MangaOcrResult,
+  NativeOcrResult,
+} from "./types/ocr";
 
 declare global {
   interface Window {
@@ -195,31 +200,10 @@ export interface IElectronAPI {
     recognizeText: (
       imageInput: string,
       languageHint?: string
-    ) => Promise<{
-      text: string;
-      blocks: Array<{
-        text: string;
-        confidence: number;
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-      }>;
-      language?: string;
-    }>;
+    ) => Promise<NativeOcrResult>;
     isAvailable: () => Promise<boolean>;
-    mangaRecognize: (imageInput: string) => Promise<{
-      text: string;
-      confidence: number;
-      blocks: Array<{
-        text: string;
-        confidence: number;
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-      }>;
-    }>;
+    mangaRecognize: (request: MangaOcrRequest) => Promise<MangaOcrResult>;
+    cancelMangaRecognize: (requestId: string) => Promise<boolean>;
     mangaIsReady: () => Promise<boolean>;
   };
 

@@ -340,9 +340,18 @@ export const useBookshelfStore = create<BookshelfState>()((set, get) => ({
         ? window.api.db.chapters.deleteByBook(bookToDelete.id)
         : Promise.resolve(false);
 
-      const removeFile = window.api.epub?.removeFromLibrary
-        ? window.api.epub.removeFromLibrary(bookToDelete.id)
-        : Promise.resolve(false);
+      const isImageFormat =
+        bookToDelete.format === 'pdf' ||
+        bookToDelete.format === 'cbz' ||
+        bookToDelete.format === 'cbr';
+
+      const removeFile = isImageFormat
+        ? (window.api.book?.removeFromLibrary
+            ? window.api.book.removeFromLibrary(bookToDelete.id, bookToDelete.format)
+            : Promise.resolve(false))
+        : (window.api.epub?.removeFromLibrary
+            ? window.api.epub.removeFromLibrary(bookToDelete.id)
+            : Promise.resolve(false));
 
       await Promise.all([chaptersDeletion, removeFile]);
 

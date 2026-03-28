@@ -3,6 +3,9 @@
  *
  * Unlike the full ReaderPage (which handles EPUB HTML chapters, sentence analysis,
  * TTS, roleplay, etc.), this page focuses on simple image page navigation.
+ *
+ * Chrome (toolbar / footer / sidebar) follows the same Apple HIG light-frosted-glass
+ * design language as the EPUB ReaderPage, while the content area stays dark.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,6 +17,7 @@ import ImageScrollViewer, {
 } from "../../components/reader/ImageScrollViewer";
 import ImageThumbnailSidebar from "../../components/reader/ImageThumbnailSidebar";
 import type { ZoomMode } from "../../hooks/useImageReaderZoom";
+import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
 import "../../components/reader/ImagePageViewer.css";
 
 export type OcrEngine = "native" | "manga";
@@ -38,12 +42,10 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
 }) => {
   const viewerRef = useRef<ImagePageViewerHandle>(null);
   const scrollViewerRef = useRef<ImageScrollViewerHandle>(null);
-  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const [ocrEnabled, setOcrEnabled] = useState(false);
   const [ocrEngine, setOcrEngine] = useState<OcrEngine>("manga");
   const [ocrAvailable, setOcrAvailable] = useState(false);
   const [mangaReady, setMangaReady] = useState(false);
-  const hideTimerRef = useRef<number | null>(null);
 
   // Zoom state (synced from viewer)
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -52,8 +54,14 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   // Thumbnail sidebar
   const [isThumbnailOpen, setIsThumbnailOpen] = useState(false);
 
-  // Current page (synced from viewer)
+  // Current page & progress (synced from viewer)
   const [currentPage, setCurrentPage] = useState(1);
+  // Toolbar visibility — same hook as EPUB reader
+  const {
+    isHeaderVisible,
+    handlePointerMove,
+    showToolbarsTemporarily,
+  } = useReaderToolbarVisibility();
 
   // View mode: single-page or continuous scroll
   const [viewMode, setViewMode] = useState<"page" | "scroll">(() => {
@@ -86,24 +94,10 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
       .catch(() => setMangaReady(false));
   }, []);
 
-  const scheduleHideToolbar = useCallback(() => {
-    if (hideTimerRef.current !== null) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = window.setTimeout(() => {
-      setIsToolbarVisible(false);
-    }, 3000);
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const y = e.clientY;
-      const h = window.innerHeight;
-      if (y < 60 || y > h - 60) {
-        setIsToolbarVisible(true);
-        scheduleHideToolbar();
-      }
-    },
-    [scheduleHideToolbar]
-  );
+  // Show toolbars on mount
+  useEffect(() => {
+    showToolbarsTemporarily(1800);
+  }, [showToolbarsTemporarily]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -117,13 +111,6 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onExitReader]);
-
-  useEffect(() => {
-    scheduleHideToolbar();
-    return () => {
-      if (hideTimerRef.current !== null) clearTimeout(hideTimerRef.current);
-    };
-  }, [scheduleHideToolbar]);
 
   const handlePageChange = useCallback(
     (page: number, _total: number, progress: number) => {
@@ -141,14 +128,21 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     []
   );
 
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      handlePointerMove(e.clientY);
+    },
+    [handlePointerMove]
+  );
+
   if (!book.filePath || !book.totalPages) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#1a1a1a] text-white">
+      <div className="h-screen flex items-center justify-center bg-[#1c1c1e] text-[#e5e5e7]">
         <div className="text-center">
           <p className="text-lg mb-4">无法加载书籍</p>
           <button
             onClick={onExitReader}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+            className="px-4 py-2 bg-black/10 hover:bg-black/15 rounded-lg transition-colors text-[#007aff]"
           >
             返回书架
           </button>
@@ -181,194 +175,210 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     return viewerRef.current?.loadThumbnail(page) ?? null;
   };
 
+  // Active viewer ref shorthand
+  const activeViewerRef = viewMode === "scroll" ? scrollViewerRef : viewerRef;
+
   return (
     <div
-      className="h-screen w-screen bg-[#1a1a1a] flex flex-col"
+      className="h-screen w-screen bg-[#1c1c1e] flex flex-col"
       onMouseMove={handleMouseMove}
     >
-      {/* Top toolbar */}
+      {/* ── Transparent drag strip (same as EPUB ReaderLayout) ── */}
       <div
+        className="fixed top-0 left-0 right-0 z-40 h-7"
+        style={{ WebkitAppRegion: isHeaderVisible ? "no-drag" : "drag" } as React.CSSProperties}
+      />
+
+      {/* ── Top toolbar — Apple HIG light frosted glass ── */}
+      <header
         className={`
-          absolute top-0 left-0 right-0 z-50
-          flex items-center justify-between px-6 h-[52px]
-          bg-[rgba(30,30,30,0.75)] backdrop-blur-[20px] backdrop-saturate-[180%]
-          border-b border-white/[0.08]
-          transition-all duration-300
-          ${isToolbarVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"}
+          fixed top-0 left-0 right-0 z-50
+          border-b border-gray-200/80
+          bg-[#fdfdfd]/90 backdrop-blur-md
+          transition-transform duration-300 ease-in-out
+          ${isHeaderVisible ? "translate-y-0" : "-translate-y-full"}
         `}
-        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       >
-        <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-          {/* Back button */}
-          <button
-            onClick={onExitReader}
-            className="flex items-center gap-1.5 text-white/70 hover:text-white hover:bg-white/[0.1] rounded-md px-2 py-1.5 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="text-[13px] font-medium">返回</span>
-          </button>
-
-          {/* Divider */}
-          <div className="h-4 w-px bg-white/15" />
-
-          {/* Thumbnail sidebar toggle */}
-          <button
-            onClick={() => setIsThumbnailOpen((v) => !v)}
-            className={`p-1.5 rounded-md transition-colors ${
-              isThumbnailOpen
-                ? "bg-white/20 text-white"
-                : "text-white/60 hover:text-white hover:bg-white/[0.1]"
-            }`}
-            title="缩略图 (⌘⇧D)"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-            </svg>
-          </button>
-        </div>
-
-        <h1 className="text-white/90 text-sm font-medium truncate max-w-[40%]">
-          {book.title}
-        </h1>
-
         <div
-          className="flex items-center gap-1.5"
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          className="flex items-center justify-between px-4 py-2"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
         >
-          {/* ── Zoom controls ── */}
-          <div className="flex items-center gap-0.5 rounded-md bg-white/10 border border-white/10 overflow-hidden">
+          {/* ── Left: navigation (pl-[76px] clears macOS traffic lights) ── */}
+          <div className="flex items-center gap-1 pl-[76px]" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <button
-              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.zoomOut()}
-              className="px-1.5 py-1 text-white/60 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
-              title="缩小 (⌘−)"
+              onClick={onExitReader}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[13px] font-medium text-gray-600 hover:bg-black/[0.05] hover:text-[#1d1d1f] transition-colors select-none"
             >
-              −
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              <span className="hidden sm:inline text-[13px]">返回</span>
             </button>
-            <span className="px-1.5 py-1 text-[10px] text-white/70 tabular-nums min-w-[36px] text-center">
-              {Math.round(zoomLevel * 100)}%
-            </span>
+
+            {/* Divider */}
+            <div className="h-4 w-px bg-gray-300 mx-0.5" />
+
+            {/* Thumbnail sidebar toggle */}
             <button
-              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.zoomIn()}
-              className="px-1.5 py-1 text-white/60 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
-              title="放大 (⌘+)"
+              onClick={() => setIsThumbnailOpen((v) => !v)}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[13px] font-medium transition-colors select-none ${
+                isThumbnailOpen
+                  ? "bg-[#007aff]/10 text-[#007aff]"
+                  : "text-gray-600 hover:bg-black/[0.05] hover:text-[#1d1d1f]"
+              }`}
+              title="缩略图 (⌘⇧D)"
             >
-              +
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+              </svg>
             </button>
           </div>
 
-          {/* Zoom preset buttons */}
-          <div className="flex items-center rounded-md bg-white/10 border border-white/10 overflow-hidden">
-            <button
-              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.setZoomMode("fit-page")}
-              className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                zoomMode === "fit-page" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
-              }`}
-              title="适应页面 (⌘0)"
-            >
-              适应页面
-            </button>
-            <button
-              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.setZoomMode("fit-width")}
-              className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                zoomMode === "fit-width" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
-              }`}
-              title="适应宽度"
-            >
-              适应宽度
-            </button>
-            <button
-              onClick={() => (viewMode === "scroll" ? scrollViewerRef : viewerRef).current?.setZoomMode("actual")}
-              className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                zoomMode === "actual" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
-              }`}
-              title="实际大小"
-            >
-              实际
-            </button>
+          {/* ── Center: book title ── */}
+          <div className="hidden md:block text-center max-w-[420px] mx-auto">
+            <h1 className="truncate text-sm font-semibold text-[#1d1d1f]">
+              {book.title}
+            </h1>
           </div>
 
-          {/* Divider */}
-          <div className="h-4 w-px bg-white/15 mx-0.5" />
-
-          {/* View mode toggle */}
-          <div className="flex items-center rounded-md bg-white/10 border border-white/10 overflow-hidden">
-            <button
-              onClick={() => { if (viewMode !== "page") toggleViewMode(); }}
-              className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                viewMode === "page" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
-              }`}
-              title="单页模式"
-            >
-              单页
-            </button>
-            <button
-              onClick={() => { if (viewMode !== "scroll") toggleViewMode(); }}
-              className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                viewMode === "scroll" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
-              }`}
-              title="连续滚动"
-            >
-              滚动
-            </button>
-          </div>
-
-          {/* Divider between view mode and OCR */}
-          <div className="h-4 w-px bg-white/15 mx-0.5" />
-
-          {/* OCR toggle — always visible, manga engine works on all platforms */}
-          <button
-            onClick={() => setOcrEnabled((v) => !v)}
-            className={`
-              px-2.5 py-1 rounded-md text-[11px] font-medium transition-all
-              ${ocrEnabled
-                ? "bg-white/25 text-white border border-white/30"
-                : "bg-white/10 text-white/60 hover:text-white/80 hover:bg-white/15 border border-transparent"
-              }
-            `}
-            title={ocrEnabled ? "关闭 OCR" : "开启 OCR"}
+          {/* ── Right: controls ── */}
+          <div
+            className="flex items-center gap-1.5"
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
-            OCR
-          </button>
-
-          {/* Engine selector (visible when OCR is on) */}
-          {ocrEnabled && (
-            <div className="flex items-center rounded-md bg-white/10 border border-white/10 overflow-hidden">
-              {ocrAvailable && (
-                <button
-                  onClick={() => setOcrEngine("native")}
-                  className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                    ocrEngine === "native"
-                      ? "bg-white/20 text-white"
-                      : "text-white/50 hover:text-white/70"
-                  }`}
-                >
-                  普通
-                </button>
-              )}
+            {/* ── Zoom controls ── */}
+            <div className="flex items-center gap-0.5 rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
               <button
-                onClick={() => {
-                  setOcrEngine("manga");
-                  recheckMangaHealth();
-                }}
-                className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                  ocrEngine === "manga"
-                    ? "bg-white/20 text-white"
-                    : "text-white/50 hover:text-white/70"
-                }`}
+                onClick={() => activeViewerRef.current?.zoomOut()}
+                className="px-1.5 py-1 text-gray-500 hover:text-[#1d1d1f] hover:bg-black/[0.05] transition-all text-sm font-medium"
+                title="缩小 (⌘−)"
               >
-                漫画
+                −
+              </button>
+              <span className="px-1.5 py-1 text-[10px] text-gray-500 tabular-nums min-w-[36px] text-center">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button
+                onClick={() => activeViewerRef.current?.zoomIn()}
+                className="px-1.5 py-1 text-gray-500 hover:text-[#1d1d1f] hover:bg-black/[0.05] transition-all text-sm font-medium"
+                title="放大 (⌘+)"
+              >
+                +
               </button>
             </div>
-          )}
+
+            {/* Zoom preset buttons */}
+            <div className="flex items-center rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
+              <button
+                onClick={() => activeViewerRef.current?.setZoomMode("fit-page")}
+                className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                  zoomMode === "fit-page" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
+                }`}
+                title="适应页面 (⌘0)"
+              >
+                适应页面
+              </button>
+              <button
+                onClick={() => activeViewerRef.current?.setZoomMode("fit-width")}
+                className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                  zoomMode === "fit-width" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
+                }`}
+                title="适应宽度"
+              >
+                适应宽度
+              </button>
+              <button
+                onClick={() => activeViewerRef.current?.setZoomMode("actual")}
+                className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                  zoomMode === "actual" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
+                }`}
+                title="实际大小"
+              >
+                实际
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="h-4 w-px bg-gray-300 mx-0.5" />
+
+            {/* View mode toggle */}
+            <div className="flex items-center rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
+              <button
+                onClick={() => { if (viewMode !== "page") toggleViewMode(); }}
+                className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                  viewMode === "page" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
+                }`}
+                title="单页模式"
+              >
+                单页
+              </button>
+              <button
+                onClick={() => { if (viewMode !== "scroll") toggleViewMode(); }}
+                className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                  viewMode === "scroll" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
+                }`}
+                title="连续滚动"
+              >
+                滚动
+              </button>
+            </div>
+
+            {/* Divider between view mode and OCR */}
+            <div className="h-4 w-px bg-gray-300 mx-0.5" />
+
+            {/* OCR toggle */}
+            <button
+              onClick={() => setOcrEnabled((v) => !v)}
+              className={`
+                px-2.5 py-1 rounded-md text-[11px] font-medium transition-all
+                ${ocrEnabled
+                  ? "bg-[#007aff]/10 text-[#007aff] border border-[#007aff]/30"
+                  : "bg-black/[0.04] text-gray-500 hover:text-[#1d1d1f] hover:bg-black/[0.06] border border-gray-200/60"
+                }
+              `}
+              title={ocrEnabled ? "关闭 OCR" : "开启 OCR"}
+            >
+              OCR
+            </button>
+
+            {/* Engine selector (visible when OCR is on) */}
+            {ocrEnabled && (
+              <div className="flex items-center rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
+                {ocrAvailable && (
+                  <button
+                    onClick={() => setOcrEngine("native")}
+                    className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                      ocrEngine === "native"
+                        ? "bg-[#007aff]/10 text-[#007aff]"
+                        : "text-gray-500 hover:text-[#1d1d1f]"
+                    }`}
+                  >
+                    普通
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setOcrEngine("manga");
+                    recheckMangaHealth();
+                  }}
+                  className={`px-2 py-1 text-[10px] font-medium transition-all ${
+                    ocrEngine === "manga"
+                      ? "bg-[#007aff]/10 text-[#007aff]"
+                      : "text-gray-500 hover:text-[#1d1d1f]"
+                  }`}
+                >
+                  漫画
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </header>
 
       {/* PaddleOCR service unavailable banner */}
       {ocrEnabled && ocrEngine === "manga" && !mangaReady && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-black/80 backdrop-blur-md rounded-lg px-4 py-3 text-center border border-white/10 max-w-sm">
-          <p className="text-white/80 text-xs">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-[#fdfdfd]/95 backdrop-blur-md rounded-lg px-4 py-3 text-center border border-gray-200/80 shadow-sm max-w-sm">
+          <p className="text-gray-600 text-xs">
             PaddleOCR 服务不可用，请检查服务器连接
           </p>
         </div>

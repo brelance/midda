@@ -3,6 +3,8 @@
  *
  * Shows lazy-loaded page thumbnails in a left sidebar. Current page is
  * highlighted with a blue border. Clicking a thumbnail jumps to that page.
+ *
+ * Uses the same light frosted-glass design language as ReaderTocSidebar.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -108,20 +110,21 @@ const ImageThumbnailSidebar: React.FC<ImageThumbnailSidebarProps> = ({
       className={`
         absolute top-0 left-0 bottom-0 z-40
         w-[200px] flex flex-col
-        bg-[rgba(30,30,30,0.85)] backdrop-blur-[20px] backdrop-saturate-[180%]
-        border-r border-white/[0.08]
-        transition-transform duration-300 ease-out
+        bg-[#f9f9f9]/95 backdrop-blur-xl
+        border-r border-gray-200/60
+        shadow-xl shadow-black/8
+        transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 h-[52px] border-b border-white/[0.08] flex-shrink-0">
-        <span className="text-white/80 text-xs font-medium">缩略图</span>
+      <div className="flex items-center justify-between px-3 pt-14 pb-3 border-b border-gray-200/80 flex-shrink-0">
+        <span className="text-[#1d1d1f] text-sm font-semibold tracking-tight">缩略图</span>
         <button
           onClick={onClose}
-          className="text-white/50 hover:text-white hover:bg-white/[0.1] rounded p-1 transition-colors"
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-black/[0.06] text-gray-500 transition-colors hover:bg-black/[0.1] hover:text-gray-700 active:scale-95"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -141,15 +144,15 @@ const ImageThumbnailSidebar: React.FC<ImageThumbnailSidebarProps> = ({
               className={`
                 cursor-pointer rounded-md overflow-hidden transition-all duration-150
                 ${isActive
-                  ? "ring-2 ring-[#007aff] ring-offset-1 ring-offset-[#1a1a1a]"
-                  : "hover:ring-1 hover:ring-white/20"
+                  ? "ring-2 ring-[#007aff] ring-offset-1 ring-offset-white"
+                  : "hover:ring-1 hover:ring-gray-300"
                 }
               `}
               onClick={() => onPageSelect(page)}
             >
               {/* Thumbnail image or placeholder */}
               <div
-                className="bg-white/5 flex items-center justify-center"
+                className="bg-gray-100 flex items-center justify-center"
                 style={{ width: THUMB_WIDTH, aspectRatio: "3/4" }}
               >
                 {thumbUrl ? (
@@ -160,7 +163,7 @@ const ImageThumbnailSidebar: React.FC<ImageThumbnailSidebarProps> = ({
                     draggable={false}
                   />
                 ) : (
-                  <div className="flex items-center justify-center text-white/20 text-xs">
+                  <div className="flex items-center justify-center text-gray-400 text-xs">
                     {page}
                   </div>
                 )}
@@ -168,7 +171,7 @@ const ImageThumbnailSidebar: React.FC<ImageThumbnailSidebarProps> = ({
 
               {/* Page number label */}
               <div className={`text-center py-1 text-[10px] tabular-nums ${
-                isActive ? "text-[#007aff] font-medium" : "text-white/50"
+                isActive ? "text-[#007aff] font-medium" : "text-gray-500"
               }`}>
                 {page}
               </div>
