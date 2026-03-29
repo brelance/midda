@@ -745,7 +745,7 @@ body {
 }
 
 .study-idle-row {
-  font-size: var(--reader-font-size, 18px);
+  font-size: var(--reader-font-size, 15px);
   line-height: var(--reader-line-height, 1.8);
   align-items: baseline;
 }
@@ -790,7 +790,7 @@ body {
 /* Main kanji / word */
 .study-kanji {
   font-family: var(--reader-font-family, inherit);
-  font-size: var(--reader-font-size, 18px);
+  font-size: var(--reader-font-size, 15px);
   line-height: 1.2;
   letter-spacing: 0.03em;
   transition: opacity 140ms;
@@ -808,6 +808,52 @@ body {
   user-select: none;
   text-align: center;
   white-space: nowrap;
+}
+
+/* ── Vertical writing-mode (縦書き) overrides ────────────────────── */
+/* Applied when the right panel has writing-mode: vertical-rl        */
+
+/* In vertical mode the sentence row flows top-to-bottom (which is 'row' in vertical-rl) */
+[style*="vertical-rl"] .study-sentence-row {
+  flex-direction: row;
+  align-items: center; /* keep words middle aligned relative to the line */
+  gap: 1px 0;
+}
+
+/* Word unit: ruby sits to the right of the kanji, romaji to the left */
+/* 'column' in vertical-rl flows right-to-left */
+[style*="vertical-rl"] .study-word-unit {
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 2px;
+}
+
+/* Ruby annotation: sits to the right of the character in vertical text */
+[style*="vertical-rl"] .study-ruby {
+  writing-mode: vertical-rl;
+  font-size: 0.45rem;
+  min-height: unset;
+  min-width: 0.7rem;
+  letter-spacing: 0;
+  margin-left: 0;
+  margin-right: 0;
+  text-align: start;
+  text-orientation: upright;
+}
+
+/* Main kanji / word */
+[style*="vertical-rl"] .study-kanji {
+  text-orientation: upright;
+}
+
+/* Romaji: sits to the left of the character in vertical text */
+[style*="vertical-rl"] .study-romaji {
+  writing-mode: vertical-rl;
+  font-size: 0.45rem;
+  margin-top: 0;
+  margin-right: 1px;
+  letter-spacing: 0;
+  text-orientation: sideways;
 }
 
 /* ── Floating word-detail popover ───────────────────────────────── */

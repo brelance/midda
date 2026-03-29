@@ -6,6 +6,10 @@
  *
  * Chrome (toolbar / footer / sidebar) follows the same Apple HIG light-frosted-glass
  * design language as the EPUB ReaderPage, while the content area stays dark.
+ *
+ * Supports two modes:
+ * - Normal: single-page or scroll viewer with optional OCR overlay
+ * - Study (精読): dual-pane layout with PDF on left, OCR text analysis on right
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -16,8 +20,13 @@ import ImageScrollViewer, {
   type ImageScrollViewerHandle,
 } from "../../components/reader/ImageScrollViewer";
 import ImageThumbnailSidebar from "../../components/reader/ImageThumbnailSidebar";
+import ImageReaderSettingsModal from "../../components/reader/ImageReaderSettingsModal";
+import ImageStudyPanel, {
+  type ImageStudyPanelHandle,
+} from "../../components/reader/ImageStudyPanel";
 import type { ZoomMode } from "../../hooks/useImageReaderZoom";
 import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
+import { deriveImageReaderMode } from "./imageReaderModeSelectors";
 import "../../components/reader/ImagePageViewer.css";
 
 export type OcrEngine = "native" | "manga";
@@ -42,6 +51,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
 }) => {
   const viewerRef = useRef<ImagePageViewerHandle>(null);
   const scrollViewerRef = useRef<ImageScrollViewerHandle>(null);
+  const studyPanelRef = useRef<ImageStudyPanelHandle>(null);
   const [ocrEnabled, setOcrEnabled] = useState(false);
   const [ocrEngine, setOcrEngine] = useState<OcrEngine>("manga");
   const [ocrAvailable, setOcrAvailable] = useState(false);
@@ -53,6 +63,12 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
 
   // Thumbnail sidebar
   const [isThumbnailOpen, setIsThumbnailOpen] = useState(false);
+
+  // Settings modal
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Study mode (精読)
+  const [studyMode, setStudyMode] = useState(false);
 
   // Current page & progress (synced from viewer)
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,13 +84,15 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     try { return (localStorage.getItem("midda-reader-viewMode") as "page" | "scroll") || "page"; }
     catch { return "page"; }
   });
+  const {
+    activeReader,
+    effectiveViewMode,
+    effectiveOcrEnabled,
+  } = deriveImageReaderMode({ studyMode, viewMode, ocrEnabled });
 
-  const toggleViewMode = useCallback(() => {
-    setViewMode((prev) => {
-      const next = prev === "page" ? "scroll" : "page";
-      try { localStorage.setItem("midda-reader-viewMode", next); } catch {}
-      return next;
-    });
+  const handleViewModeChange = useCallback((mode: "page" | "scroll") => {
+    setViewMode(mode);
+    try { localStorage.setItem("midda-reader-viewMode", mode); } catch {}
   }, []);
 
   // Check OCR availability
@@ -135,6 +153,24 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     [handlePointerMove]
   );
 
+  // Settings modal callbacks
+  const handleZoomModeChange = useCallback((mode: ZoomMode) => {
+    if (mode === "custom") return; // custom is not a settable mode
+    const ref = effectiveViewMode === "scroll" ? scrollViewerRef : viewerRef;
+    ref.current?.setZoomMode(mode);
+  }, [effectiveViewMode]);
+
+  const handleStudyModeChange = useCallback((enabled: boolean) => {
+    setStudyMode(enabled);
+  }, []);
+
+  const handleOcrEngineChange = useCallback((engine: OcrEngine) => {
+    setOcrEngine(engine);
+    if (engine === "manga") {
+      recheckMangaHealth();
+    }
+  }, [recheckMangaHealth]);
+
   if (!book.filePath || !book.totalPages) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#1c1c1e] text-[#e5e5e7]">
@@ -159,7 +195,9 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
 
   // Sidebar callbacks — Fix #11
   const handleSidebarPageSelect = (page: number) => {
-    if (viewMode === "scroll") {
+    if (activeReader === "study") {
+      studyPanelRef.current?.goToPage(page);
+    } else if (activeReader === "scroll") {
       scrollViewerRef.current?.goToPage(page);
     } else {
       viewerRef.current?.goToPage(page);
@@ -169,14 +207,14 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   const handleSidebarClose = () => setIsThumbnailOpen(false);
 
   const handleSidebarLoadThumbnail = async (page: number) => {
-    if (viewMode === "scroll") {
+    if (activeReader === "study") {
+      return studyPanelRef.current?.loadThumbnail(page) ?? null;
+    }
+    if (activeReader === "scroll") {
       return scrollViewerRef.current?.loadThumbnail(page) ?? null;
     }
     return viewerRef.current?.loadThumbnail(page) ?? null;
   };
-
-  // Active viewer ref shorthand
-  const activeViewerRef = viewMode === "scroll" ? scrollViewerRef : viewerRef;
 
   return (
     <div
@@ -241,142 +279,61 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
             </h1>
           </div>
 
-          {/* ── Right: controls ── */}
+          {/* ── Right: settings gear + zoom controls ── */}
           <div
             className="flex items-center gap-1.5"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
-            {/* ── Zoom controls ── */}
-            <div className="flex items-center gap-0.5 rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
-              <button
-                onClick={() => activeViewerRef.current?.zoomOut()}
-                className="px-1.5 py-1 text-gray-500 hover:text-[#1d1d1f] hover:bg-black/[0.05] transition-all text-sm font-medium"
-                title="缩小 (⌘−)"
-              >
-                −
-              </button>
-              <span className="px-1.5 py-1 text-[10px] text-gray-500 tabular-nums min-w-[36px] text-center">
-                {Math.round(zoomLevel * 100)}%
+            {/* Study mode badge */}
+            {studyMode && (
+              <span className="px-2 py-0.5 rounded-md bg-[#007aff]/10 text-[#007aff] text-[11px] font-medium">
+                精读
               </span>
-              <button
-                onClick={() => activeViewerRef.current?.zoomIn()}
-                className="px-1.5 py-1 text-gray-500 hover:text-[#1d1d1f] hover:bg-black/[0.05] transition-all text-sm font-medium"
-                title="放大 (⌘+)"
-              >
-                +
-              </button>
-            </div>
+            )}
 
-            {/* Zoom preset buttons */}
-            <div className="flex items-center rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
-              <button
-                onClick={() => activeViewerRef.current?.setZoomMode("fit-page")}
-                className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                  zoomMode === "fit-page" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
-                }`}
-                title="适应页面 (⌘0)"
-              >
-                适应页面
-              </button>
-              <button
-                onClick={() => activeViewerRef.current?.setZoomMode("fit-width")}
-                className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                  zoomMode === "fit-width" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
-                }`}
-                title="适应宽度"
-              >
-                适应宽度
-              </button>
-              <button
-                onClick={() => activeViewerRef.current?.setZoomMode("actual")}
-                className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                  zoomMode === "actual" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
-                }`}
-                title="实际大小"
-              >
-                实际
-              </button>
-            </div>
+            {/* Zoom +/- (only in normal mode) */}
+            {!studyMode && (
+              <div className="flex items-center gap-0.5 rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
+                <button
+                  onClick={() => (effectiveViewMode === "scroll" ? scrollViewerRef : viewerRef).current?.zoomOut()}
+                  className="px-1.5 py-1 text-gray-500 hover:text-[#1d1d1f] hover:bg-black/[0.05] transition-all text-sm font-medium"
+                  title="缩小 (⌘−)"
+                >
+                  −
+                </button>
+                <span className="px-1.5 py-1 text-[10px] text-gray-500 tabular-nums min-w-[36px] text-center">
+                  {Math.round(zoomLevel * 100)}%
+                </span>
+                <button
+                  onClick={() => (effectiveViewMode === "scroll" ? scrollViewerRef : viewerRef).current?.zoomIn()}
+                  className="px-1.5 py-1 text-gray-500 hover:text-[#1d1d1f] hover:bg-black/[0.05] transition-all text-sm font-medium"
+                  title="放大 (⌘+)"
+                >
+                  +
+                </button>
+              </div>
+            )}
 
             {/* Divider */}
             <div className="h-4 w-px bg-gray-300 mx-0.5" />
 
-            {/* View mode toggle */}
-            <div className="flex items-center rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
-              <button
-                onClick={() => { if (viewMode !== "page") toggleViewMode(); }}
-                className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                  viewMode === "page" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
-                }`}
-                title="单页模式"
-              >
-                单页
-              </button>
-              <button
-                onClick={() => { if (viewMode !== "scroll") toggleViewMode(); }}
-                className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                  viewMode === "scroll" ? "bg-[#007aff]/10 text-[#007aff]" : "text-gray-500 hover:text-[#1d1d1f]"
-                }`}
-                title="连续滚动"
-              >
-                滚动
-              </button>
-            </div>
-
-            {/* Divider between view mode and OCR */}
-            <div className="h-4 w-px bg-gray-300 mx-0.5" />
-
-            {/* OCR toggle */}
+            {/* Settings gear */}
             <button
-              onClick={() => setOcrEnabled((v) => !v)}
-              className={`
-                px-2.5 py-1 rounded-md text-[11px] font-medium transition-all
-                ${ocrEnabled
-                  ? "bg-[#007aff]/10 text-[#007aff] border border-[#007aff]/30"
-                  : "bg-black/[0.04] text-gray-500 hover:text-[#1d1d1f] hover:bg-black/[0.06] border border-gray-200/60"
-                }
-              `}
-              title={ocrEnabled ? "关闭 OCR" : "开启 OCR"}
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[13px] font-medium text-gray-600 hover:bg-black/[0.05] hover:text-[#1d1d1f] transition-colors select-none"
+              title="设置"
             >
-              OCR
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.325 4.317c.426-1.756 3.324-1.756 3.75 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 3.324 0 3.75a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-3.324 1.756-3.75 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-3.324 0-3.75a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
             </button>
-
-            {/* Engine selector (visible when OCR is on) */}
-            {ocrEnabled && (
-              <div className="flex items-center rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
-                {ocrAvailable && (
-                  <button
-                    onClick={() => setOcrEngine("native")}
-                    className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                      ocrEngine === "native"
-                        ? "bg-[#007aff]/10 text-[#007aff]"
-                        : "text-gray-500 hover:text-[#1d1d1f]"
-                    }`}
-                  >
-                    普通
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setOcrEngine("manga");
-                    recheckMangaHealth();
-                  }}
-                  className={`px-2 py-1 text-[10px] font-medium transition-all ${
-                    ocrEngine === "manga"
-                      ? "bg-[#007aff]/10 text-[#007aff]"
-                      : "text-gray-500 hover:text-[#1d1d1f]"
-                  }`}
-                >
-                  漫画
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </header>
 
       {/* PaddleOCR service unavailable banner */}
-      {ocrEnabled && ocrEngine === "manga" && !mangaReady && (
+      {effectiveOcrEnabled && ocrEngine === "manga" && !mangaReady && (
         <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-[#fdfdfd]/95 backdrop-blur-md rounded-lg px-4 py-3 text-center border border-gray-200/80 shadow-sm max-w-sm">
           <p className="text-gray-600 text-xs">
             PaddleOCR 服务不可用，请检查服务器连接
@@ -384,8 +341,20 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
         </div>
       )}
 
-      {/* Viewer: single-page or continuous scroll */}
-      {viewMode === "scroll" ? (
+      {/* ── Content area ── */}
+      {activeReader === "study" ? (
+        /* Study mode: dual-pane layout */
+        <ImageStudyPanel
+          ref={studyPanelRef}
+          bookId={book.id}
+          filePath={book.filePath}
+          format={book.format}
+          totalPages={book.totalPages}
+          initialPage={initialPage}
+          onPageChange={handlePageChange}
+          ocrEngine={ocrEngine}
+        />
+      ) : activeReader === "scroll" ? (
         <ImageScrollViewer
           ref={scrollViewerRef}
           bookId={book.id}
@@ -395,8 +364,9 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           initialPage={initialPage}
           onPageChange={handlePageChange}
           onZoomChange={handleZoomChange}
-          ocrEnabled={ocrEnabled}
+          ocrEnabled={effectiveOcrEnabled}
           ocrEngine={ocrEngine}
+          isFooterVisible={isHeaderVisible}
         />
       ) : (
         <ImagePageViewer
@@ -408,8 +378,9 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           initialPage={initialPage}
           onPageChange={handlePageChange}
           onZoomChange={handleZoomChange}
-          ocrEnabled={ocrEnabled}
+          ocrEnabled={effectiveOcrEnabled}
           ocrEngine={ocrEngine}
+          isFooterVisible={isHeaderVisible}
         />
       )}
 
@@ -421,6 +392,23 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
         onPageSelect={handleSidebarPageSelect}
         onClose={handleSidebarClose}
         loadThumbnail={handleSidebarLoadThumbnail}
+      />
+
+      {/* Settings modal */}
+      <ImageReaderSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        zoomMode={zoomMode}
+        onZoomModeChange={handleZoomModeChange}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        studyMode={studyMode}
+        onStudyModeChange={handleStudyModeChange}
+        ocrEnabled={ocrEnabled}
+        onOcrEnabledChange={setOcrEnabled}
+        ocrEngine={ocrEngine}
+        onOcrEngineChange={handleOcrEngineChange}
+        ocrAvailable={ocrAvailable}
       />
     </div>
   );

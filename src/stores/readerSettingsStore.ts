@@ -93,7 +93,7 @@ const migrateOldLocalStorageKeys = (
 export const useReaderSettings = create<ReaderSettingsState>()(
   persist(
     (set) => ({
-      fontSize: 18,
+      fontSize: 15,
       lineHeight: 1.8,
       theme: "light" as ReaderTheme,
       fontFamily: "",

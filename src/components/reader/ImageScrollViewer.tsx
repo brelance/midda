@@ -44,6 +44,8 @@ interface ImageScrollViewerProps {
   onZoomChange?: (level: number, mode: ZoomMode) => void;
   ocrEnabled?: boolean;
   ocrEngine?: OcrEngine;
+  /** When false, the bottom bar slides off-screen */
+  isFooterVisible?: boolean;
 }
 
 const PAGE_GAP = 8;
@@ -61,6 +63,7 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
       onZoomChange,
       ocrEnabled = false,
       ocrEngine = "native",
+      isFooterVisible = true,
     },
     ref
   ) => {
@@ -316,8 +319,12 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
           </div>
         </div>
 
-        {/* Bottom bar (same style as single-page viewer) */}
-        <div className="flex-shrink-0 w-full px-6 py-3 bg-[rgba(30,30,30,0.75)] backdrop-blur-[20px] backdrop-saturate-[180%] border-t border-white/[0.08] flex items-center gap-3">
+        {/* Bottom bar (same light frosted-glass style as single-page viewer) */}
+        <div className={`
+          flex-shrink-0 w-full px-6 py-3 bg-[#fdfdfd]/90 backdrop-blur-md border-t border-gray-200/80 flex items-center gap-3
+          transition-transform duration-300 ease-in-out
+          ${isFooterVisible ? 'translate-y-0' : 'translate-y-full'}
+        `}>
           {isPageInputVisible ? (
             <input
               autoFocus
@@ -336,7 +343,7 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
                 }
               }}
               onBlur={() => setIsPageInputVisible(false)}
-              className="w-16 bg-white/10 text-white text-sm text-center rounded px-1.5 py-0.5 border border-white/20 outline-none focus:border-white/50 tabular-nums"
+              className="w-16 bg-black/[0.06] text-[#1d1d1f] text-sm text-center rounded-md px-1.5 py-1 border border-gray-200/80 outline-none focus:border-[#007aff]/40 focus:ring-1 focus:ring-[#007aff]/20 tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
           ) : (
             <button
@@ -344,7 +351,7 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
                 setPageInputValue(String(currentPage));
                 setIsPageInputVisible(true);
               }}
-              className="text-white/70 hover:text-white text-sm tabular-nums transition-colors cursor-pointer whitespace-nowrap"
+              className="text-gray-500 hover:text-[#1d1d1f] text-sm tabular-nums transition-colors cursor-pointer whitespace-nowrap"
               title="点击跳转页码"
             >
               {currentPage} / {totalPages}
@@ -357,13 +364,13 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
             max={totalPages}
             value={currentPage}
             onChange={(e) => goToPage(Number(e.target.value))}
-            className="image-reader-slider flex-1 h-1 cursor-pointer"
+            className="image-reader-slider image-reader-slider--light flex-1 h-1 cursor-pointer"
             style={{
-              background: `linear-gradient(to right, rgba(255,255,255,0.7) ${pageProgress}%, rgba(255,255,255,0.2) ${pageProgress}%)`,
+              background: `linear-gradient(to right, rgba(0,122,255,0.7) ${pageProgress}%, rgba(0,0,0,0.08) ${pageProgress}%)`,
             }}
           />
 
-          <span className="text-white/70 text-sm tabular-nums whitespace-nowrap">
+          <span className="text-gray-500 text-sm tabular-nums whitespace-nowrap">
             {pageProgress}%
           </span>
         </div>
