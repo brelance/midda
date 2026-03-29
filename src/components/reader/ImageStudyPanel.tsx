@@ -565,6 +565,7 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
       setSentenceItems([]);
       clearQueue();
       languageRef.current = undefined;
+      processingRef.current = false;
 
       if (flushTimerRef.current !== null) {
         cancelAnimationFrame(flushTimerRef.current);
