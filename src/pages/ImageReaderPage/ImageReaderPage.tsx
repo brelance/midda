@@ -27,6 +27,7 @@ import ImageStudyPanel, {
 import type { ZoomMode } from "../../hooks/useImageReaderZoom";
 import { useReaderToolbarVisibility } from "../../hooks/useReaderToolbarVisibility";
 import { deriveImageReaderMode } from "./imageReaderModeSelectors";
+import type { ReadingMode } from "./imageReaderModeSelectors";
 import "../../components/reader/ImagePageViewer.css";
 
 export type OcrEngine = "native" | "manga";
@@ -52,9 +53,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   const viewerRef = useRef<ImagePageViewerHandle>(null);
   const scrollViewerRef = useRef<ImageScrollViewerHandle>(null);
   const studyPanelRef = useRef<ImageStudyPanelHandle>(null);
-  const [ocrEnabled, setOcrEnabled] = useState(false);
   const [ocrEngine, setOcrEngine] = useState<OcrEngine>("manga");
-  const [ocrAvailable, setOcrAvailable] = useState(false);
   const [mangaReady, setMangaReady] = useState(false);
 
   // Zoom state (synced from viewer)
@@ -67,8 +66,8 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   // Settings modal
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Study mode (精読)
-  const [studyMode, setStudyMode] = useState(false);
+  // Reading mode: browse (plain) / text (OCR overlay) / study (intensive reading)
+  const [readingMode, setReadingMode] = useState<ReadingMode>("browse");
 
   // Current page & progress (synced from viewer)
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,19 +87,16 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   const {
     activeReader,
     effectiveViewMode,
-    effectiveOcrEnabled,
-  } = deriveImageReaderMode({ studyMode, viewMode, ocrEnabled });
+    ocrEnabled,
+  } = deriveImageReaderMode({ readingMode, viewMode });
 
   const handleViewModeChange = useCallback((mode: "page" | "scroll") => {
     setViewMode(mode);
     try { localStorage.setItem("midda-reader-viewMode", mode); } catch {}
   }, []);
 
-  // Check OCR availability
+  // Check Manga OCR health on mount
   useEffect(() => {
-    window?.api?.ocr?.isAvailable?.()
-      .then((available) => setOcrAvailable(available))
-      .catch(() => {});
     window?.api?.ocr?.mangaIsReady?.()
       .then((ready) => setMangaReady(ready))
       .catch(() => {});
@@ -161,8 +157,8 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     ref.current?.setZoomMode(mode);
   }, [effectiveViewMode]);
 
-  const handleStudyModeChange = useCallback((enabled: boolean) => {
-    setStudyMode(enabled);
+  const handleReadingModeChange = useCallback((mode: ReadingMode) => {
+    setReadingMode(mode);
   }, []);
 
   const handleOcrEngineChange = useCallback((engine: OcrEngine) => {
@@ -285,15 +281,15 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
             className="flex items-center gap-1.5"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
-            {/* Study mode badge */}
-            {studyMode && (
+            {/* Reading mode badge */}
+            {readingMode !== "browse" && (
               <span className="px-2 py-0.5 rounded-md bg-[#007aff]/10 text-[#007aff] text-[11px] font-medium">
-                精读
+                {readingMode === "study" ? "精读" : "文字"}
               </span>
             )}
 
-            {/* Zoom +/- (only in normal mode) */}
-            {!studyMode && (
+            {/* Zoom +/- (only in non-study mode) */}
+            {readingMode !== "study" && (
               <div className="flex items-center gap-0.5 rounded-md bg-black/[0.04] border border-gray-200/60 overflow-hidden">
                 <button
                   onClick={() => (effectiveViewMode === "scroll" ? scrollViewerRef : viewerRef).current?.zoomOut()}
@@ -334,7 +330,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
       </header>
 
       {/* PaddleOCR service unavailable banner */}
-      {effectiveOcrEnabled && ocrEngine === "manga" && !mangaReady && (
+      {ocrEnabled && ocrEngine === "manga" && !mangaReady && (
         <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-[#fdfdfd]/95 backdrop-blur-md rounded-lg px-4 py-3 text-center border border-gray-200/80 shadow-sm max-w-sm">
           <p className="text-gray-600 text-xs">
             PaddleOCR 服务不可用，请检查服务器连接
@@ -365,7 +361,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           initialPage={initialPage}
           onPageChange={handlePageChange}
           onZoomChange={handleZoomChange}
-          ocrEnabled={effectiveOcrEnabled}
+          ocrEnabled={ocrEnabled}
           ocrEngine={ocrEngine}
           isFooterVisible={isFooterVisible}
         />
@@ -379,7 +375,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           initialPage={initialPage}
           onPageChange={handlePageChange}
           onZoomChange={handleZoomChange}
-          ocrEnabled={effectiveOcrEnabled}
+          ocrEnabled={ocrEnabled}
           ocrEngine={ocrEngine}
           isFooterVisible={isFooterVisible}
         />
@@ -403,13 +399,10 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
         onZoomModeChange={handleZoomModeChange}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
-        studyMode={studyMode}
-        onStudyModeChange={handleStudyModeChange}
-        ocrEnabled={ocrEnabled}
-        onOcrEnabledChange={setOcrEnabled}
+        readingMode={readingMode}
+        onReadingModeChange={handleReadingModeChange}
         ocrEngine={ocrEngine}
         onOcrEngineChange={handleOcrEngineChange}
-        ocrAvailable={ocrAvailable}
       />
     </div>
   );

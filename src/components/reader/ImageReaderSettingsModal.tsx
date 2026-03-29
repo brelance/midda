@@ -1,6 +1,7 @@
 import React from "react";
 import type { ZoomMode } from "../../hooks/useImageReaderZoom";
 import type { OcrEngine } from "../../pages/ImageReaderPage/ImageReaderPage";
+import type { ReadingMode } from "../../pages/ImageReaderPage/imageReaderModeSelectors";
 import { useReaderSettings } from "../../stores/readerSettingsStore";
 
 const FONT_FAMILY_OPTIONS: { value: string; label: string }[] = [
@@ -25,15 +26,12 @@ interface ImageReaderSettingsModalProps {
   // View mode
   viewMode: "page" | "scroll";
   onViewModeChange: (mode: "page" | "scroll") => void;
-  // Study mode
-  studyMode: boolean;
-  onStudyModeChange: (enabled: boolean) => void;
-  // OCR
-  ocrEnabled: boolean;
-  onOcrEnabledChange: (enabled: boolean) => void;
+  // Reading mode (browse / text / study)
+  readingMode: ReadingMode;
+  onReadingModeChange: (mode: ReadingMode) => void;
+  // OCR engine
   ocrEngine: OcrEngine;
   onOcrEngineChange: (engine: OcrEngine) => void;
-  ocrAvailable: boolean;
 }
 
 /** iOS-style segmented control */
@@ -77,34 +75,7 @@ const SegmentedControl = <T extends string>({
   </div>
 );
 
-/** iOS-style toggle switch */
-const ToggleSwitch: React.FC<{
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  label: string;
-}> = ({ checked, onChange, label }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    aria-label={label}
-    onClick={() => onChange(!checked)}
-    className={`
-      relative h-[31px] w-[51px] flex-shrink-0 rounded-full
-      transition-colors duration-250 ease-in-out
-      ${checked ? "bg-[#34c759]" : "bg-gray-300"}
-    `}
-  >
-    <span
-      className={`
-        absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white
-        shadow-sm shadow-black/15
-        transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]
-        ${checked ? "translate-x-[22px]" : "translate-x-[2px]"}
-      `}
-    />
-  </button>
-);
+
 
 /** Stepper (+ / –) */
 const Stepper: React.FC<{
@@ -147,15 +118,22 @@ const ImageReaderSettingsModal: React.FC<ImageReaderSettingsModalProps> = ({
   onZoomModeChange,
   viewMode,
   onViewModeChange,
-  studyMode,
-  onStudyModeChange,
-  ocrEnabled,
-  onOcrEnabledChange,
+  readingMode,
+  onReadingModeChange,
   ocrEngine,
   onOcrEngineChange,
-  ocrAvailable,
 }) => {
   const { fontFamily, setFontFamily, fontSize, setFontSize, lineHeight, setLineHeight } = useReaderSettings();
+
+  // Check native OCR availability (only needed for engine selector)
+  const [ocrAvailable, setOcrAvailable] = React.useState(false);
+  React.useEffect(() => {
+    if (!isOpen) return;
+    window?.api?.ocr?.isAvailable?.()
+      .then((available) => setOcrAvailable(available))
+      .catch(() => {});
+  }, [isOpen]);
+
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -219,21 +197,22 @@ const ImageReaderSettingsModal: React.FC<ImageReaderSettingsModalProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[15px] font-medium text-[#1d1d1f]">版面</span>
-                  {studyMode && (
+                  {readingMode === "study" && (
                     <p className="mt-0.5 text-[12px] leading-snug text-[#007aff]">精读模式固定为单页</p>
                   )}
                 </div>
                 <SegmentedControl
                   id="image-reading-mode-control"
-                  value={studyMode ? "study" : "normal"}
-                  onChange={(v) => onStudyModeChange(v === "study")}
+                  value={readingMode}
+                  onChange={onReadingModeChange}
                   options={[
-                    { label: "普通", value: "normal" },
+                    { label: "浏览", value: "browse" },
+                    { label: "文字", value: "text" },
                     { label: "精读", value: "study" },
                   ]}
                 />
               </div>
-              {!studyMode && (
+              {readingMode !== "study" && (
                 <>
                   <div className="my-3 h-px bg-gray-100" />
                   <div className="flex items-center justify-between">
@@ -253,7 +232,7 @@ const ImageReaderSettingsModal: React.FC<ImageReaderSettingsModalProps> = ({
             </div>
 
             {/* ── 缩放 ── */}
-            {!studyMode && (
+            {readingMode !== "study" && (
               <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
                 <div className="flex items-center justify-between">
                   <span className="text-[15px] font-medium text-[#1d1d1f]">缩放</span>
@@ -262,8 +241,8 @@ const ImageReaderSettingsModal: React.FC<ImageReaderSettingsModalProps> = ({
                     value={zoomMode}
                     onChange={onZoomModeChange}
                     options={[
-                      { label: "适应页面", value: "fit-page" },
-                      { label: "适应宽度", value: "fit-width" },
+                      { label: "页面", value: "fit-page" },
+                      { label: "宽度", value: "fit-width" },
                       { label: "实际", value: "actual" },
                     ]}
                   />
@@ -271,39 +250,23 @@ const ImageReaderSettingsModal: React.FC<ImageReaderSettingsModalProps> = ({
               </div>
             )}
 
-            {/* ── OCR 设置 ── */}
-            <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 pr-3">
-                  <span className="text-[15px] font-medium text-[#1d1d1f]">OCR 文字识别</span>
-                  <p className="mt-0.5 text-[13px] leading-snug text-gray-400">
-                    {studyMode ? "精读模式下自动启用" : "在页面上叠加识别文字"}
-                  </p>
+            {/* ── 识别引擎 (仅在文字/精读模式下可见) ── */}
+            {readingMode !== "browse" && (
+              <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[15px] font-medium text-[#1d1d1f]">识别引擎</span>
+                  <SegmentedControl
+                    id="image-ocr-engine-control"
+                    value={ocrEngine}
+                    onChange={onOcrEngineChange}
+                    options={[
+                      ...(ocrAvailable ? [{ label: "普通", value: "native" as OcrEngine }] : []),
+                      { label: "漫画", value: "manga" as OcrEngine },
+                    ]}
+                  />
                 </div>
-                <ToggleSwitch
-                  checked={studyMode ? true : ocrEnabled}
-                  onChange={studyMode ? () => {} : onOcrEnabledChange}
-                  label="OCR 文字识别"
-                />
               </div>
-              {(ocrEnabled || studyMode) && (
-                <>
-                  <div className="my-3 h-px bg-gray-100" />
-                  <div className="flex items-center justify-between">
-                    <span className="text-[15px] font-medium text-[#1d1d1f]">识别引擎</span>
-                    <SegmentedControl
-                      id="image-ocr-engine-control"
-                      value={ocrEngine}
-                      onChange={onOcrEngineChange}
-                      options={[
-                        ...(ocrAvailable ? [{ label: "普通", value: "native" as OcrEngine }] : []),
-                        { label: "漫画", value: "manga" as OcrEngine },
-                      ]}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
+            )}
 
             {/* ── 字体 ── */}
             <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5">
@@ -327,7 +290,7 @@ const ImageReaderSettingsModal: React.FC<ImageReaderSettingsModalProps> = ({
             </div>
 
             {/* ── 字号 & 行高 (only in study mode) ── */}
-            {studyMode && (
+            {readingMode === "study" && (
               <div className="rounded-xl bg-white p-4 shadow-sm shadow-black/5 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[15px] font-medium text-[#1d1d1f]">字号</span>

@@ -425,7 +425,7 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
       [activeSource, activeBlockIndex, blockRefsMap]
     );
 
-    const { enableTokenHoverTts, analysisTtsLanguage: ttsLanguage } = useReaderSettings();
+    const { fontFamily, fontSize, lineHeight, enableTokenHoverTts, analysisTtsLanguage: ttsLanguage } = useReaderSettings();
 
     const pageProgress = useMemo(
       () => (totalPages > 0 ? Math.round((currentPage / totalPages) * 100) : 0),
@@ -1247,7 +1247,14 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
         <div
           ref={rightPanelRef}
           className="min-w-0 overflow-y-auto overscroll-contain bg-[#fdfdfd] relative flex items-center justify-center p-2"
-          style={{ width: `${(1 - splitRatio) * 100}%`, flexShrink: 0, scrollbarWidth: "none" }}
+          style={{
+            width: `${(1 - splitRatio) * 100}%`,
+            flexShrink: 0,
+            scrollbarWidth: "none",
+            fontFamily: fontFamily || "inherit",
+            fontSize: `${fontSize}px`,
+            lineHeight,
+          }}
           onClick={unpinBlock}
         >
           {/* Status Overlay */}
