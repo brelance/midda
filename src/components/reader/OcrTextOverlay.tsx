@@ -124,6 +124,8 @@ interface OcrTextOverlayProps {
   enabled: boolean;
   languageHint?: string;
   ocrEngine?: OcrEngine;
+  bookId: string;
+  pageNumber: number;
 }
 
 const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
@@ -134,6 +136,8 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
   enabled,
   languageHint,
   ocrEngine = "native",
+  bookId,
+  pageNumber,
 }) => {
   const [blocks, setBlocks] = useState<OcrBlock[]>([]);
   const [isRecognizing, setIsRecognizing] = useState(false);
@@ -175,7 +179,7 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
     return () => observer.disconnect();
   }, [imageRef, updateOverlayPosition]);
 
-  // Perform OCR when source or engine changes
+  // Perform OCR when source or engine changes (cache-first)
   useEffect(() => {
     const sourceKey = `${ocrEngine}:${imageSource}`;
     if (!enabled || !imageSource || sourceKey === `${lastEngineRef.current}:${lastSourceRef.current}`) return;
@@ -191,6 +195,27 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
 
     (async () => {
       try {
+        // ── Cache-first: try DB cache ──
+        let cacheHit = false;
+        try {
+          const cached = await window.api.db.pageOcrCache.get(
+            bookId, pageNumber, ocrEngine
+          );
+          if (cached && !cancelled) {
+            const cachedBlocks = JSON.parse(cached.blocksJson) as OcrBlock[];
+            setBlocks(cachedBlocks);
+            setOcrSourceWidth(cached.sourceWidth);
+            setOcrSourceHeight(cached.sourceHeight);
+            cacheHit = true;
+          }
+        } catch {
+          // Cache miss or parse error
+        }
+
+        if (cacheHit) return;
+        if (cancelled) return;
+
+        // ── Cache miss: call OCR API ──
         if (ocrEngine === "manga") {
           if (!window?.api?.ocr?.mangaRecognize) {
             console.warn("PaddleOCR API not available");
@@ -216,6 +241,17 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
             setBlocks(result.blocks);
             setOcrSourceWidth(result.sourceWidth);
             setOcrSourceHeight(result.sourceHeight);
+            // Write to DB cache
+            const fullText = result.blocks.map((b) => b.text).join("\n") || result.text;
+            window.api.db.pageOcrCache.upsert({
+              bookId,
+              pageNumber,
+              ocrEngine,
+              blocksJson: JSON.stringify(result.blocks),
+              sourceWidth: result.sourceWidth,
+              sourceHeight: result.sourceHeight,
+              fullText,
+            }).catch(() => {});
           }
         } else {
           // Native OCR
@@ -226,6 +262,15 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
           const result = await window.api.ocr.recognizeText(imageSource, languageHint);
           if (!cancelled && result?.blocks) {
             setBlocks(result.blocks);
+            // Write to DB cache
+            const fullText = result.blocks.map((b) => b.text).join("\n") || result.text;
+            window.api.db.pageOcrCache.upsert({
+              bookId,
+              pageNumber,
+              ocrEngine,
+              blocksJson: JSON.stringify(result.blocks),
+              fullText,
+            }).catch(() => {});
           }
         }
       } catch (error) {
@@ -243,7 +288,7 @@ const OcrTextOverlay: React.FC<OcrTextOverlayProps> = ({
         releasePendingMangaOcrRequest(sourceKey, pendingRequestId);
       }
     };
-  }, [imageSource, enabled, languageHint, ocrEngine]);
+  }, [imageSource, enabled, languageHint, ocrEngine, bookId, pageNumber]);
 
   // Clear when disabled
   useEffect(() => {

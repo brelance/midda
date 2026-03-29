@@ -302,6 +302,8 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
                           imageSource={pageData.dataUrl}
                           enabled={isOcrWindowPage}
                           ocrEngine={ocrEngine}
+                          bookId={bookId}
+                          pageNumber={page}
                         />
                       )}
                     </>

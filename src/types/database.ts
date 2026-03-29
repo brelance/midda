@@ -206,3 +206,26 @@ export interface CollectionCreatePayload {
   name: string;
 }
 
+// ── Page OCR Cache ──────────────────────────────────────────────────────────
+
+export interface PageOcrCacheRecord {
+  id: number;
+  bookId: string;
+  pageNumber: number;
+  ocrEngine: string;
+  blocksJson: string;
+  sourceWidth?: number;
+  sourceHeight?: number;
+  fullText?: string;
+  createdAt: string;
+}
+
+export interface PageOcrCacheUpsertPayload {
+  bookId: string;
+  pageNumber: number;
+  ocrEngine: string;
+  blocksJson: string;
+  sourceWidth?: number;
+  sourceHeight?: number;
+  fullText?: string;
+}

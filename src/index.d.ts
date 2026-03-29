@@ -27,6 +27,8 @@ import type {
   VocabularyContextRecord,
   VocabularyUpsertPayload,
   CollectionRecord,
+  PageOcrCacheRecord,
+  PageOcrCacheUpsertPayload,
 } from "./types/database";
 import type {
   RoleplayAnalysisPayload,
@@ -135,6 +137,15 @@ export interface IElectronAPI {
       addBook: (collectionId: string, bookId: string) => Promise<void>;
       removeBook: (collectionId: string, bookId: string) => Promise<boolean>;
       getBookIds: (collectionId: string) => Promise<string[]>;
+    };
+    pageOcrCache: {
+      get: (
+        bookId: string,
+        pageNumber: number,
+        ocrEngine: string
+      ) => Promise<PageOcrCacheRecord | null>;
+      upsert: (payload: PageOcrCacheUpsertPayload) => Promise<void>;
+      deleteByBook: (bookId: string) => Promise<boolean>;
     };
   };
 

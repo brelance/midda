@@ -19,6 +19,7 @@ import type {
   SentenceAnalysisJobStatus,
   VocabularyUpsertPayload,
   VocabStatus,
+  PageOcrCacheUpsertPayload,
 } from "../src/types/database";
 import type { RoleplayAnalysisPayload } from "../src/types/roleplay";
 import type {
@@ -180,6 +181,17 @@ const api = {
         ipcRenderer.invoke("db:collections:removeBook", collectionId, bookId),
       getBookIds: (collectionId: string): Promise<string[]> =>
         ipcRenderer.invoke("db:collections:getBookIds", collectionId),
+    },
+    pageOcrCache: {
+      get: (
+        bookId: string,
+        pageNumber: number,
+        ocrEngine: string
+      ) => ipcRenderer.invoke("db:pageOcrCache:get", bookId, pageNumber, ocrEngine),
+      upsert: (payload: PageOcrCacheUpsertPayload) =>
+        ipcRenderer.invoke("db:pageOcrCache:upsert", payload),
+      deleteByBook: (bookId: string) =>
+        ipcRenderer.invoke("db:pageOcrCache:deleteByBook", bookId),
     },
   },
 

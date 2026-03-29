@@ -411,13 +411,15 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
                 draggable={false}
               />
               {ocrEnabled && (
-                <OcrTextOverlay
+              <OcrTextOverlay
                   imageRef={imageElRef}
                   imageWidth={currentImage.width}
                   imageHeight={currentImage.height}
                   imageSource={currentImage.dataUrl}
                   enabled={ocrEnabled}
                   ocrEngine={ocrEngine}
+                  bookId={bookId}
+                  pageNumber={currentPage}
                 />
               )}
             </div>

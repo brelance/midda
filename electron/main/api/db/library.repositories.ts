@@ -933,3 +933,107 @@ function mapUserPreferenceRow(row: UserPreferenceRow): UserPreferenceRecord {
     updatedAt: row.updated_at,
   };
 }
+
+// ── Page OCR Cache ──────────────────────────────────────────────────
+
+export interface PageOcrCacheRecord {
+  id: number;
+  bookId: string;
+  pageNumber: number;
+  ocrEngine: string;
+  blocksJson: string;
+  sourceWidth?: number;
+  sourceHeight?: number;
+  fullText?: string;
+  createdAt: string;
+}
+
+export interface PageOcrCacheUpsertPayload {
+  bookId: string;
+  pageNumber: number;
+  ocrEngine: string;
+  blocksJson: string;
+  sourceWidth?: number;
+  sourceHeight?: number;
+  fullText?: string;
+}
+
+export class PageOcrCacheRepository {
+  private readonly upsertStmt = db.prepare(`
+    INSERT INTO page_ocr_cache (
+      book_id, page_number, ocr_engine,
+      blocks_json, source_width, source_height, full_text
+    ) VALUES (
+      @bookId, @pageNumber, @ocrEngine,
+      @blocksJson, @sourceWidth, @sourceHeight, @fullText
+    )
+    ON CONFLICT(book_id, page_number, ocr_engine) DO UPDATE SET
+      blocks_json = excluded.blocks_json,
+      source_width = excluded.source_width,
+      source_height = excluded.source_height,
+      full_text = excluded.full_text,
+      created_at = CURRENT_TIMESTAMP
+  `);
+
+  private readonly getStmt = db.prepare(`
+    SELECT id, book_id, page_number, ocr_engine,
+           blocks_json, source_width, source_height, full_text, created_at
+    FROM page_ocr_cache
+    WHERE book_id = ? AND page_number = ? AND ocr_engine = ?
+  `);
+
+  private readonly deleteByBookStmt = db.prepare(
+    `DELETE FROM page_ocr_cache WHERE book_id = ?`
+  );
+
+  upsert(payload: PageOcrCacheUpsertPayload): void {
+    this.upsertStmt.run({
+      ...payload,
+      sourceWidth: payload.sourceWidth ?? null,
+      sourceHeight: payload.sourceHeight ?? null,
+      fullText: payload.fullText ?? null,
+    });
+  }
+
+  get(
+    bookId: string,
+    pageNumber: number,
+    ocrEngine: string
+  ): PageOcrCacheRecord | null {
+    const row = this.getStmt.get(bookId, pageNumber, ocrEngine) as
+      | PageOcrCacheRow
+      | undefined;
+    return row ? mapPageOcrCacheRow(row) : null;
+  }
+
+  deleteByBook(bookId: string): boolean {
+    const res = this.deleteByBookStmt.run(bookId);
+    return res.changes > 0;
+  }
+}
+
+interface PageOcrCacheRow {
+  id: number;
+  book_id: string;
+  page_number: number;
+  ocr_engine: string;
+  blocks_json: string;
+  source_width: number | null;
+  source_height: number | null;
+  full_text: string | null;
+  created_at: string;
+}
+
+function mapPageOcrCacheRow(row: PageOcrCacheRow): PageOcrCacheRecord {
+  return {
+    id: row.id,
+    bookId: row.book_id,
+    pageNumber: row.page_number,
+    ocrEngine: row.ocr_engine,
+    blocksJson: row.blocks_json,
+    sourceWidth: toNullable(row.source_width),
+    sourceHeight: toNullable(row.source_height),
+    fullText: toNullable(row.full_text),
+    createdAt: row.created_at,
+  };
+}

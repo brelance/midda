@@ -12,7 +12,9 @@ import {
   SentenceAnalysisRepository,
   SentenceAnalysisUpsertPayload,
   UserPreferencesRepository,
+  PageOcrCacheRepository,
 } from "../../db/library.repositories";
+import type { PageOcrCacheUpsertPayload } from "../../db/library.repositories";
 import {
   VocabularyRepository,
   VocabStatus,
@@ -28,6 +30,7 @@ const sentenceAnalysisJobRepository = new SentenceAnalysisJobRepository();
 const userPreferencesRepository = new UserPreferencesRepository();
 const vocabularyRepository = new VocabularyRepository();
 const collectionRepository = new CollectionRepository();
+const pageOcrCacheRepository = new PageOcrCacheRepository();
 
 export function registerDbHandlers(): void {
   // --- Books ---
@@ -298,6 +301,28 @@ export function registerDbHandlers(): void {
     "db:collections:getBookIds",
     (_event, collectionId: string) => {
       return collectionRepository.getBookIds(collectionId);
+    }
+  );
+
+  // --- Page OCR Cache ---
+  ipcMain.handle(
+    "db:pageOcrCache:get",
+    (_event, bookId: string, pageNumber: number, ocrEngine: string) => {
+      return pageOcrCacheRepository.get(bookId, pageNumber, ocrEngine);
+    }
+  );
+
+  ipcMain.handle(
+    "db:pageOcrCache:upsert",
+    (_event, payload: PageOcrCacheUpsertPayload) => {
+      return pageOcrCacheRepository.upsert(payload);
+    }
+  );
+
+  ipcMain.handle(
+    "db:pageOcrCache:deleteByBook",
+    (_event, bookId: string) => {
+      return pageOcrCacheRepository.deleteByBook(bookId);
     }
   );
 }

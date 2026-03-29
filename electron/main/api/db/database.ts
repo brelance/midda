@@ -165,6 +165,22 @@ function initializeSchema(database: DB): void {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_sentence_analysis_jobs_hash ON sentence_analysis_jobs(book_id, sentence_hash);
 
+    CREATE TABLE IF NOT EXISTS page_ocr_cache (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      book_id TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      ocr_engine TEXT NOT NULL,
+      blocks_json TEXT NOT NULL,
+      source_width INTEGER,
+      source_height INTEGER,
+      full_text TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_page_ocr_cache_unique
+      ON page_ocr_cache(book_id, page_number, ocr_engine);
+
     COMMIT;
   `;
 

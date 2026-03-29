@@ -37,6 +37,7 @@ import { splitIntoSentences } from "../../utils/lang/sentenceSegmenter";
 import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
 import { useBlockRefs, type NudgeOffset } from "./useAntiOverlap";
 import PageTurnButton from "./PageTurnButton";
+import { loadStudyPageOcr } from "./imageStudyOcr";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -547,7 +548,7 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
       onPageChange?.(currentPage, totalPages, pageProgress);
     }, [currentPage, totalPages, pageProgress, onPageChange]);
 
-    // ── OCR — trigger when page changes ──────────────────────────────────
+    // ── OCR — trigger when page changes (cache-first) ─────────────────
     useEffect(() => {
       if (!currentImage) return;
 
@@ -570,31 +571,33 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
         flushTimerRef.current = null;
       }
 
-      timeoutId = window.setTimeout(async () => {
+      (async () => {
         try {
-          let blocks: PositionedOcrBlock[] = [];
-          let sourceHeight = currentImage.height;
-          let sourceWidth = currentImage.width;
-          let fallbackText = "";
+          const result = await loadStudyPageOcr({
+            bookId,
+            pageNumber: currentPage,
+            ocrEngine,
+            requestId: `study-ocr-${generation}`,
+            currentImage,
+            getCachedPageOcr: (targetBookId, pageNumber, engine) =>
+              window.api.db.pageOcrCache.get(targetBookId, pageNumber, engine),
+            waitForOcrDebounce: () =>
+              new Promise<void>((resolve) => {
+                timeoutId = window.setTimeout(resolve, MANGA_OCR_DEBOUNCE_MS);
+              }),
+            recognizeManga: window?.api?.ocr?.mangaRecognize,
+            recognizeNative: window?.api?.ocr?.recognizeText
+              ? (imageInput) => window.api.ocr.recognizeText(imageInput)
+              : undefined,
+            upsertCachedPageOcr: (payload) => window.api.db.pageOcrCache.upsert(payload),
+          });
 
-          if (ocrEngine === "manga") {
-            if (!window?.api?.ocr?.mangaRecognize) return;
-            const result = await window.api.ocr.mangaRecognize({
-              requestId: `study-ocr-${generation}`,
-              imageInput: currentImage.dataUrl,
-            });
-            if (cancelled || pageGenerationRef.current !== generation) return;
-            blocks = result?.blocks ?? [];
-            sourceHeight = result?.sourceHeight || currentImage.height;
-            sourceWidth = result?.sourceWidth || currentImage.width;
-            if (!blocks.length) fallbackText = result?.text ?? "";
-          } else {
-            if (!window?.api?.ocr?.recognizeText) return;
-            const result = await window.api.ocr.recognizeText(currentImage.dataUrl);
-            if (cancelled || pageGenerationRef.current !== generation) return;
-            blocks = result?.blocks ?? [];
-            if (!blocks.length) fallbackText = result?.text ?? "";
-          }
+          const {
+            blocks,
+            sourceHeight,
+            sourceWidth,
+            fallbackText,
+          } = result;
 
           if (cancelled || pageGenerationRef.current !== generation) return;
 
@@ -660,7 +663,7 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
             setIsOcrRunning(false);
           }
         }
-      }, MANGA_OCR_DEBOUNCE_MS);
+      })();
 
       return () => {
         cancelled = true;
