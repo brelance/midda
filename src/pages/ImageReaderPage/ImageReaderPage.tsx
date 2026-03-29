@@ -75,6 +75,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
   // Toolbar visibility — same hook as EPUB reader
   const {
     isHeaderVisible,
+    isFooterVisible,
     handlePointerMove,
     showToolbarsTemporarily,
   } = useReaderToolbarVisibility();
@@ -119,7 +120,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onExitReader();
+      if (e.key === "Escape" && !isSettingsOpen) onExitReader();
       // ⌘⇧D toggle thumbnail sidebar
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d") {
         e.preventDefault();
@@ -128,7 +129,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onExitReader]);
+  }, [onExitReader, isSettingsOpen]);
 
   const handlePageChange = useCallback(
     (page: number, _total: number, progress: number) => {
@@ -366,7 +367,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           onZoomChange={handleZoomChange}
           ocrEnabled={effectiveOcrEnabled}
           ocrEngine={ocrEngine}
-          isFooterVisible={isHeaderVisible}
+          isFooterVisible={isFooterVisible}
         />
       ) : (
         <ImagePageViewer
@@ -380,7 +381,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
           onZoomChange={handleZoomChange}
           ocrEnabled={effectiveOcrEnabled}
           ocrEngine={ocrEngine}
-          isFooterVisible={isHeaderVisible}
+          isFooterVisible={isFooterVisible}
         />
       )}
 

@@ -159,7 +159,10 @@ const ImageReaderSettingsModal: React.FC<ImageReaderSettingsModalProps> = ({
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.stopImmediatePropagation();
+        onClose();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);

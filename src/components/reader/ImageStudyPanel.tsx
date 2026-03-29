@@ -605,8 +605,18 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
           let items: ReaderSentenceAnalysisItem[];
 
           if (hasCoords && blocks.length > 0) {
-            // Block-aware layout with absolute 2D projection mapping
-            const result = buildBlockGroups(blocks, pageId);
+            // Filter out zero-sized blocks (text-only, no bbox)
+            const positionedBlocks = blocks.filter((b) => b.width > 0 && b.height > 0);
+            const unpositionedText = blocks
+              .filter((b) => b.width === 0 || b.height === 0)
+              .map((b) => b.text)
+              .join("\n");
+            const result = buildBlockGroups(positionedBlocks, pageId);
+            // Append unpositioned text as flat sentences after positioned blocks
+            if (unpositionedText.trim()) {
+              const flatItems = buildFlatSentenceItems(unpositionedText, `${pageId}-flat`);
+              result.items.push(...flatItems);
+            }
             items = result.items;
             setBlockGroups(result.groups);
             setIsPageVertical(result.isPageVertical);
@@ -819,6 +829,10 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
     // Cleanup
     useEffect(() => {
       return () => {
+        // Invalidate any in-flight analysis loop so it stops queuing requests
+        pageGenerationRef.current++;
+        clearQueue();
+
         if (pdfDocRef.current) {
           pdfDocRef.current.destroy();
           pdfDocRef.current = null;
