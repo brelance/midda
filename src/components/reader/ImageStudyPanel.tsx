@@ -1029,6 +1029,51 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
       }
     }
 
+    // ── Centroid-based recentering ────────────────────────────────────────
+    // When blocks cluster unevenly (e.g. manga speech bubbles in one
+    // corner), shift the entire layout so the bounding-box center of all
+    // blocks aligns with the canvas center.  This prevents one edge from
+    // overflowing while the opposite edge sits empty.
+    const recenterOffset = useMemo(() => {
+      if (blockGroups.length === 0 || sourceWidth === 0 || sourceHeight === 0) {
+        return { dx: 0, dy: 0 };
+      }
+
+      // 1. Bounding box of all blocks (source-image pixels)
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const g of blockGroups) {
+        minX = Math.min(minX, g.x);
+        minY = Math.min(minY, g.y);
+        maxX = Math.max(maxX, g.x + g.width);
+        maxY = Math.max(maxY, g.y + g.height);
+      }
+
+      // 2. Offset: bounding-box center → canvas center
+      const bbCx = (minX + maxX) / 2;
+      const bbCy = (minY + maxY) / 2;
+      let dx = sourceWidth / 2 - bbCx;
+      let dy = sourceHeight / 2 - bbCy;
+
+      // 3. Clamp so no bbox edge goes outside (2% padding)
+      const pad = Math.min(sourceWidth, sourceHeight) * 0.02;
+      const spanX = maxX - minX;
+      const spanY = maxY - minY;
+      const availW = sourceWidth - 2 * pad;
+      const availH = sourceHeight - 2 * pad;
+
+      // Only clamp if the block span fits; otherwise keep centered
+      if (spanX <= availW) {
+        if (minX + dx < pad) dx = pad - minX;
+        if (maxX + dx > sourceWidth - pad) dx = sourceWidth - pad - maxX;
+      }
+      if (spanY <= availH) {
+        if (minY + dy < pad) dy = pad - minY;
+        if (maxY + dy > sourceHeight - pad) dy = sourceHeight - pad - maxY;
+      }
+
+      return { dx, dy };
+    }, [blockGroups, sourceWidth, sourceHeight]);
+
     // ── Anti-overlap: measure blocks and resolve collisions ─────────────
     // Track the number of loaded sentences as a dependency for re-measurement
     const loadedTokenCount = useMemo(
@@ -1319,8 +1364,11 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
                   );
                   if (!groupItems.length) return null;
 
-                  const pctX = (group.x / sourceWidth) * 100;
-                  const pctY = (group.y / sourceHeight) * 100;
+                  // Apply centroid recentering offset
+                  const adjX = group.x + recenterOffset.dx;
+                  const adjY = group.y + recenterOffset.dy;
+                  const pctX = (adjX / sourceWidth) * 100;
+                  const pctY = (adjY / sourceHeight) * 100;
                   const pctWidth = (group.width / sourceWidth) * 100;
 
                   // Anti-overlap nudge offset
