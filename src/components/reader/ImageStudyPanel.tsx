@@ -1197,12 +1197,12 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
-      <div className="flex flex-col h-full w-full bg-[#1c1c1e] overflow-hidden">
+      <div className="flex flex-col h-full w-full bg-[#f5f5f7] overflow-hidden">
         {/* ── Dual-pane area ── */}
         <div ref={dualPaneRef} className="flex flex-1 min-h-0 overflow-hidden">
         {/* ── Left pane: page image ── */}
         <div
-          className="flex items-center justify-center bg-[#1a1a1a] overflow-hidden relative select-none min-w-0"
+          className="flex items-center justify-center bg-[#e8e8ed] overflow-hidden relative select-none min-w-0"
           style={{ width: `${splitRatio * 100}%`, flexShrink: 0 }}
           onClick={unpinBlock}
         >
@@ -1289,7 +1289,7 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
           onPointerMove={handleDividerPointerMove}
           onPointerUp={handleDividerPointerUp}
         >
-          <div className="w-px h-full bg-white/10 group-hover:bg-[#007aff]/40 group-active:bg-[#007aff]/60 transition-colors" />
+          <div className="w-px h-full bg-gray-300 group-hover:bg-[#007aff]/40 group-active:bg-[#007aff]/60 transition-colors" />
         </div>
 
         {/* ── Right pane: OCR text analysis ── */}

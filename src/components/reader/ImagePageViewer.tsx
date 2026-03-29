@@ -368,7 +368,7 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
     const isPannable = zoomLevel > fittedZoom;
 
     return (
-      <div className="relative h-full w-full flex flex-col items-center bg-[#1a1a1a] overflow-hidden select-none">
+      <div className="relative h-full w-full flex flex-col items-center bg-[#e8e8ed] overflow-hidden select-none">
         {/* Page image area */}
         <div
           ref={containerRef}

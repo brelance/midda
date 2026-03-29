@@ -170,7 +170,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
 
   if (!book.filePath || !book.totalPages) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#1c1c1e] text-[#e5e5e7]">
+      <div className="h-screen flex items-center justify-center bg-[#f5f5f7] text-[#1d1d1f]">
         <div className="text-center">
           <p className="text-lg mb-4">无法加载书籍</p>
           <button
@@ -215,7 +215,7 @@ const ImageReaderPage: React.FC<ImageReaderPageProps> = ({
 
   return (
     <div
-      className="h-screen w-screen bg-[#1c1c1e] flex flex-col"
+      className="h-screen w-screen bg-[#f5f5f7] flex flex-col"
       onMouseMove={handleMouseMove}
     >
       {/* ── Transparent drag strip (same as EPUB ReaderLayout) ── */}

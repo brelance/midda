@@ -252,7 +252,7 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
     );
 
     return (
-      <div className="relative h-full w-full flex flex-col bg-[#1a1a1a] overflow-hidden select-none">
+      <div className="relative h-full w-full flex flex-col bg-[#e8e8ed] overflow-hidden select-none">
         {/* Scrollable page container */}
         <div
           ref={scrollContainerRef}
@@ -308,9 +308,9 @@ const ImageScrollViewer = forwardRef<ImageScrollViewerHandle, ImageScrollViewerP
                       )}
                     </>
                   ) : (
-                    <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-2 text-white/30">
-                        <div className="w-6 h-6 border-2 border-white/20 border-t-white/50 rounded-full animate-spin" />
+                    <div className="w-full h-full bg-black/[0.03] flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-2 text-gray-400">
+                        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
                         <span className="text-xs tabular-nums">{page}</span>
                       </div>
                     </div>
