@@ -36,6 +36,7 @@ import { queuedSendTokensRequest, clearQueue } from "../../services/apiQueue";
 import { splitIntoSentences } from "../../utils/lang/sentenceSegmenter";
 import { detectLanguageForSamples } from "../../utils/lang/detectLanguage";
 import { useBlockRefs, type NudgeOffset } from "./useAntiOverlap";
+import PageTurnButton from "./PageTurnButton";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -1179,31 +1180,9 @@ const ImageStudyPanel = forwardRef<ImageStudyPanelHandle, ImageStudyPanelProps>(
             />
           )}
 
-          {/* Click-to-turn zones (z-10) */}
-          <div
-            className="absolute left-0 top-0 bottom-0 w-[30%] z-10 cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
-            onClick={goToPrevPage}
-          >
-            <div className="h-full flex items-center justify-start pl-4">
-              <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div
-            className="absolute right-0 top-0 bottom-0 w-[30%] z-10 cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
-            onClick={goToNextPage}
-          >
-            <div className="h-full flex items-center justify-end pr-4">
-              <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          </div>
+          {/* Click-to-turn page-turn buttons (same as EPUB paged mode) */}
+          <PageTurnButton direction="prev" onClick={goToPrevPage} disabled={currentPage <= 1} absolute zIndex={10} />
+          <PageTurnButton direction="next" onClick={goToNextPage} disabled={currentPage >= totalPages} absolute zIndex={10} />
 
           {/* SVG overlay: interactive hover zones + highlight (z-20, above turn zones) */}
           {!isLoading && !error && currentImage && blockGroups.length > 0 && (

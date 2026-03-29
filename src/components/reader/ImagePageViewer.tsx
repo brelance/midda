@@ -22,6 +22,7 @@ import {
   useImperativeHandle,
 } from "react";
 import OcrTextOverlay from "./OcrTextOverlay";
+import PageTurnButton from "./PageTurnButton";
 import type { OcrEngine } from "../../pages/ImageReaderPage/ImageReaderPage";
 import { useImageReaderZoom } from "../../hooks/useImageReaderZoom";
 import type { ZoomMode } from "../../hooks/useImageReaderZoom";
@@ -422,34 +423,11 @@ const ImagePageViewer = forwardRef<ImagePageViewerHandle, ImagePageViewerProps>(
             </div>
           )}
 
-          {/* Click-to-turn zones (only when not panning) */}
+          {/* Click-to-turn page-turn buttons (same as EPUB paged mode) */}
           {!isPannable && (
             <>
-              <div
-                className="absolute left-0 top-0 bottom-0 w-[30%] cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
-                onClick={goToPrevPage}
-              >
-                <div className="h-full flex items-center justify-start pl-4">
-                  <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="absolute right-0 top-0 bottom-0 w-[30%] cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
-                onClick={goToNextPage}
-              >
-                <div className="h-full flex items-center justify-end pr-4">
-                  <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
+              <PageTurnButton direction="prev" onClick={goToPrevPage} disabled={currentPage <= 1} />
+              <PageTurnButton direction="next" onClick={goToNextPage} disabled={currentPage >= totalPages} />
             </>
           )}
         </div>

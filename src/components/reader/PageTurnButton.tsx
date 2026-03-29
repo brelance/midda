@@ -4,12 +4,18 @@ interface PageTurnButtonProps {
   direction: "prev" | "next";
   onClick: () => void;
   disabled?: boolean;
+  /** Use `position: absolute` instead of `fixed` (for embedding inside a relative container). */
+  absolute?: boolean;
+  /** Override default z-index (20). */
+  zIndex?: number;
 }
 
 const PageTurnButton: React.FC<PageTurnButtonProps> = ({
   direction,
   onClick,
   disabled = false,
+  absolute = false,
+  zIndex = 20,
 }) => {
   const isPrev = direction === "prev";
 
@@ -17,12 +23,12 @@ const PageTurnButton: React.FC<PageTurnButtonProps> = ({
     <div
       className="page-turn-zone group"
       style={{
-        position: "fixed",
-        top: 56,          /* below the header bar */
-        bottom: 56,       /* above the footer bar */
+        position: absolute ? "absolute" : "fixed",
+        top: absolute ? 0 : 56,          /* below the header bar (fixed mode) */
+        bottom: absolute ? 0 : 56,       /* above the footer bar (fixed mode) */
         width: 60,
         [isPrev ? "left" : "right"]: 0,
-        zIndex: 20,
+        zIndex,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

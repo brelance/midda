@@ -58,7 +58,7 @@ function getPosColor(pos: string): string {
 }
 
 // ── Token popover state ─────────────────────────────────────────────────────
-interface TokenPopoverState {
+export interface TokenPopoverState {
   visible: boolean;
   x: number;
   y: number;
@@ -78,7 +78,7 @@ interface TokenPopoverState {
   aiLoading: boolean;
 }
 
-const INITIAL_POPOVER: TokenPopoverState = {
+export const INITIAL_POPOVER: TokenPopoverState = {
   visible: false,
   x: 0,
   y: 0,
@@ -95,6 +95,16 @@ const INITIAL_POPOVER: TokenPopoverState = {
   aiLoading: false,
 };
 
+function renderTokenWord(word: string): React.ReactNode {
+  const lines = word.split("\n");
+  return lines.map((line, idx) => (
+    <React.Fragment key={idx}>
+      {line}
+      {idx < lines.length - 1 && <br />}
+    </React.Fragment>
+  ));
+}
+
 // ── StudyToken ──────────────────────────────────────────────────────────────
 interface StudyTokenProps {
   token: TokenData;
@@ -109,7 +119,7 @@ interface StudyTokenProps {
   vocabSet?: Set<string>;
 }
 
-const StudyToken: React.FC<StudyTokenProps> = ({
+export const StudyToken: React.FC<StudyTokenProps> = ({
   token,
   sentenceText,
   onTokenClick,
@@ -148,7 +158,7 @@ const StudyToken: React.FC<StudyTokenProps> = ({
         {showRuby ? token.furigana : "\u00A0"}
       </span>
       <span className="study-kanji" style={{ color }}>
-        {token.word}
+        {renderTokenWord(token.word)}
       </span>
       {showRomaji && (
         <span className="study-romaji">{token.romaji}</span>
@@ -171,7 +181,7 @@ interface StudySentenceRowProps {
   vocabSet?: Set<string>;
 }
 
-const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
+export const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
   item,
   onTokenClick,
   enableHoverTts,
@@ -202,7 +212,9 @@ const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
             key={idx}
             token={token}
             sentenceText={item.text}
-            onTokenClick={(e, tok, text) => onTokenClick(e, tok, text, item.chapterId)}
+            onTokenClick={(e, tok, text) =>
+              onTokenClick(e, tok, text, item.chapterId)
+            }
             enableHoverTts={enableHoverTts}
             ttsLanguage={ttsLanguage}
             vocabSet={vocabSet}
@@ -216,7 +228,12 @@ const StudySentenceRow: React.FC<StudySentenceRowProps> = ({
   return (
     <div className="study-sentence-row study-idle-row">
       <span style={{ color: "var(--reader-text, #1C1C1E)", opacity: 0.45 }}>
-        {item.text}
+        {item.text.split("\n").map((line, i, arr) => (
+          <React.Fragment key={i}>
+            {line}
+            {i < arr.length - 1 && <br />}
+          </React.Fragment>
+        ))}
       </span>
     </div>
   );
@@ -230,7 +247,7 @@ interface StudyPopoverProps {
   onRequestAi: () => void;
 }
 
-const StudyPopover: React.FC<StudyPopoverProps> = ({
+export const StudyPopover: React.FC<StudyPopoverProps> = ({
   state,
   onClose,
   onRequestAi,

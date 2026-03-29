@@ -1,0 +1,16 @@
+On branch feat/image_reading
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   src/assets/main.css
+	modified:   src/components/reader/StudyDoublePanel.tsx
+	modified:   src/pages/ImageReaderPage/ImageReaderPage.tsx
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.git-diff-output.txt
+	.git-status-output.txt
+	src/components/reader/ImageReaderSettingsModal.tsx
+	src/components/reader/ImageStudyPanel.tsx
+
+no changes added to commit (use "git add" and/or "git commit -a")
