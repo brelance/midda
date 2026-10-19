@@ -16,7 +16,7 @@
 
 🎬 **26 秒了解 Midda**
 
-https://github.com/user-attachments/assets/741c237c-b729-478e-8741-dab550248485
+https://github.com/user-attachments/assets/9073fee5-4a62-4482-81ed-f6f492ba465c
 
 读原版小说时，一个生词让你离开故事；看日语漫画时，一句台词连复制查词都做不到。Midda 把阅读与理解放在同一个窗口：打开喜欢的书，遇到不懂的地方就地查阅，再把读过的词带进下一次复习。
 
