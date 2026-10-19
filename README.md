@@ -14,7 +14,11 @@
 
 </div>
 
-🎬 **[查看项目演示视频](media/midda-intro.mov)** · 26 秒 · 原始 MOV，约 22 MB。若 GitHub 未显示播放器，可下载后观看。
+🎬 **26 秒了解 Midda**
+
+https://github.com/user-attachments/assets/741c237c-b729-478e-8741-dab550248485
+
+[下载原始演示视频（MOV，约 22 MB）](media/midda-intro.mov)
 
 读原版小说时，一个生词让你离开故事；看日语漫画时，一句台词连复制查词都做不到。Midda 把阅读与理解放在同一个窗口：打开喜欢的书，遇到不懂的地方就地查阅，再把读过的词带进下一次复习。
 
