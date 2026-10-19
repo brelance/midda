@@ -1,0 +1,83 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: midda-backend
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://127.0.0.1:3308/midda?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${MYSQL_USER:midda}
+    password: ${MYSQL_PASSWORD:local-development}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6381}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9096}
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: manual_immediate
+  elasticsearch:
+    uris: ${ES_URL:http://127.0.0.1:9202}
+    username: ${ES_USERNAME:}
+    password: ${ES_PASSWORD:}
+  ai:
+    # AI credentials are optional for login, feeds and interactions.
+    # Placeholder values allow model construction; AI calls require real keys.
+    openai:
+      api-key: ${OPENAI_API_KEY:not-configured}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      embedding:
+        options:
+          model: ${EMBEDDING_MODEL:text-embedding-3-small}
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY:not-configured}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    vectorstore:
+      elasticsearch:
+        initialize-schema: false
+        index-name: ${ES_VECTOR_INDEX:midda_vectors}
+        dimensions: ${EMBEDDING_DIMENSIONS:1536}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+auth:
+  jwt:
+    issuer: midda-backend
+    key-id: midda-backend-key
+    private-key: ${JWT_PRIVATE_KEY:file:./secrets/private.pem}
+    public-key: ${JWT_PUBLIC_KEY:file:./secrets/public.pem}
+
+oss:
+  endpoint: ${OSS_ENDPOINT:}
+  bucket: ${OSS_BUCKET:}
+  access-key-id: ${OSS_ACCESS_KEY_ID:}
+  access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+  public-domain: ${OSS_PUBLIC_DOMAIN:}
+
+# Canal is required for asynchronous follower/search projections, not the reader feed.
+canal:
+  enabled: ${CANAL_ENABLED:false}
+  host: ${CANAL_HOST:127.0.0.1}
+  port: ${CANAL_PORT:11111}
+  destination: ${CANAL_DESTINATION:example}
+  username: ${CANAL_USERNAME:}
+  password: ${CANAL_PASSWORD:}
+  filter: ${CANAL_FILTER:midda\.outbox}
+  batchSize: 100
+  intervalMs: 1000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

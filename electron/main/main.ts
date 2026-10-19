@@ -12,26 +12,13 @@ import { setupOcrApiHandlers } from "./api/ocr/ocr.api";
 import { setupTtsApiHandler } from "./api/tts/tts.api";
 import { setupLocalDictApiHandler } from "./api/dict/dict.api";
 import { setupAuthApiHandler, setAuthMainWindow } from "./api/auth/auth.api";
-import { handleAuthCallback } from "./api/auth/auth.service";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import { app, BrowserWindow } from "electron";
 
 // Register epub-img:// scheme as privileged BEFORE app is ready
 registerEpubImageScheme();
 
-// Register midda:// custom protocol for OAuth callbacks
-if (process.defaultApp) {
-  // Dev mode: register via argv
-  if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient("midda", process.execPath, [
-      path.resolve(process.argv[1]!),
-    ]);
-  }
-} else {
-  app.setAsDefaultProtocolClient("midda");
-}
-
-// Single instance lock — needed so OAuth redirect re-uses the running app
+// Single instance lock prevents concurrent writes to the local library/session.
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -92,25 +79,7 @@ function createWindow() {
   }
 }
 
-// macOS: handle midda:// URL when app is already running
-app.on("open-url", (event, url) => {
-  event.preventDefault();
-  if (url.startsWith("midda://auth-callback")) {
-    void handleAuthCallback(url);
-    // Bring window to front
-    if (win) {
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    }
-  }
-});
-
-// Windows/Linux: handle midda:// URL via second-instance
-app.on("second-instance", (_event, argv) => {
-  const url = argv.find((arg) => arg.startsWith("midda://auth-callback"));
-  if (url) {
-    void handleAuthCallback(url);
-  }
+app.on("second-instance", () => {
   // Bring window to front
   if (win) {
     if (win.isMinimized()) win.restore();
@@ -148,7 +117,7 @@ app.whenReady().then(() => {
   // 本地词典
   setupLocalDictApiHandler();
 
-  // Auth (Supabase OAuth)
+  // Auth (backend JWT; tokens stay in the main process)
   setupAuthApiHandler();
 
   // Setup epub-img:// protocol handler
@@ -159,14 +128,6 @@ app.whenReady().then(() => {
   // Wire auth state change notifications to the main window
   if (win) {
     setAuthMainWindow(win);
-  }
-
-  // P3 fix: Windows/Linux cold launch — protocol URL arrives via process.argv
-  const protocolUrl = process.argv.find((arg) =>
-    arg.startsWith("midda://auth-callback")
-  );
-  if (protocolUrl) {
-    void handleAuthCallback(protocolUrl);
   }
 
   app.on("activate", function () {

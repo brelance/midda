@@ -4,6 +4,7 @@ import MainContent from "./MainContent";
 import VocabularyPage from "../../pages/VocabularyPage";
 import AccountPage from "../../pages/AccountPage";
 import HomePage from "../../pages/HomePage";
+import CommunityPage from "../../pages/CommunityPage";
 import { useBookshelfStore, useSortBy } from "../../stores/bookshelfStore";
 import { useCollectionStore } from "../../stores/collectionStore";
 import { isCollectionNav, getCollectionId } from "../../types/types";
@@ -111,6 +112,8 @@ const Layout: React.FC = () => {
             onEnterReader={enterReader}
             onNavChange={navChange}
           />
+        ) : activeNav === "community" ? (
+          <CommunityPage />
         ) : activeNav === "profile" ? (
           <AccountPage />
         ) : activeNav === "vocabulary" ? (

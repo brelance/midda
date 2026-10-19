@@ -234,7 +234,8 @@ export interface IElectronAPI {
   };
 
   auth: {
-    startOAuth: (provider: "google" | "apple") => Promise<void>;
+    login: (identifier: string, password: string) => Promise<AuthUser>;
+    request: <T>(path: string, method?: string, body?: unknown) => Promise<T>;
     getSession: () => Promise<{
       user: AuthUser | null;
       isAuthenticated: boolean;

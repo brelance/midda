@@ -36,6 +36,10 @@ backup
 page_proto
 tmp
 apple_reding_app
-resources/
+/resources/
 release
-docs/
+/docs/
+
+# Checked-in configuration examples
+!.env.example
+!midda-backend/.env.example

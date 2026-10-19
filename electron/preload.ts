@@ -307,8 +307,10 @@ const api = {
   },
 
   auth: {
-    startOAuth: (provider: "google" | "apple"): Promise<void> =>
-      ipcRenderer.invoke("auth:start-oauth", provider),
+    login: (identifier: string, password: string) =>
+      ipcRenderer.invoke('auth:login', identifier, password),
+    request: (path: string, method = 'GET', body?: unknown): Promise<unknown> =>
+      ipcRenderer.invoke('auth:request', path, method, body),
     getSession: (): Promise<{
       user: { id: string; email: string; name: string; avatar?: string; provider: string } | null;
       isAuthenticated: boolean;

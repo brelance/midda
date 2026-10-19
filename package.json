@@ -12,7 +12,11 @@
     "postinstall": "electron-builder install-app-deps",
     "rebuild-native": "electron-builder install-app-deps",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "midda-backend": "cd midda-backend && ./mvnw spring-boot:run",
+    "midda-backend:test": "cd midda-backend && ./mvnw test",
+    "midda-backend:build": "cd midda-backend && ./mvnw package",
+    "test:community": "tsx --test electron/main/api/auth/jwtClient.test.ts src/services/community.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3",

@@ -249,6 +249,9 @@ async function fetchAndParseResults(
 
   const content = await response.text();
 
+  // DEBUG: 临时输出原始 JSONL，用完删除
+  console.log("[PaddleOCR] RAW JSONL OUTPUT ↓↓↓\n" + content + "\n[PaddleOCR] RAW JSONL END ↑↑↑");
+
   if (PADDLE_OCR_DEBUG_SAVE_JSONL) {
     const { promises: fs } = await import("node:fs");
     const os = await import("node:os");

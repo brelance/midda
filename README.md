@@ -4,13 +4,15 @@
 
 **让你想读的故事，成为你学会的语言。**
 
-面向语言学习的 AI 桌面阅读器 · 原文精读 · 漫画 OCR · 生词复习 · 角色对话
+面向语言学习的 AI 桌面阅读器 · 原文精读 · 漫画 OCR · 生词复习 · 角色对话 · 阅读社区
 
 ![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Java](https://img.shields.io/badge/Java-21-ED8B00)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2-6DB33F?logo=springboot&logoColor=white)
 
-[功能亮点](#功能亮点) · [开始使用](#开始使用) · [服务配置](#服务配置) · [参与开发](#参与开发)
+[功能亮点](#功能亮点) · [开始使用](#开始使用) · [服务配置](#服务配置) · [技术栈](#技术栈) · [参与开发](#参与开发)
 
 </div>
 
@@ -137,14 +139,27 @@ npm run dev
 
 朗读可在设置中选择系统语音或 Edge TTS。系统语音取决于操作系统安装的语音资源；Edge TTS 需要联网，Linux 播放还需要可用的播放器，例如 `mpv` 或 `ffplay`。
 
-账号功能通过 Supabase 接入 Google / Apple OAuth：
+账号与阅读社区现已统一使用本仓库的 Java JWT 后端。账号页和社区共用登录状态；旧 Supabase OAuth 会话需要重新登录，本地书库保持不变。
 
-```dotenv
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
+### 阅读社区与 Java 后端
+
+侧栏「阅读社区」支持阅读分享、分页、详情、点赞收藏、我的发布及 Markdown 心得发布。未配置后端时展示明确标识的演示内容；配置后连接真实接口，接口失败会显示错误。话题与搜索筛选已加载的分享。
+
+后端位于 [`midda-backend/`](midda-backend/README.md)，需要 **JDK 21**；Maven Wrapper 会下载 Maven，无需单独安装。先启动 Docker，然后在项目根目录执行：
+
+```bash
+docker compose -f midda-backend/compose.yaml up -d --wait
+sh midda-backend/scripts/generate-keys.sh
+npm run midda-backend
 ```
 
-需要在 Supabase 中启用相应提供方，并允许回调地址 `midda://auth-callback`。这两个变量由 Vite 在构建时注入，修改后需要重启开发进程或重新打包。当前阅读与学习数据保存在本地，账号登录不代表已实现跨设备同步。
+在根目录 `.env` 配置并重启桌面应用：
+
+```dotenv
+MIDDA_API_URL=http://localhost:8080
+```
+
+后端地址不包含 `/api/v1`。Java 服务的配置、账号注册方式、OSS 发布配置及完整启动说明见 [后端 README](midda-backend/README.md)。Access / Refresh Token 仅由 Electron 主进程管理，系统支持时加密持久化；登录不会自动上传或同步本地书籍。
 
 ## 数据存在哪里
 
@@ -152,13 +167,28 @@ SUPABASE_ANON_KEY=your-anon-key
 
 AI 功能会向所配置的模型服务发送待分析的文本或对话；PaddleOCR 会上传待识别的页面图片，Edge TTS 会发送待朗读的文本。macOS Vision 在本地完成识别。
 
-## 参与开发
+## 技术栈
 
-Midda 使用 **Electron + React + TypeScript + Vite**，通过 Zustand 管理界面状态、SQLite 持久化阅读与学习数据，使用 PDF.js 渲染 PDF。
+Midda 由 Electron 桌面阅读器和 `midda-backend` Java 社区服务组成。本地阅读与学习数据存储在 SQLite，社区账号和帖子存储在后端 MySQL。
+
+| 模块 | 技术与用途 |
+| --- | --- |
+| 桌面与界面 | Electron 41、React 18、TypeScript、Vite 5、Tailwind CSS 4；Zustand 管理界面状态 |
+| 本地阅读与数据 | better-sqlite3 / SQLite、PDF.js、EPUB；JMdict 本地日语词典 |
+| OCR、朗读与 AI | macOS Vision / Swift、PaddleOCR-VL、系统语音、Edge TTS、兼容 Chat Completions 的模型接口 |
+| Java 后端 | Java 21、Spring Boot 3.2、Spring Web、MyBatis、MySQL 8.4 |
+| 账号认证 | Spring Security、RSA 签名 JWT、Redis 刷新令牌管理；Electron IPC 与 safeStorage 管理客户端会话 |
+| 缓存与异步处理 | Redis 7.4、Redisson、Caffeine、Kafka 4.1；Canal 驱动 Outbox 事件流 |
+| 社区内容与检索 | 阿里云 OSS 正文直传、Elasticsearch 9.2 全文与向量检索、Spring AI 1.0 / RAG |
+| 构建与本地服务 | npm、electron-builder、Maven Wrapper、Docker Compose |
+
+OSS 发布、AI / RAG、Canal 和 Elasticsearch IK 分词需要额外配置。当前社区界面的搜索筛选已加载内容；后端全文搜索、关注和 RAG API 已迁入，尚未接入社区 UI。配置细节见 [后端 README](midda-backend/README.md)。
+
+## 参与开发
 
 ```text
 src/
-├── pages/                书架、EPUB 阅读器、图片阅读器、生词本与账号
+├── pages/                书架、阅读器、生词本、账号与阅读社区
 ├── components/reader/    精读面板、OCR 文字层、目录与阅读设置
 ├── stores/               Zustand 状态管理
 ├── services/             请求队列、词典与角色对话服务
@@ -168,11 +198,16 @@ electron/
 └── preload.ts            渲染进程与主进程之间的 API 桥接
 scripts/
 └── import-jmdict.ts       本地词典导入
+midda-backend/            Java 21 社区后端、数据库结构及本地服务配置
 ```
 
 | 命令 | 用途 |
 | --- | --- |
 | `npm run dev` | 启动桌面开发环境 |
+| `npm run midda-backend` | 启动 Java 社区后端 |
+| `npm run midda-backend:test` | 运行 Java 测试 |
+| `npm run midda-backend:build` | 测试并打包 Java 后端 |
+| `npm run test:community` | 验证社区与 JWT 客户端 |
 | `npm run lint` | 执行 ESLint 检查 |
 | `npm run import-jmdict` | 下载并生成本地日语词典 |
 | `npm run rebuild-native` | 为 Electron 重建原生依赖 |

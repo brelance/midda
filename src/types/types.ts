@@ -166,6 +166,7 @@ export interface User {
 export type NavigationItem =
   | 'home'
   | 'bookshelf'
+  | 'community'
   | 'discover'
   | 'store'
   | 'profile'

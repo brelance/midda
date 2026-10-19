@@ -1,5 +1,6 @@
 import { app, ipcMain, type WebContents } from "electron";
 import { TtsController } from "./TtsController";
+import { EdgeTtsEngine } from "./EdgeTtsEngine";
 import type {
   TtsSentencePayload,
   TtsStartRequestOptions,
@@ -177,10 +178,9 @@ export const setupTtsApiHandler = (): void => {
 
   // ── Edge TTS specific ─────────────────────────────────────────────────
 
-  let _edgeEngine: import("./EdgeTtsEngine").EdgeTtsEngine | null = null;
-  const getEdgeEngine = async () => {
+  let _edgeEngine: EdgeTtsEngine | null = null;
+  const getEdgeEngine = () => {
     if (!_edgeEngine) {
-      const { EdgeTtsEngine } = await import("./EdgeTtsEngine");
       _edgeEngine = new EdgeTtsEngine();
     }
     return _edgeEngine;
@@ -188,7 +188,7 @@ export const setupTtsApiHandler = (): void => {
 
   ipcMain.handle("tts:list-voices", async (_event, language?: string) => {
     try {
-      const engine = await getEdgeEngine();
+      const engine = getEdgeEngine();
       return await engine.listVoices(language);
     } catch (error) {
       console.error("[tts] listVoices failed:", error);

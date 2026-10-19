@@ -86,6 +86,15 @@ const NavMenu: React.FC<NavMenuProps> = ({ activeNav, onNavChange }) => {
         />
       </div>
 
+      <div>
+        <NavItem
+          label="阅读社区"
+          isActive={activeNav === 'community'}
+          onClick={() => onNavChange('community')}
+          icon={<svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.5 8.5 0 01-8.5 8.5H4l-2 2v-9.5A8.5 8.5 0 0110.5 4H13a8 8 0 018 7.5zM7 10h9M7 14h6" /></svg>}
+        />
+      </div>
+
       {/* ── 书库 ── */}
       <div>
         <div className="px-2 mb-1 text-[12px] font-medium text-[#86868b] tracking-wide select-none">

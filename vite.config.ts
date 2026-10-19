@@ -5,11 +5,23 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import dotenv from "dotenv";
 
-// Load .env at config time so we can inject Supabase credentials at build time
+// Backend URL is public configuration; JWTs are acquired only at runtime.
 dotenv.config();
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      '/community-api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (url) => url.replace(/^\/community-api/, ''),
+      },
+    },
+  },
+  define: {
+    'import.meta.env.VITE_COMMUNITY_API_URL': JSON.stringify(process.env.MIDDA_API_URL || process.env.VITE_COMMUNITY_API_URL || ''),
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -19,8 +31,7 @@ export default defineConfig({
         entry: "electron/main/main.ts",
         vite: {
           define: {
-            __SUPABASE_URL__: JSON.stringify(process.env.SUPABASE_URL ?? ""),
-            __SUPABASE_ANON_KEY__: JSON.stringify(process.env.SUPABASE_ANON_KEY ?? ""),
+            __MIDDA_API_URL__: JSON.stringify(process.env.MIDDA_API_URL || (process.env.VITE_COMMUNITY_API_URL === '/community-api' ? 'http://localhost:8080' : process.env.VITE_COMMUNITY_API_URL) || ''),
           },
           build: {
             rollupOptions: {

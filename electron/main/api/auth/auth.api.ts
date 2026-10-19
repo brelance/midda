@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import {
-  startOAuthFlow,
+  login,
+  backendRequest,
   getSession,
   restoreSession,
   refreshSession,
@@ -9,6 +10,7 @@ import {
   type AuthUser,
 } from "./auth.service";
 import type { BrowserWindow } from "electron";
+import { isAllowedBackendRequest } from './jwtClient';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -24,12 +26,14 @@ export function setupAuthApiHandler(): void {
     }
   });
 
-  ipcMain.handle(
-    "auth:start-oauth",
-    (_event, provider: "google" | "apple") => {
-      return startOAuthFlow(provider);
-    }
-  );
+  ipcMain.handle('auth:login', (_event, identifier: string, password: string) => {
+    if (typeof identifier !== 'string' || typeof password !== 'string') throw new Error('无效的登录参数');
+    return login(identifier, password);
+  });
+  ipcMain.handle('auth:request', (_event, path: string, method: string, body?: unknown) => {
+    if (!isAllowedBackendRequest(path, method)) throw new Error('不允许的后端请求');
+    return backendRequest(path, method, body);
+  });
 
   ipcMain.handle("auth:get-session", () => {
     return getSession();
