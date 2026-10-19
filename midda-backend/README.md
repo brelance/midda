@@ -1,6 +1,6 @@
 # midda-backend
 
-Midda 阅读社区的 Java 21 / Spring Boot 后端。包含 JWT 认证、个人资料、帖子、Feed、点赞收藏、关注、搜索、OSS 上传和 AI / RAG 模块。Maven artifact、应用名称、入口类和启动命令已统一为 `midda-backend`；保留原 Java 包名、API 路径和数据库字段以兼容原有客户端。
+Midda 阅读社区的 Java 21 / Spring Boot 后端。包含 JWT 认证、个人资料、帖子、Feed、点赞收藏、关注、搜索、OSS 上传和 AI / RAG 模块。Maven artifact、应用名称、入口类和启动命令已统一为 `midda-backend`；
 
 上游来源与原项目说明见 [UPSTREAM.md](UPSTREAM.md)，接口和设计文档位于 [docs/](docs/)。
 
